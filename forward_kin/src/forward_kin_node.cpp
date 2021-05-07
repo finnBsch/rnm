@@ -18,7 +18,6 @@ MatrixXd get_transformationmatrix(const float theta, const float a, const float 
 }
 
 void callback(const sensor_msgs::JointState& msg) {
-  // TODO: find data type that stores all the matrices -> calc the 8 matrices in for-loop
   std::array<MatrixXd, 8> a_;
   for(int i  = 0; i<8; i++){
     a_.at(i) = get_transformationmatrix(msg.position[i], a(i), d(i), alpha(i));
