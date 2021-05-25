@@ -1,0 +1,3 @@
+float64[7] joint_angles
+---
+float64[3] end_effector_pos
