@@ -3,7 +3,20 @@
 [![Build Status][travis-status]][travis]
 
 See the [Franka Control Interface (FCI) documentation][fci-docs] for more information.
+## Needed packages
+Eigen
 
+    sudo apt install libeigen3-dev
+
+Install libcc
+    
+    cd ~
+    git clone https://github.com/danfis/libccd
+    cd libccd
+    cd src
+    make
+    sudo make install
+    
 ## Dependencies
 
 Libfranka
