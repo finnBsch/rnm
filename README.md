@@ -16,6 +16,16 @@ Install libcc
     cd src
     make
     sudo make install
+
+FCL
+
+    cd ~
+    git clone https://github.com/flexible-collision-library/fcl
+    cd fcl
+    mkdir build
+    cd build
+    cmake ..
+    make
     
 ## Dependencies
 
