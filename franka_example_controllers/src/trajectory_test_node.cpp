@@ -30,7 +30,7 @@ class RobotArm
   RobotArm(ros::NodeHandle nh, std::vector<double> goal_pose, std::string command_topic, double t_f): t_f_(t_f), nh_(nh), num_joints_(7), goal_pose_(goal_pose), command_topic_(command_topic_)
   {
     sensor_msgs::JointState joint_state_msg;
-
+    std::vector<double> max_acc_ = {15, 7.5, 10, 12.5, 15, 20, 20};
     if (command_topic.find("sim") != std::string::npos) {
       joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
     }
@@ -55,7 +55,6 @@ class RobotArm
         double t_vel = t_f_/2;
         double max_vel = 3*temp_coeff[1]*pow(t_vel,2) + 4* temp_coeff[2]*pow(t_vel,3) + 5*temp_coeff[3]*pow(t_vel, 4);
         double t_acc = t_f_/4;
-        std::vector<double> max_acc_ = {15, 7.5, 10, 12.5, 15, 20, 20};
         double max_acc = 6*temp_coeff[1]*pow(t_acc,1) + 12* temp_coeff[2]*pow(t_acc,2) + 20*temp_coeff[3]*pow(t_acc, 3);
         if(abs(max_vel)>0.8*max_vels_[i] || abs(max_acc)>0.5*max_acc_[i]) {
           trajectory_feasible = false;
