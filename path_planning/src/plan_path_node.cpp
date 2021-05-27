@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     float f = 0.0;
     visualization_msgs::Marker line_list;
 
-    line_list.header.frame_id = "/world";
+    line_list.header.frame_id = "/world"; // TODO Find correct frame
     line_list.header.stamp = ros::Time::now();
     line_list.ns = "plan_path_node";
     line_list.action = visualization_msgs::Marker::ADD;
