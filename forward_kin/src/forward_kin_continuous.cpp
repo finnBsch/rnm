@@ -18,7 +18,7 @@ int main(int argc, char **argv)
   auto a = client.call(srv);
   if (a)
   {
-    ROS_INFO("Endpos: %f", srv.response.end_effector_pos);
+    ROS_INFO("Endpos: %f", srv.response.end_effector_pos[0]);
   }
   else
   {
