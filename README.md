@@ -1,8 +1,12 @@
-# ROS integration for Franka Emika research robots
-
-[![Build Status][travis-status]][travis]
-
-See the [Franka Control Interface (FCI) documentation][fci-docs] for more information.
+# RNM 
+path planning launch
+    
+    clion anpassen wie besprochen
+    catkin_make  (wird mit fehler abschließen, dann einfach nochmal catkin_make)
+    roslaunch franka_example_controllers join_....._sim.launch
+    rosrun forward_kin forward_kin_node
+    dann den path planning node in clion launchen
+    
 ## Needed packages
 Eigen
 
