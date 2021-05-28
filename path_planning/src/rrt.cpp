@@ -12,7 +12,7 @@
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
 
-rrt::rrt(Point start_point, Point goal_point,rrt_params params) {
+rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
 
     // save params
     this->goal_point = goal_point;
@@ -60,7 +60,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     new_node = new rrt_node(stepped_point, nearest_node);
     array<int, 3> id = return_grid_id(stepped_point);
     grid.at(id[0]).at(id[1]).at(id[2]).push_back(new_node);
-    if(euclidean_dist(new_node->get_pos(), goal_point)<0.02){
+    if(euclidean_dist(new_node->get_pos(), goal_point)<0.04){
         goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
