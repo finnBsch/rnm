@@ -7,6 +7,7 @@ project(forward_kin)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
@@ -157,6 +158,7 @@ target_link_libraries(${PROJECT_NAME}_spam_node
         ${catkin_LIBRARIES}
         ${EIGEN3_LIBRARIES}
         )
+
 add_dependencies(${PROJECT_NAME}_spam_node forward_kin_gencpp)
 add_dependencies(${PROJECT_NAME}_node forward_kin_gencpp)
 #############

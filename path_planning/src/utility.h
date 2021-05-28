@@ -20,6 +20,7 @@ struct rrt_params{
     float grid_size;
 };
 float euclidean_dist(Point A, Point B);
+float euclidean_dist_sqrd(Point A, Point B);
 float euclidean_norm(Point A);
 Point random_point(array<float, 2> range_x, array<float, 2> range_y, array<float, 2> range_z);
 Point step_forward(Point start, Point goal, float dist);

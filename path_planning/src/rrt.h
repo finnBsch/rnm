@@ -13,6 +13,7 @@ private:
     Point goal_point;
     Point start_point;
     rrt_node* start_node;
+    rrt_node* goal_node = nullptr;
     // RRT Params
     rrt_params params;
     // TODO save obstacles
@@ -25,6 +26,7 @@ private:
 public:
     rrt(Point start_point, Point goal_point,rrt_params params);
     tuple<bool, array<array<float, 3>, 2>> expand();
+    vector<array<float, 3>> return_goal_path();
 
 };
 
