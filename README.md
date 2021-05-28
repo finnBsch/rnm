@@ -6,6 +6,10 @@ path planning launch
     roslaunch franka_example_controllers join_....._sim.launch
     rosrun forward_kin forward_kin_node
     dann den path planning node in clion launchen
+    in rviz sobald der node läuft schnell unten links 'add' -> 'from topic' -> 'marker' (so n ding mit grünem quader als symbol)
+    ab dann sieht man den pathplanning immer wieder, aber wenn man den franka controller neustartet muss man den marker wieder neu hinzufügen
+    parameter die man mal ändern kann: goal_point, x, y, z-range, step_size
+
     
 ## Needed packages
 Eigen
