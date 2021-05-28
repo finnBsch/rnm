@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
   // Amount of movement in each joint
   double joint_move_dist = 5;
-  ros::param::get("~joint_move_dist", joint_move_dist);
+ // ros::param::get("~joint_move_dist", joint_move_dist);
   ROS_INFO_STREAM("joint_move_dist: " << joint_move_dist << " degrees.");
 
   // Amount of movement in each joint

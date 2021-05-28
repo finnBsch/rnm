@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
+#include "forward_kin/get_endeffector.h"
 
 using namespace Eigen;
 
@@ -17,15 +18,19 @@ MatrixXd get_transformationmatrix(const float theta, const float a, const float 
   return ret_mat;
 }
 
-void callback(const sensor_msgs::JointState& msg) {
+bool get_end_effector(forward_kin::get_endeffector::Request  &req,
+                      forward_kin::get_endeffector::Response &res) {
   std::array<MatrixXd, 8> a_;
-  for(int i  = 0; i<8; i++){
-    a_.at(i) = get_transformationmatrix(msg.position[i], a(i), d(i), alpha(i));
+  for(int i  = 0; i<7; i++){
+    a_.at(i) = get_transformationmatrix(req.joint_angles[i], a(i), d(i), alpha(i));
   }
+  a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
   VectorXd in(4);
   in << 0, 0, 0, 1;
   VectorXd out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
-  std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+  res.end_effector_pos =  {out[0], out[1], out[2]};
+  //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+  return true;
 }
 
 int main(int argc, char** argv)  {
@@ -46,9 +51,6 @@ int main(int argc, char** argv)  {
   nh.getParam("queue_size", queue_size);
 
   // Register a callback function (a function that is called every time a new message arrives)
-  ros::Subscriber sub = nh.subscribe("/joint_states", 10, callback);
-
-  // Prevent the program from terminating
-  // Blocks but still allows messages to be received
+  ros::ServiceServer service = nh.advertiseService("get_endeffector", get_end_effector);
   ros::spin();
 }
