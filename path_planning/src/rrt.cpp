@@ -4,6 +4,13 @@
 
 #include "rrt.h"
 
+/* Performance improvements:
+ * euclidean dist: remove redudant array calls, implement euclidean dist sqrd (no need for sqrt)
+ * generally decrease amount of array at(x) calls
+ *
+ * possible things to do:
+ * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
+                                                                                                        nodes to vector*/
 
 rrt::rrt(Point start_point, Point goal_point,rrt_params params) {
 
@@ -15,6 +22,7 @@ rrt::rrt(Point start_point, Point goal_point,rrt_params params) {
     start_node = new rrt_node(this->start_point);
     auto id = return_grid_id(start_point);
     // initialize grid
+    // TODO Find faster way of saving stuff than nested vectors. Eigen?
     vector<rrt_node*> dummy;
     for(int x = 0; x<ceil((params.x_range[1]-params.x_range[0])/params.grid_size)+1; x++){
         vector<vector<vector<rrt_node*>>> dummy_x;
@@ -53,6 +61,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     array<int, 3> id = return_grid_id(stepped_point);
     grid.at(id[0]).at(id[1]).at(id[2]).push_back(new_node);
     if(euclidean_dist(new_node->get_pos(), goal_point)<0.02){
+        goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
     // TODO repeat until new node in case of collision
@@ -72,17 +81,33 @@ rrt_node *rrt::findNearestNode(Point relative_to) {
     vector<rrt_node*> near_nodes;
     rrt_node* nearest_node;
     array<int, 3> base_id = return_grid_id(relative_to);
+    // precalculate loop limits to decrease array accesses
+    int id_x = base_id[0];
+    int id_y = base_id[1];
+    int id_z = base_id[2];
+    int num_x = num_cells[0];
+    int num_y = num_cells[1];
+    int num_z = num_cells[2];
     int radius = 0;
+    float min_dist = -1;
     while(no_node_found){
-        for(int x = base_id[0]-radius; x<=base_id[0]+radius; x++){
-            for(int y = base_id[1]-radius; y<=base_id[1]+radius; y++){
-                for(int z = base_id[2]-radius; z<=base_id[2]+radius; z++){
-                    if(abs(base_id[2]-z)==radius || abs(base_id[1]-y)==radius || abs(base_id[0]-x)==radius){
-                        if(x>= 0 && x<num_cells[0] && y>= 0 && y<num_cells[1] && z>= 0 && z<num_cells[2]) {
+        int cap_x = min(id_x+radius,num_x-1);
+        int cap_y = min(id_y+radius,num_y-1);
+        int cap_z = min(id_z+radius,num_z-1);
+        for(int x = id_x-radius; x<=cap_x; x++){
+            for(int y = id_y-radius; y<=cap_y; y++){
+                for(int z = id_z-radius; z<=cap_z; z++){
+                    if(abs(id_z-z)==radius || abs(id_y-y)==radius || abs(id_x-x)==radius){
+                        if(x>= 0 && x<num_x && y>= 0 && y<num_y && z>= 0 && z<num_z) {
                             if (!grid.at(x).at(y).at(z).empty()) {
                                 no_node_found = false;
-                                near_nodes.insert(near_nodes.end(), grid.at(x).at(y).at(z).begin(),
-                                                  grid.at(x).at(y).at(z).end());
+                                for(rrt_node* c_node:grid.at(x).at(y).at(z)) {
+                                    float current_dist = euclidean_dist_sqrd(c_node->get_pos(), relative_to);
+                                    if (current_dist < min_dist || min_dist == -1) {
+                                        min_dist = current_dist;
+                                        nearest_node = c_node;
+                                    }
+                                }
                             }
                         }
                     }
@@ -91,27 +116,39 @@ rrt_node *rrt::findNearestNode(Point relative_to) {
         }
         radius++;
     }
-    for(int x = base_id[0]-radius; x<=base_id[0]+radius; x++){
-        for(int y = base_id[1]-radius; y<=base_id[1]+radius; y++){
-            for(int z = base_id[2]-radius; z<=base_id[2]+radius; z++){
-                if(abs(base_id[2]-z)==radius || abs(base_id[1]-y)==radius || abs(base_id[0]-x)==radius){
-                    if(x>= 0 && x<num_cells[0] && y>= 0 && y<num_cells[1] && z>= 0 && z<num_cells[2]) {
+    for(int x = id_x-radius; x<=id_x+radius; x++){
+        for(int y = id_y-radius; y<=id_y+radius; y++){
+            for(int z = id_z-radius; z<=id_z+radius; z++){
+                if(abs(id_z-z)==radius || abs(id_y-y)==radius || abs(id_x-x)==radius){
+                    if(x>= 0 && x<num_x && y>= 0 && y<num_y && z>= 0 && z<num_z) {
                         if (!grid.at(x).at(y).at(z).empty()) {
-                            near_nodes.insert(near_nodes.end(), grid.at(x).at(y).at(z).begin(),
-                                              grid.at(x).at(y).at(z).end());
+                            for(rrt_node* c_node:grid.at(x).at(y).at(z)) {
+                                float current_dist = euclidean_dist_sqrd(c_node->get_pos(), relative_to);
+                                if (current_dist < min_dist || min_dist == -1) {
+                                    min_dist = current_dist;
+                                    nearest_node = c_node;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-    float min_dist = -1;
-    for(rrt_node* c_node:near_nodes){
-        float current_dist = euclidean_dist(c_node->get_pos(), relative_to);
-        if( current_dist < min_dist|| min_dist == -1){
-            min_dist = current_dist;
-            nearest_node = c_node;
-        }
-    }
     return nearest_node;
+}
+
+vector<array<float, 3>> rrt::return_goal_path() {
+    rrt_node* current_node = goal_node;
+    vector<array<float, 3>> goal_path;
+    array<float,3> point;
+    do {
+        point = current_node->get_pos();
+        goal_path.push_back(point);
+        current_node = current_node->get_parent();
+    } while(current_node->get_parent() != nullptr);
+    point = current_node->get_pos();
+    goal_path.push_back(point);
+
+    return goal_path;
 }

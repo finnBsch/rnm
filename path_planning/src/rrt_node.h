@@ -14,7 +14,7 @@ private:
 public:
     rrt_node(Point position);
     rrt_node(Point position, rrt_node* parent_node);
-    Point get_pos(){
+    Point& get_pos(){
         return position;
     };
     rrt_node* get_parent(){
