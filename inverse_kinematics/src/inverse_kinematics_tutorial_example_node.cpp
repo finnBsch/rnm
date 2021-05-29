@@ -40,20 +40,21 @@ MatrixXd exampleMatrix_A_03(float theta1, float theta2, float d3){
   return A;
 }
 
-/*
- * This function takes A 4x4 Matrix and converts it to a 1x12 vector
- *
- * @param: MatrixXd M
- * returns: VectorXd v
- */
-VectorXd convert4DMatrixTo12DVector(MatrixXd M){
-  VectorXd v(12);
-    v << M(0,0), M(1,0), M(2,0),
-         M(0,1), M(1,1), M(2,1),
-         M(0,2), M(1,2), M(2,2),
-         M(0,3), M(1,3), M(2,3);
-  return v;
-}
+//-----------------already outsourced in convert.h----------------------------
+//
+// * This function takes A 4x4 Matrix and converts it to a 1x12 vector
+// *
+// * @param: MatrixXd M
+// * returns: VectorXd v
+// */
+//VectorXd convert4DMatrixTo12DVector(MatrixXd M){
+//  VectorXd v(12);
+//    v << M(0,0), M(1,0), M(2,0),
+//         M(0,1), M(1,1), M(2,1),
+//         M(0,2), M(1,2), M(2,2),
+//         M(0,3), M(1,3), M(2,3);
+//  return v;
+//}
 
 /*
  * This function gives the Jacobian of the example Matrix A. It takes the joint angles and returns a 12x3 Matrix.
@@ -102,7 +103,7 @@ VectorXd incrementalStep(VectorXd currentThetas, VectorXd currentA, VectorXd fin
 int main(int argc, char** argv)  {
   // initialize variables
   initialThetas << 40*PI/180, 40*PI/180, 20;
-  initialA = exampleMatrix_A_03(initialTheta[0],initialTheta[1], initialTheta[2]);
+  initialA = exampleMatrix_A_03(initialThetas[0],initialThetas[1], initialThetas[2]);
   desiredA << 0.5792, -0.7071, 0.4056,  93.2834,
               0.5792,  0.7071, 0.4056,  93.2834,
              -0.5736,  0     , 0.8192, 288.4050,
