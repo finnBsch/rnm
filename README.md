@@ -1,9 +1,40 @@
-# ROS integration for Franka Emika research robots
+# RNM 
+path planning launch
+    
+    clion anpassen wie besprochen
+    catkin_make  (wird mit fehler abschließen, dann einfach nochmal catkin_make)
+    roslaunch franka_example_controllers join_....._sim.launch
+    rosrun forward_kin forward_kin_node
+    dann den path planning node in clion launchen
+    in rviz sobald der node läuft schnell unten links 'add' -> 'from topic' -> 'marker' (so n ding mit grünem quader als symbol)
+    ab dann sieht man den pathplanning immer wieder, aber wenn man den franka controller neustartet muss man den marker wieder neu hinzufügen
+    parameter die man mal ändern kann: goal_point, x, y, z-range, step_size
 
-[![Build Status][travis-status]][travis]
+    
+## Needed packages
+Eigen
 
-See the [Franka Control Interface (FCI) documentation][fci-docs] for more information.
+    sudo apt install libeigen3-dev
 
+Install libcc
+    
+    cd ~
+    git clone https://github.com/danfis/libccd
+    cd libccd
+    cd src
+    make
+    sudo make install
+
+FCL
+
+    cd ~
+    git clone https://github.com/flexible-collision-library/fcl
+    cd fcl
+    mkdir build
+    cd build
+    cmake ..
+    make
+    
 ## Dependencies
 
 Libfranka

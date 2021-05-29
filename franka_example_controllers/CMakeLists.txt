@@ -50,8 +50,7 @@ catkin_package(
 
 add_library(franka_example_controllers
   src/joint_position_example_controller.cpp
-  src/joint_position_example_controller_sim.cpp
-)
+  src/joint_position_example_controller_sim.cpp)
 
 add_dependencies(franka_example_controllers
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
@@ -76,6 +75,10 @@ target_include_directories(franka_example_controllers PUBLIC
 )
 
 add_executable(test_move_node src/test_move.cpp)
+add_executable(trajectory_test_node src/trajectory_test_node.cpp)
+target_link_libraries(trajectory_test_node PUBLIC
+        ${catkin_LIBRARIES}
+        )
 target_link_libraries(test_move_node PUBLIC
         ${catkin_LIBRARIES}
         )
