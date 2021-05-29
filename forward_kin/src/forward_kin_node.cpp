@@ -1,6 +1,7 @@
 #include <ros/ros.h>
-#include "sensor_msgs/JointState.h"
+#include <std_msgs/Float64.h>
 #include <eigen3/Eigen/Dense>
+#include "sensor_msgs/JointState.h"
 
 using namespace Eigen;
 
@@ -24,8 +25,15 @@ void callback(const sensor_msgs::JointState& msg) {
   }
   VectorXd in(4);
   in << 0, 0, 0, 1;
-  VectorXd out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+  MatrixXd A_total=a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7);
+  VectorXd out = A_total*in;
   std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+
+  ros::NodeHandle nh;
+  ros::Publisher a11_pub = nh.advertise<std_msgs::Float64>("/a_11", 10);
+  std_msgs::Float64 a11;
+  a11.data = A_total(1,1);
+  a11_pub.publish(a11);
 }
 
 int main(int argc, char** argv)  {
