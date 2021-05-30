@@ -8,6 +8,8 @@ project(point_cloud_registration)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
+set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
+
 find_package(catkin REQUIRED COMPONENTS
          pcl_conversions
          pcl_ros
