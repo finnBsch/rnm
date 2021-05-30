@@ -2,7 +2,7 @@
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
 #include "forward_kin/get_endeffector.h"
-#include "../../general/convert.h"
+#include "../../inverse_kinematics/src/convert.h"
 #include <std_msgs/Float64MultiArray.h>
 #include "tf/transform_datatypes.h"
 #include <eigen_conversions/eigen_msg.h>

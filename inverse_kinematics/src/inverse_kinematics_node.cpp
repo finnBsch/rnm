@@ -9,14 +9,13 @@
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
 #include <stdlib.h>
-#include "../../general/convert.h"
-#include "../../forward_kin/srv/get_endeffector.h"
+#include "forward_kin/get_endeffector.h"
+#include <eigen_conversions/eigen_msg.h>
 
 
 #define PI 3.14159265
 
 using namespace Eigen;
-
 
 
 /*
@@ -27,9 +26,9 @@ using namespace Eigen;
  */
 
 
-VectorXd incrementalStep(VectorXd currentThetas, VectorXd currentA, VectorXd finalA){
+VectorXd incrementalStep(sensor_msgs::JointState& msg, VectorXd currentA, VectorXd finalA){
   VectorXd delta_A = (finalA - currentA);
-
+    VectorXd currentThetas(7,1) << msg.position[0],msg.position[1],msg.position[2],msg.position[3],msg.position[4],msg.position[5],msg.position[6];
   if (abs(delta_A.maxCoeff()) <= 0.01){
     return currentThetas;
   } else{
@@ -40,6 +39,13 @@ VectorXd incrementalStep(VectorXd currentThetas, VectorXd currentA, VectorXd fin
     VectorXd nextA = convert4DMatrixTo12DVector(exampleMatrix_A_03(nextThetas[0], nextThetas[1], nextThetas[2]));
     return incrementalStep(nextThetas, nextA, finalA);
   }
+}
+
+void callback(const sensor_msgs::JointState& msg){
+
+    MatrixXd jacobian << calculateJacobian(msg.position);
+
+
 }
 
 
@@ -60,7 +66,7 @@ int main(int argc, char** argv)  {
   boost::array<double, 7> arr = {joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2],
                                    joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5],
                                    joint_state_msg.position[6]};
-  srv.request.A = arr;
+  //srv.request. = arr;
   auto a = client.call(srv);
   // check if service worked
   if (a)
@@ -74,7 +80,13 @@ int main(int argc, char** argv)  {
   }
 
 
-
+//subscriber node for jacobian
+ ros::NodeHandle  nodeHandle("~");
+ std::string topic_name;
+int queue_size;
+  nodeHandle.getParam("topic_name", topic_name);
+  nodeHandle.getParam("queue_size", queue_size);
+ ros::Subscriber sub = nodeHandle.subscribe("/joint_states", 10, callback);
 
 
 
@@ -85,7 +97,7 @@ int main(int argc, char** argv)  {
   initialThetas << 40*PI/180, 40*PI/180, 20;
 
 
-  initialA = nullptr;
+  //initialA = nullptr;
 
   desiredA << 0.5792, -0.7071, 0.4056,  93.2834,
       0.5792,  0.7071, 0.4056,  93.2834,
@@ -93,11 +105,11 @@ int main(int argc, char** argv)  {
       0     ,  0     , 0     ,   1;
 
   // Matrix to vectors transformation
-  VectorXd initialA_vector = convert4DMatrixTo12DVector(initialA);
-  VectorXd desiredA_vector = convert4DMatrixTo12DVector(desiredA);
+  //VectorXd initialA_vector = convert4DMatrixTo12DVector(initialA);
+  //VectorXd desiredA_vector = convert4DMatrixTo12DVector(desiredA);
 
   // perform incremental steps
-  desiredThetas = incrementalStep(initialThetas, initialA_vector, desiredA_vector);
+ // desiredThetas = incrementalStep(initialThetas, initialA_vector, desiredA_vector);
 
   // final Matrix A
   //MatrixXd finalA = exampleMatrix_A_03(desiredThetas[0], desiredThetas[1], desiredThetas[2]);

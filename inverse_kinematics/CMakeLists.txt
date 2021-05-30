@@ -8,9 +8,13 @@ project(inverse_kinematics)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-)
+        roscpp
+        sensor_msgs
+        std_msgs
+        forward_kin
+        )
+find_package(Eigen3 REQUIRED)
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -53,11 +57,9 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ #add_service_files(
+  # FILES
+ #)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -106,6 +108,7 @@ catkin_package(
 #  LIBRARIES inverse_kinematics
 #  CATKIN_DEPENDS roscpp rospy
 #  DEPENDS system_lib
+        DEPENDS EIGEN3
 )
 
 ###########
@@ -117,6 +120,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+        ${EIGEN3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -132,7 +136,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/inverse_kinematics_node.cpp)
+ add_executable(${PROJECT_NAME}_node src/inverse_kinematics_node.cpp src/jacobian.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -145,9 +149,10 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(${PROJECT_NAME}_node
+   ${catkin_LIBRARIES}
+        ${EIGEN3_LIBRARIES}
+ )
 
 #############
 ## Install ##

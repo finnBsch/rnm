@@ -4,25 +4,23 @@
  * added: 29.5.21
  * last edited: 29.5.21
  */
-
+/*
 #include <eigen3/Eigen/Dense>
 #include <std_msgs/Float64MultiArray.h>
 #include "tf/transform_datatypes.h"
 #include <eigen_conversions/eigen_msg.h>
 
-
-
 using namespace tf;
 using namespace std_msgs;
 using namespace Eigen;
-
-
+*/
 /*
  * This function takes A 4x4 Matrix and converts it to a 1x12 vector
  *
  * @param: MatrixXd M
  * returns: VectorXd v
  */
+/*
 VectorXd convert4DMatrixTo12DVector(MatrixXd M){
   VectorXd v(12);
   v << M(0,0), M(1,0), M(2,0),
@@ -38,3 +36,4 @@ Float64MultiArray convertEigenToStd(MatrixXd Matrix){
     return array;
 }
 
+*/
