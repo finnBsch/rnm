@@ -6,8 +6,14 @@
  */
 
 #include <eigen3/Eigen/Dense>
+#include <std_msgs/Float64MultiArray.h>
+#include "tf/transform_datatypes.h"
+#include <eigen_conversions/eigen_msg.h>
 
 
+
+using namespace tf;
+using namespace std_msgs;
 using namespace Eigen;
 
 
@@ -25,3 +31,10 @@ VectorXd convert4DMatrixTo12DVector(MatrixXd M){
       M(0,3), M(1,3), M(2,3);
   return v;
 }
+
+Float64MultiArray convertEigenToStd(MatrixXd Matrix){
+    std_msgs::Float64MultiArray array;
+    matrixEigenToMsg(Matrix,array );
+    return array;
+}
+
