@@ -56,7 +56,7 @@ class RobotArm
         double max_vel = 3*temp_coeff[1]*pow(t_vel,2) + 4* temp_coeff[2]*pow(t_vel,3) + 5*temp_coeff[3]*pow(t_vel, 4);
         double t_acc = t_f_/4;
         double max_acc = 6*temp_coeff[1]*pow(t_acc,1) + 12* temp_coeff[2]*pow(t_acc,2) + 20*temp_coeff[3]*pow(t_acc, 3);
-        if(abs(max_vel)>0.8*max_vels_[i] || abs(max_acc)>0.5*max_acc_[i]) {
+        if(abs(max_vel)>0.05*max_vels_[i] || abs(max_acc)>0.05*max_acc_[i]) {
           trajectory_feasible = false;
           trajectory_coeff.clear();
           break;
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // Amount of movement in each joint
-  double init_angle = 80*M_PI/180;
+  double init_angle = 0*M_PI/180;
   double t_f =0.3;
   std::vector<double> goal_pose = {init_angle, init_angle, -init_angle, -init_angle, init_angle, init_angle  , init_angle};
   //std::vector<double> goal_pose = {0,0,-90*M_PI/180,-90*M_PI/180,90*M_PI/180,90*M_PI/180 , 0*90*M_PI/180};
