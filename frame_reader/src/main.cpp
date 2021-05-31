@@ -91,12 +91,12 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh;
 
   // uncomment to: read only
-  //cv::namedWindow("frame");
-  //ros::Subscriber sub = nh.subscribe("k4a/rgb/image_raw", 1, imageCallback); // apparently transport should always be used for imgs
+  cv::namedWindow("frame");
+  ros::Subscriber sub = nh.subscribe("/rgb/image_raw", 1, imageCallback); // apparently transport should always be used for imgs
 
   // uncomment to: write imgs
-  image_transport::ImageTransport it(nh);
-  image_transport::Subscriber sub = it.subscribe("k4a/rgb/image_raw", 1, imageWrite);
+  //image_transport::ImageTransport it(nh);
+  //image_transport::Subscriber sub = it.subscribe("k4a/rgb/image_raw", 1, imageWrite);
 
   // subscribing at frequency
   // while loop needed
