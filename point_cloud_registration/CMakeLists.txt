@@ -11,15 +11,16 @@ project(point_cloud_registration)
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
 
 find_package(catkin REQUIRED COMPONENTS
-         pcl_conversions
-         pcl_ros
+        pcl_conversions
+        pcl_ros
         roscpp
-         sensor_msgs
+        sensor_msgs
         std_msgs
         genmsg
         rospy
         PCL REQUIRED
 )
+find_package(Eigen3 REQUIRED)
 
 
 
@@ -118,6 +119,7 @@ catkin_package(
 #  LIBRARIES point_cloud_registration
 #  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
 #  DEPENDS system_lib
+        DEPENDS EIGEN3
 )
 
 ###########
@@ -130,6 +132,7 @@ include_directories(
 # include
         ${catkin_INCLUDE_DIRS}
         ${PCL_INCLUDE_DIRS}
+        ${EIGEN3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -138,6 +141,7 @@ include_directories(
 # )
 
 link_directories(${PCL_LIBRARY_DIRS})
+
 add_definitions(${PCL_DEFINITIONS})
 
 ## Add cmake target dependencies of the library
@@ -165,6 +169,7 @@ add_executable(PCMatrixTransform src/PCMatrixTransform.cpp)
 target_link_libraries(VoxelGridFilter ${catkin_LIBRARIES})
 target_link_libraries(PCMatrixTransform ${catkin_LIBRARIES})
 target_link_libraries (PCMatrixTransform ${PCL_LIBRARIES})
+target_link_libraries (PCMatrixTransform ${EIGEN3_LIBRARIES})
 
 #############
 ## Install ##
