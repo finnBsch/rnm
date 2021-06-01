@@ -4,23 +4,8 @@
 
 #ifndef SRC_JACOBIAN_H
 #define SRC_JACOBIAN_H
-
+#include <eigen3/Eigen/Dense>
+#include "sensor_msgs/JointState.h"
 #endif //SRC_JACOBIAN_H
-
-MatrixXd calculateJacobian( sensor_msgs::JointState& msg){
-    theta1= msg.position[0];
-    theta2= msg.position[1];
-    theta3= msg.position[2];
-    theta4= msg.position[3];
-    theta5= msg.position[4];
-    theta6= msg.position[5];
-    theta7= msg.position[6];
-    MatrixXd jacobian(12,7);
-
-    jacobian <<
-
-
-
-
-    return jacobian;
-}
+using namespace Eigen;
+MatrixXd calculateJacobian(const sensor_msgs::JointState& msg);

@@ -16,7 +16,7 @@ set(EXECUTABLES robot_joint_state_publisher gripper_joint_state_publisher)
 
 foreach(executable ${EXECUTABLES})
   add_executable(${executable}
-    src/${executable}.cpp ../inverse_kinematics/src/inverse_kinematics_tutorial_example_node.cpp ../inverse_kinematics/src/inverse_kinematics_node.cpp ../inverse_kinematics/src/convert.h)
+    src/${executable}.cpp)
   add_dependencies(${executable}
     ${${PROJECT_NAME}_EXPORTED_TARGETS}
     ${catkin_EXPORTED_TARGETS}

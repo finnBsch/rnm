@@ -6,10 +6,9 @@
  */
 
 #include <ros/ros.h>
-#include "sensor_msgs/JointState.h"
-#include <eigen3/Eigen/Dense>
 #include <stdlib.h>
 #include "forward_kin/get_endeffector.h"
+#include "jacobian.h"
 #include <eigen_conversions/eigen_msg.h>
 
 
@@ -27,27 +26,28 @@ using namespace Eigen;
 
 
 VectorXd incrementalStep(sensor_msgs::JointState& msg, VectorXd currentA, VectorXd finalA){
-  VectorXd delta_A = (finalA - currentA);
-    VectorXd currentThetas(7,1) << msg.position[0],msg.position[1],msg.position[2],msg.position[3],msg.position[4],msg.position[5],msg.position[6];
+    A_total = currentA; //TODO aus service
+    finalA = A_total*1.01; // Wunsch postition sowie orientierung
+    //TODO vor delta, erst Matritzen reshapen (converten)
+    VectorXd delta_A = (finalA - currentA);
+    VectorXd currentThetas(7,1);
+    currentThetas = msg.position[0],msg.position[1],msg.position[2],msg.position[3],msg.position[4],msg.position[5],msg.position[6];
   if (abs(delta_A.maxCoeff()) <= 0.01){
     return currentThetas;
   } else{
-    MatrixXd J = jacobian(currentThetas[0], currentThetas[1], currentThetas[2]);
-    MatrixXd pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
+      MatrixXd jacobian_(12, 7);
+      jacobian_ = calculateJacobian(msg);
+    MatrixXd pinvJ = jacobian_.completeOrthogonalDecomposition().pseudoInverse();
 
-    VectorXd nextThetas = currentThetas + pinvJ * delta_A/10;
-    VectorXd nextA = convert4DMatrixTo12DVector(exampleMatrix_A_03(nextThetas[0], nextThetas[1], nextThetas[2]));
+    VectorXd nextThetas = currentThetas + pinvJ * delta_A/10; //berechnet neue Winkel
+    VectorXd nextA; //TODO definiere next A als func von current A, vllt for schleife statt 10?
     return incrementalStep(nextThetas, nextA, finalA);
   }
 }
 
-void callback(const sensor_msgs::JointState& msg){
-
-    MatrixXd jacobian << calculateJacobian(msg.position);
-
+void callback(const sensor_msgs::JointState& msg) {
 
 }
-
 
 int main(int argc, char** argv)  {
 
@@ -56,6 +56,7 @@ int main(int argc, char** argv)  {
   static VectorXd desiredThetas(3);
   static Matrix4Xd initialA;
   static Matrix4Xd desiredA;
+
 
   ros::init(argc,argv, "inverse_kinematics_node");
   ros::NodeHandle n;
