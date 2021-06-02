@@ -1,2 +1,11 @@
 # Project exclude paths
 /cmake-build-debug/
+/.idea/
+/azure_kinect_ros_driver-melodic/include/azure_kinect_ros_driver/
+/azure_kinect_ros_driver-melodic/src/k4a_calibration_transform_data.cpp
+/azure_kinect_ros_driver-melodic/src/k4a_ros_bridge_node.cpp
+/azure_kinect_ros_driver-melodic/src/k4a_ros_bridge_nodelet.cpp
+/azure_kinect_ros_driver-melodic/src/k4a_ros_device.cpp
+/azure_kinect_ros_driver-melodic/src/k4a_ros_device_params.cpp
+/azure_kinect_ros_driver-melodic/
+/point_cloud_reg/
