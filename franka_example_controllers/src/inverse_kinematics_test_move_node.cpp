@@ -1,7 +1,7 @@
 //
 // Created by tolga on 02.06.21.
 //
-/*
+
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -121,4 +121,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-*/
