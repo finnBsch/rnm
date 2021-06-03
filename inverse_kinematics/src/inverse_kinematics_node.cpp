@@ -12,27 +12,17 @@
 #include "forward_kin/get_endeffector.h"
 #include "jacobian.h"
 #include <eigen_conversions/eigen_msg.h>
-
-
-
-#define PI 3.14159265
+#include "inverse_kinematics/unserService.h"
 
 using namespace tf;
 using namespace Eigen;
 
-
+float incrementalStepSize = 10;
 boost::array<double, 7> desiredJointAngles;
-VectorXd jointAngles;
-
+VectorXd jointAngles(7,1);
 VectorXd currentA_vector(12, 1);
 VectorXd finalA_vector(12, 1);
-
-MatrixXd currentA;
-
-
-float incrementalStepSize = 10;
-
-
+ros::NodeHandle nodeHandle("~");
 
 /*
  * This function takes A 4x4 Matrix and converts it to a 1x12 vector
@@ -48,16 +38,6 @@ VectorXd convert4DMatrixTo12DVector(MatrixXd M){
       M(0,3), M(1,3), M(2,3);
   return v;
 }
-
-
-
-/*void callback(const sensor_msgs::JointState& msg) {
-    // fill jointAngles vector with joinState entries
-    for (int i = 0; i < 7; ++i) {
-        jointAngles(i, 0) = msg.position[i];
-    }
-}*/
-
 
 boost::array<double, 7> transformVectorToArray(VectorXd vector){
     return {vector[0], vector[1],vector[2],
@@ -78,33 +58,29 @@ ros::ServiceClient client){
     joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
     jointAngles << joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2], joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5], joint_state_msg.position[6];
 
-
     // --------------- GET A MATRIX -------------------
     // check connection
     auto a = client.call(srv);
     if (a)
     {
-        ROS_INFO("Endpos: %f", srv.response.layout);
+        ROS_INFO("A-Matrix: %f", srv.response.layout.data[0]);
     }
     else
     {
         ROS_ERROR("Failed to call service forward_kin");
-        return 1;
+        exit; //TODO find better solution
     }
-
     // get the current A Matrix from the forward_kin node
-
-    wrenchEigenToMsg(srv.response.layout, currentA); // alternative try: transformMsgToEigen and in Forward_kin_node.cpp: twistEigenToMsg
-
-    // conversion of matrices to vectors
-    currentA_vector = convert4DMatrixTo12DVector(currentA);
-
+    currentA_vector << srv.response.layout.data[0],srv.response.layout.data[1],srv.response.layout.data[2],srv.response.layout.data[3],
+    srv.response.layout.data[4],srv.response.layout.data[5],srv.response.layout.data[6],srv.response.layout.data[7],
+    srv.response.layout.data[8],srv.response.layout.data[9],srv.response.layout.data[10],srv.response.layout.data[11],
+    srv.response.layout.data[12],srv.response.layout.data[13],srv.response.layout.data[14],srv.response.layout.data[15];
 
     //---------------- DO INCREMENTAL CALCULATION ----------------
 
     // calculate the difference
     VectorXd delta_A = (finalA_vector - currentA_vector);
-    
+
     if (abs(delta_A.maxCoeff()) <= 0.01){
         return transformVectorToArray(jointAngles);
     } else{
@@ -112,26 +88,42 @@ ros::ServiceClient client){
     MatrixXd J = calculateJacobian(jointAngles);
     MatrixXd pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
 
-
     // calculate new joint angles
     VectorXd newJointAngles = jointAngles + pinvJ * delta_A/incrementalStepSize;
 
-
     // call forward kin node and transmit the new joint angles
-        srv.request.joint_angles = transformVectorToArray(jointAngles);
+    srv.request.joint_angles = transformVectorToArray(jointAngles);
 
     return incrementalStep(joint_state_msg, srv, client);
   }
 }
 
+bool ik_jointAngles(inverse_kinematics::unserService::Request  &req,
+                    inverse_kinematics::unserService::Response &res){
+
+    sensor_msgs::JointState joint_state_msg;
+
+    // create client and subscribe to service
+    forward_kin::get_endeffector srv;
+    ros::ServiceClient client = nodeHandle.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
+
+    finalA_vector = currentA_vector * 0.80; // ONLY FOR TESTING
+
+    desiredJointAngles = incrementalStep(joint_state_msg, srv, client);
+
+    std::cout << desiredJointAngles[0] << desiredJointAngles[1];
+    res.ik_jointAngles={desiredJointAngles[0],desiredJointAngles[1],
+                        desiredJointAngles[2],desiredJointAngles[3],
+                        desiredJointAngles[4],desiredJointAngles[5],desiredJointAngles[6]};
+
+}
+
 
 
 int main(int argc, char** argv)  {
-
-
   // create inverse-kinematics node
   ros::init(argc,argv, "inverse_kinematics_node");
-  ros::NodeHandle nodeHandle("~");
+  //ros::NodeHandle nodeHandle("~");
 
 
   //-------------------- Joint Angles ---------------------------
@@ -141,34 +133,9 @@ int main(int argc, char** argv)  {
   nodeHandle.getParam("topic_name", topic_name);
   nodeHandle.getParam("queue_size", queue_size);
 
-  sensor_msgs::JointState joint_state_msg;
+    //PUBLISH
+    ros::ServiceServer service = nodeHandle.advertiseService("unserService", ik_jointAngles);
 
-
-  // Register a callback function (a function that is called every time a new message arrives)
-  //ros::Subscriber sub = nodeHandle.subscribe("/joint_states", 10, callback);
-
-
-  //-------------------- Matrix A ------------------------------
-  // create client and subscribe to service
-  forward_kin::get_endeffector srv;
-  ros::ServiceClient client = nodeHandle.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
-  
-  finalA_vector = currentA_vector * 0.90; // ONLY FOR TESTING
-
-  desiredJointAngles = incrementalStep(joint_state_msg, srv, client);
-
-  std::cout << desiredJointAngles[0] << desiredJointAngles[1];
-  //PUBLISH
-
-
-
-
-
-  // perform incremental steps
-  // desiredThetas = incrementalStep(initialThetas, initialA_vector, desiredA_vector);
-
-  // final Matrix A
-  //MatrixXd finalA = exampleMatrix_A_03(desiredThetas[0], desiredThetas[1], desiredThetas[2]);
   ros::spin();
 }
 
