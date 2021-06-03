@@ -150,7 +150,7 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
 target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
         )
-
+add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############
