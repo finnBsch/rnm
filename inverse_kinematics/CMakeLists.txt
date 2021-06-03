@@ -79,6 +79,7 @@ find_package(OpenCV REQUIRED)
    std_msgs  # Or other packages containing msgs
  )
 
+
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
