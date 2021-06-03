@@ -22,17 +22,17 @@ class IncrementalInverseKinematics {
 
 private:
     float incrementalStepSize;
-    boost::array<double, 7> desiredJointAngles;
+    boost::array<double, 7> desired_joint_angles_;
 
-    VectorXd jointAngles;
+    VectorXd joint_angles_;
 
-    VectorXd currentA_vector;
+    VectorXd current_transformationmatrix_vector_;
 
-    VectorXd finalA_vector;
+    VectorXd final_transformationmatrix_vector_;
 
     ros::NodeHandle node_handle_;
 public:
-    explicit IncrementalInverseKinematics(ros::NodeHandle node_handle): node_handle_(node_handle), jointAngles(7,1), currentA_vector(12,1), finalA_vector(12,1){
+    explicit IncrementalInverseKinematics(ros::NodeHandle node_handle): node_handle_(node_handle), joint_angles_(7, 1), current_transformationmatrix_vector_(12, 1), final_transformationmatrix_vector_(12, 1){
         incrementalStepSize = 10;
 
     }
@@ -69,7 +69,7 @@ public:
 
         // --------------- GET JOINT ANGLES -------------------
         joint_state_msg = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states", ros::Duration(10)));
-        jointAngles
+        joint_angles_
                 << joint_state_msg.position[0], joint_state_msg.position[1], joint_state_msg.position[2], joint_state_msg.position[3], joint_state_msg.position[4], joint_state_msg.position[5], joint_state_msg.position[6];
 
         // --------------- GET A MATRIX -------------------
@@ -82,7 +82,7 @@ public:
             exit; //TODO find better solution
         }
         // get the current A Matrix from the forward_kin node
-        currentA_vector
+        current_transformationmatrix_vector_
                 << srv.response.layout.data[0], srv.response.layout.data[1], srv.response.layout.data[2], srv.response.layout.data[3],
                 srv.response.layout.data[4], srv.response.layout.data[5], srv.response.layout.data[6], srv.response.layout.data[7],
                 srv.response.layout.data[8], srv.response.layout.data[9], srv.response.layout.data[10], srv.response.layout.data[11],
@@ -91,20 +91,20 @@ public:
         //---------------- DO INCREMENTAL CALCULATION ----------------
 
         // calculate the difference
-        VectorXd delta_A = (finalA_vector - currentA_vector);
+        VectorXd delta_A = (final_transformationmatrix_vector_ - current_transformationmatrix_vector_);
 
         if (abs(delta_A.maxCoeff()) <= 0.01) {
-            return transformVectorToArray(jointAngles);
+            return transformVectorToArray(joint_angles_);
         } else {
 
-            MatrixXd J = calculateJacobian(jointAngles);
+            MatrixXd J = calculateJacobian(joint_angles_);
             MatrixXd pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
 
             // calculate new joint angles
-            VectorXd newJointAngles = jointAngles + pinvJ * delta_A / incrementalStepSize;
+            VectorXd newJointAngles = joint_angles_ + pinvJ * delta_A / incrementalStepSize;
 
             // call forward kin node and transmit the new joint angles
-            srv.request.joint_angles = transformVectorToArray(jointAngles);
+            srv.request.joint_angles = transformVectorToArray(newJointAngles);
 
             return incrementalStep(joint_state_msg, srv, client);
         }
@@ -117,17 +117,17 @@ public:
 
         // create client and subscribe to service
         forward_kin::get_endeffector srv;
-        ros::ServiceClient client = nodeHandle.serviceClient<forward_kin::get_endeffector>(
+        ros::ServiceClient client = node_handle_.serviceClient<forward_kin::get_endeffector>(
                 "forward_kin_node/get_endeffector");
 
-        finalA_vector = currentA_vector * 0.80; // ONLY FOR TESTING
+        final_transformationmatrix_vector_ = current_transformationmatrix_vector_ * 0.80; // ONLY FOR TESTING
 
-        desiredJointAngles = incrementalStep(joint_state_msg, srv, client);
+        desired_joint_angles_ = incrementalStep(joint_state_msg, srv, client);
 
-        std::cout << desiredJointAngles[0] << desiredJointAngles[1];
-        res.ik_jointAngles = {desiredJointAngles[0], desiredJointAngles[1],
-                              desiredJointAngles[2], desiredJointAngles[3],
-                              desiredJointAngles[4], desiredJointAngles[5], desiredJointAngles[6]};
+        std::cout << desired_joint_angles_[0] << desired_joint_angles_[1];
+        res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
+                              desired_joint_angles_[2], desired_joint_angles_[3],
+                              desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
 
     }
 
