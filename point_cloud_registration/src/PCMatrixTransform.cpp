@@ -48,8 +48,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   std::cout << msg_counter;
   printf("\n");
 
-  std::cout << PCL_VERSION << std::endl;
-
   //only take every 20th message for stitching
   if (msg_counter%20 == 0){
 
@@ -137,7 +135,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   sensor_msgs::PointCloud2 output;
 
   pcl::toROSMsg(*stitched_cloud, output);
-
   publisher.publish (output);
   }
 }

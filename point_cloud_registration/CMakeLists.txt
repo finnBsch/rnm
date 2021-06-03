@@ -23,8 +23,6 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 
 
-
-
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -154,7 +152,9 @@ add_definitions(${PCL_DEFINITIONS})
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(VoxelGridFilter src/VoxelGridFilter.cpp)
 add_executable(PCMatrixTransform src/PCMatrixTransform.cpp)
+add_executable(STLconversion_node src/STLconversion_node.cpp)
 
+add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -170,6 +170,7 @@ target_link_libraries(VoxelGridFilter ${catkin_LIBRARIES})
 target_link_libraries(PCMatrixTransform ${catkin_LIBRARIES})
 target_link_libraries (PCMatrixTransform ${PCL_LIBRARIES})
 target_link_libraries (PCMatrixTransform ${EIGEN3_LIBRARIES})
+target_link_libraries(STLconversion_node ${catkin_LIBRARIES})
 
 #############
 ## Install ##
