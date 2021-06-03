@@ -2,7 +2,13 @@
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
 #include "forward_kin/get_endeffector.h"
+#include "../../inverse_kinematics/src/convert.h"
+#include <std_msgs/Float64MultiArray.h>
+#include "tf/transform_datatypes.h"
+#include <eigen_conversions/eigen_msg.h>
 
+using namespace std_msgs;
+using namespace tf;
 using namespace Eigen;
 
 static VectorXd a(8);
@@ -27,9 +33,12 @@ bool get_end_effector(forward_kin::get_endeffector::Request  &req,
   a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
   VectorXd in(4);
   in << 0, 0, 0, 1;
-  VectorXd out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+  MatrixXd A_total=a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7);
+  VectorXd out = A_total*in;
   res.end_effector_pos =  {out[0], out[1], out[2]};
   //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+  matrixEigenToMsg(A_total,res.layout);
+  std::cout << res.layout;
   return true;
 }
 
@@ -43,7 +52,6 @@ int main(int argc, char** argv)  {
   // e.g. /node_name/parameter_name can then be
   // read by nh.getParam("parameter_name", value);
   ros::NodeHandle  nh("~");
-
   // Parse parameters specified in the .launch file
   std::string topic_name;
   int queue_size;

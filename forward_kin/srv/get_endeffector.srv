@@ -1,3 +1,5 @@
 float64[7] joint_angles
 ---
 float64[3] end_effector_pos
+std_msgs/Float64MultiArray layout
+
