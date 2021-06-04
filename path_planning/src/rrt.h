@@ -18,7 +18,7 @@ private:
     rrt_params params;
     // TODO save obstacles
     rrt_node* findNearestNode(Point relative_to);
-
+    normal_random_variable* sampler;
     // Sorting grid
     node_grid grid;
     array<int, 3> num_cells;

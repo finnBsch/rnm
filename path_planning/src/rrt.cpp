@@ -13,7 +13,12 @@
                                                                                                         nodes to vector*/
 
 rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
-
+    int size = 3; // Dimensionality (rows)
+    Eigen::MatrixXd covar(size,size);
+    covar << 0.3, 0, 0,
+            0, 0.3, 0,
+            0, 0, 0.15;
+    sampler = new normal_random_variable {covar};
     // save params
     this->goal_point = goal_point;
     this->start_point = start_point;
@@ -47,7 +52,20 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     Point stepped_point;
     bool n_feasible = true;
     while(n_feasible) {
-        sample_point = random_point(params.x_range, params.y_range, params.z_range);
+        //sample_point = random_point(params.x_range, params.y_range, params.z_range);
+        auto sampled = sampler->operator()();
+        sampled[0] += goal_point[0];
+        sampled[1] += goal_point[1];
+        sampled[2] += goal_point[2];
+
+        while(sampled[0] < params.x_range[0] || sampled[0] > params.x_range[1] || sampled[1] < params.y_range[0] || sampled[1] > params.y_range[1]
+        || sampled[2] < params.z_range[0] || sampled[2] > params.z_range[1]){
+            sampled = sampler->operator()();
+            sampled[0] += goal_point[0];
+            sampled[1] += goal_point[1];
+            sampled[2] += goal_point[2];
+        }
+        sample_point = {(float)sampled[0], (float)sampled[1], (float)sampled[2]};
         nearest_node = findNearestNode(sample_point);
         stepped_point = step_forward(nearest_node->get_pos(), sample_point, params.step_size);
         if(stepped_point[0]>params.x_range[0] && stepped_point[0]<params.x_range[1] &&
@@ -60,7 +78,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     new_node = new rrt_node(stepped_point, nearest_node);
     array<int, 3> id = return_grid_id(stepped_point);
     grid.at(id[0]).at(id[1]).at(id[2]).push_back(new_node);
-    if(euclidean_dist(new_node->get_pos(), goal_point)<0.04){
+    if(euclidean_dist(new_node->get_pos(), goal_point)<0.05){
         goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
