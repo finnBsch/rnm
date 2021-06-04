@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
         genmsg
         rospy
         PCL REQUIRED
+        forward_kin
 )
 find_package(Eigen3 REQUIRED)
 
