@@ -38,7 +38,7 @@ bool get_end_effector(forward_kin::get_endeffector::Request  &req,
   res.end_effector_pos =  {out[0], out[1], out[2]};
   //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
   matrixEigenToMsg(A_total,res.layout);
-  std::cout << res.layout;
+    ROS_INFO("Endpos:", res.layout.data[0]);
   return true;
 }
 

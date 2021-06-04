@@ -9,6 +9,7 @@
 #include <math.h>
 #include <sensor_msgs/JointState.h>
 #include "inverse_kinematics/unserService.h"
+#include "forward_kin/get_endeffector.h"
 
 class RobotArm
 {
@@ -38,7 +39,7 @@ public:
         }
         else
         {
-            ROS_ERROR("Failed to call service forward_kin");
+            ROS_ERROR("Failed to call service inverse_kinematics");
             exit; //TODO find better solution
         }
 
