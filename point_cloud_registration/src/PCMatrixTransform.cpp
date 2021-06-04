@@ -14,6 +14,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include "forward_kin/get_endeffector.h"
 
 //Public publisher
 ros::Publisher publisher;
@@ -26,21 +27,23 @@ using namespace Eigen;
 //global cloud to store the stitched cloud
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
+VectorXd currentA_vector(12, 1);
 //values to calculate forward kinematics
 static VectorXf a(8);
 static VectorXf d(8);
 static VectorXf alpha(8);
 
-Matrix4f get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
-  Matrix4f ret_mat(4,4);
-  ret_mat << cos(theta), -sin(theta), 0, a,
-      sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
-      sin(theta) * sin(alpha), cos(theta)*sin(alpha), cos(alpha), d * cos(alpha),
-      0, 0, 0, 1;
-  return ret_mat;
-}
+//Matrix4f get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
+//  Matrix4f ret_mat(4,4);
+//  ret_mat << cos(theta), -sin(theta), 0, a,
+//      sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
+//      sin(theta) * sin(alpha), cos(theta)*sin(alpha), cos(alpha), d * cos(alpha),
+//      0, 0, 0, 1;
+//  return ret_mat;
+//}
 
-void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states)
+void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states,
+              ros::NodeHandle &nh)
 {
   //print out how many messages have been received in total
   msg_counter++;
@@ -84,12 +87,43 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
           0,          0,          0,          1;
 
 
+
+    forward_kin::get_endeffector srv;
+   // sensor_msgs::JointState joint_state_msg;
+    //joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+
+    ros::ServiceClient client = nh.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
+    boost::array<double, 7> angles = {joint_states->position[0], joint_states->position[1],joint_states->position[2],
+                                   joint_states->position[3], joint_states->position[4],joint_states->position[5],
+                                   joint_states->position[6]};
+    srv.request.joint_angles = angles;
+// --------------- GET A MATRIX -------------------
+    // check connection
+    auto cl = client.call(srv);
+    if (cl)
+    {
+      ROS_INFO("forward_kin service called");
+    }
+    else
+    {
+      ROS_ERROR("Failed to call service forward_kin");
+      exit; //TODO find better solution
+    }
+    // get the current Transformation matrix Matrix from the forward_kin node
+    Matrix4f transform;
+    transform << srv.response.layout.data[0],srv.response.layout.data[1],srv.response.layout.data[2],srv.response.layout.data[3],
+        srv.response.layout.data[4],srv.response.layout.data[5],srv.response.layout.data[6],srv.response.layout.data[7],
+        srv.response.layout.data[8],srv.response.layout.data[9],srv.response.layout.data[10],srv.response.layout.data[11],
+        srv.response.layout.data[12],srv.response.layout.data[13],srv.response.layout.data[14],srv.response.layout.data[15];
+   transform = transform*handeye;
+
   //calculate the transformation matrix from robot base to camera
-  std::array<Matrix4f, 8> a_;
-  for(int i  = 0; i<8; i++){
-    a_.at(i) = get_transformationmatrix(joint_states->position[i], a(i), d(i), alpha(i));
-  }
-  Matrix4f transform = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*handeye;
+ // std::array<Matrix4f, 8> a_;
+  //for(int i  = 0; i<8; i++){
+   // a_.at(i) = get_transformationmatrix(joint_states->position[i], a(i), d(i), alpha(i));
+  //}
+  // Matrix4f transform = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*handeye;
+
 
   //Transformation of the filtered cloud
   pcl::transformPointCloud (*cloud_filtered, *cloud_transformed, transform);
@@ -149,7 +183,6 @@ main (int argc, char** argv)
 
   ros::init (argc, argv, "PCMatrixTransform");
   ros::NodeHandle nh;
-
   //Let the publisher publish on topic transformed_clouds
   publisher = nh.advertise<sensor_msgs::PointCloud2> ("transformed_clouds", 1);
 
@@ -162,7 +195,7 @@ main (int argc, char** argv)
   //again a large queue size to make sure no messages get lost
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::JointState> MySyncPolicy;
   message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(150), filtered_cloud, joint_states);
-  sync.registerCallback(boost::bind(&cloud_cb, _1, _2));
+  sync.registerCallback(boost::bind(&cloud_cb, _1, _2, boost::ref(nh)));
 
   ros::spin ();
 }
