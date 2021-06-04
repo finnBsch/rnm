@@ -14,6 +14,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include "inverse_kinematics/unserService.h"
 
+
 using namespace tf;
 using namespace Eigen;
 
@@ -21,7 +22,7 @@ using namespace Eigen;
 class IncrementalInverseKinematics {
 
 private:
-    float incrementalStepSize;
+    double incrementalStepSize;
     bool initializing = true;
     boost::array<double, 7> desired_joint_angles_;
     VectorXd joint_angles_;
@@ -33,7 +34,7 @@ private:
 public:
     std::string text = "vorher";
     explicit IncrementalInverseKinematics(ros::ServiceClient* client): client_(client),joint_angles_(7, 1), current_transformationmatrix_vector_(12, 1), final_transformationmatrix_vector_(12, 1){
-        incrementalStepSize = 10;
+        incrementalStepSize = 10.0;
     }
 
 /*
@@ -76,42 +77,43 @@ public:
         // check connection
         forward_kin::get_endeffector srv;
         srv.request.joint_angles = transformVectorToArray(joint_angles_);
+
         auto a = client_->call(srv);
         if (a) {
-            ROS_INFO("A-Matrix: %f", srv.response.layout.data[0]);
+            //ROS_INFO("A-Matrix: %f", srv.response.layout.data[0]);
+            //ROS_INFO("THETA1: %f",joint_angles_(0));
         } else {
+          //  ROS_INFO("THETA1: %f",joint_angles_(0));
             ROS_ERROR("Failed to call service forward_kin");
             exit; //TODO find better solution
         }
         // get the current A Matrix from the forward_kin node
         current_transformationmatrix_vector_
-                << srv.response.layout.data[0], srv.response.layout.data[1], srv.response.layout.data[2], srv.response.layout.data[3],
-                srv.response.layout.data[4], srv.response.layout.data[5], srv.response.layout.data[6], srv.response.layout.data[7],
-                srv.response.layout.data[8], srv.response.layout.data[9], srv.response.layout.data[10], srv.response.layout.data[11];
+                << srv.response.layout.data[0], srv.response.layout.data[4], srv.response.layout.data[8],
+                srv.response.layout.data[1],srv.response.layout.data[5], srv.response.layout.data[9],
+                srv.response.layout.data[2], srv.response.layout.data[6],srv.response.layout.data[10],
+                srv.response.layout.data[3], srv.response.layout.data[7], srv.response.layout.data[11];
+
         //---------------- DO INCREMENTAL CALCULATION ----------------
         if(initializing) {
-            final_transformationmatrix_vector_  << 1 << 0 << 0 << 0
-                                                  << 0 << 1 << 0 <<0
-                                                  << 0 << 0 << 1<<  0; // ONLY FOR TESTING
+            final_transformationmatrix_vector_  << 0.20077,-0.894,-0.40058,0.40058,0.44807,-0.79923,0.894,0,0.44807,0.21926,0,0.62827 ; // ONLY FOR TESTING
             initializing = false;
         }
 
         // calculate the difference
         VectorXd delta_A = (final_transformationmatrix_vector_ - current_transformationmatrix_vector_);
-
+        ROS_INFO("DBLABAL %f",joint_angles_(2));
         if (abs(delta_A.maxCoeff()) <= 0.01) {
-            std::cout << "ich war in der if schleife";
+            ROS_INFO("YYYYYYYYYYYYYYYYYYYYYYYYYYYY: %f",delta_A(0));
             initializing = true;
             return transformVectorToArray(joint_angles_);
         } else {
 
             MatrixXd J = calculateJacobian(joint_angles_);
             MatrixXd pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
-
+            //MatrixXd pinvJ = pinv_eigen_based(J);
             // calculate new joint angles
             joint_angles_ = joint_angles_ + pinvJ * delta_A / incrementalStepSize;
-
-            // call forward kin node and transmit the new joint angles
 
             return incrementalStep();
         }
@@ -131,8 +133,34 @@ public:
         res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
-        std::cout << "2222222";
         return true;
+    }
+
+    Eigen::MatrixXd pinv_eigen_based(Eigen::MatrixXd & origin, const float er = 0) {
+        // perform svd decomposition
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd_holder(origin,
+                                                     Eigen::ComputeThinU |
+                                                     Eigen::ComputeThinV);
+        // Build SVD decomposition results
+        Eigen::MatrixXd U = svd_holder.matrixU();
+        Eigen::MatrixXd V = svd_holder.matrixV();
+        Eigen::MatrixXd D = svd_holder.singularValues();
+
+        // Build the S matrix
+        Eigen::MatrixXd S(V.cols(), U.cols());
+        S.setZero();
+
+        for (unsigned int i = 0; i < D.size(); ++i) {
+
+            if (D(i, 0) > er) {
+                S(i, i) = 1 / D(i, 0);
+            } else {
+                S(i, i) = 0;
+            }
+        }
+
+        // pinv_matrix = V * S * U^T
+        return V * S * U.transpose();
     }
 
 };
@@ -141,7 +169,6 @@ int main(int argc, char** argv)  {
     // create inverse-kinematics node
     ros::init(argc,argv, "inverse_kinematics_node");
     ros::NodeHandle node_handle("~");
-    std::cout << "moin moin";
 
     //-------------------- Joint Angles ---------------------------
     // Parse parameters specified in the .launch file
