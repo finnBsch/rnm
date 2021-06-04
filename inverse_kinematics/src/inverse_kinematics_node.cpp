@@ -22,21 +22,18 @@ class IncrementalInverseKinematics {
 
 private:
     float incrementalStepSize;
+    bool initializing = true;
     boost::array<double, 7> desired_joint_angles_;
     VectorXd joint_angles_;
     VectorXd current_transformationmatrix_vector_;
     VectorXd final_transformationmatrix_vector_;
-    ros::NodeHandle node_handle_;
-    ros::ServiceClient client;
+    ros::ServiceClient* client_;
     sensor_msgs::JointState joint_state_msg;
-    forward_kin::get_endeffector srv;
 
 public:
     std::string text = "vorher";
-    explicit IncrementalInverseKinematics(ros::NodeHandle node_handle): node_handle_(node_handle), joint_angles_(7, 1), current_transformationmatrix_vector_(12, 1), final_transformationmatrix_vector_(12, 1){
+    explicit IncrementalInverseKinematics(ros::ServiceClient* client): client_(client),joint_angles_(7, 1), current_transformationmatrix_vector_(12, 1), final_transformationmatrix_vector_(12, 1){
         incrementalStepSize = 10;
-        client = node_handle_.serviceClient<forward_kin::get_endeffector>(
-                "forward_kin_node/get_endeffector");
     }
 
 /*
@@ -59,10 +56,10 @@ public:
         service = node_handle_.advertiseService("unserService",ik_jointAngles);
     }
 */
-    boost::array<double, 7> transformVectorToArray(VectorXd vector) {
-        return {vector[0], vector[1], vector[2],
-                vector[3], vector[4], vector[5],
-                vector[6]};
+    boost::array<double, 7> transformVectorToArray(VectorXd &vector) {
+        return (boost::array<double, 7>){vector[0], vector[1], vector[2],
+                                         vector[3], vector[4], vector[5],
+                                         vector[6]};
     }
 
 /*
@@ -77,7 +74,9 @@ public:
         //joint_state_msg = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states", ros::Duration(10)));
         // --------------- GET A MATRIX -------------------
         // check connection
-        auto a = client.call(srv);
+        forward_kin::get_endeffector srv;
+        srv.request.joint_angles = transformVectorToArray(joint_angles_);
+        auto a = client_->call(srv);
         if (a) {
             ROS_INFO("A-Matrix: %f", srv.response.layout.data[0]);
         } else {
@@ -88,16 +87,21 @@ public:
         current_transformationmatrix_vector_
                 << srv.response.layout.data[0], srv.response.layout.data[1], srv.response.layout.data[2], srv.response.layout.data[3],
                 srv.response.layout.data[4], srv.response.layout.data[5], srv.response.layout.data[6], srv.response.layout.data[7],
-                srv.response.layout.data[8], srv.response.layout.data[9], srv.response.layout.data[10], srv.response.layout.data[11],
-                srv.response.layout.data[12], srv.response.layout.data[13], srv.response.layout.data[14], srv.response.layout.data[15];
-
+                srv.response.layout.data[8], srv.response.layout.data[9], srv.response.layout.data[10], srv.response.layout.data[11];
         //---------------- DO INCREMENTAL CALCULATION ----------------
+        if(initializing) {
+            final_transformationmatrix_vector_  << 1 << 0 << 0 << 0
+                                                  << 0 << 1 << 0 <<0
+                                                  << 0 << 0 << 1<<  0; // ONLY FOR TESTING
+            initializing = false;
+        }
 
         // calculate the difference
         VectorXd delta_A = (final_transformationmatrix_vector_ - current_transformationmatrix_vector_);
 
         if (abs(delta_A.maxCoeff()) <= 0.01) {
             std::cout << "ich war in der if schleife";
+            initializing = true;
             return transformVectorToArray(joint_angles_);
         } else {
 
@@ -108,7 +112,6 @@ public:
             joint_angles_ = joint_angles_ + pinvJ * delta_A / incrementalStepSize;
 
             // call forward kin node and transmit the new joint angles
-            srv.request.joint_angles = transformVectorToArray(joint_angles_);
 
             return incrementalStep();
         }
@@ -121,9 +124,7 @@ public:
         for(int i=0;i<7;i++) {
             joint_angles_(i) = req.initial_joint_angles[i];
         }
-    //TODO goal pos in service
-        final_transformationmatrix_vector_ = current_transformationmatrix_vector_ * 0.40; // ONLY FOR TESTING
-
+        //TODO goal pos in service
         desired_joint_angles_ = incrementalStep();
 
         std::cout << desired_joint_angles_[0] << desired_joint_angles_[1];
@@ -131,27 +132,30 @@ public:
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
         std::cout << "2222222";
+        return true;
     }
 
 };
 
 int main(int argc, char** argv)  {
-  // create inverse-kinematics node
-  ros::init(argc,argv, "inverse_kinematics_node");
-  ros::NodeHandle node_handle("~");
+    // create inverse-kinematics node
+    ros::init(argc,argv, "inverse_kinematics_node");
+    ros::NodeHandle node_handle("~");
     std::cout << "moin moin";
 
-  //-------------------- Joint Angles ---------------------------
-  // Parse parameters specified in the .launch file
-  std::string topic_name;
-  int queue_size;
-  node_handle.getParam("topic_name", topic_name);
-  node_handle.getParam("queue_size", queue_size);
-    IncrementalInverseKinematics inverse_kinematics(node_handle);
+    //-------------------- Joint Angles ---------------------------
+    // Parse parameters specified in the .launch file
+    std::string topic_name;
+    int queue_size;
+    node_handle.getParam("topic_name", topic_name);
+    node_handle.getParam("queue_size", queue_size);
+    auto client = node_handle.serviceClient<forward_kin::get_endeffector>(
+            "/forward_kin_node/get_endeffector");
+    IncrementalInverseKinematics inverse_kinematics(&client);
     ros::ServiceServer service = node_handle.advertiseService("unserService",&IncrementalInverseKinematics::ik_jointAngles,&inverse_kinematics);
-   // inverse_kinematics.startIncrementalInverseKinvematics();
+    // inverse_kinematics.startIncrementalInverseKinvematics();
     std::cout << inverse_kinematics.text;
 
-  ros::spin();
+    ros::spin();
 }
 
