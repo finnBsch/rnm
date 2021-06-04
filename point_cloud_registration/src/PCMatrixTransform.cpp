@@ -7,6 +7,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <eigen3/Eigen/Dense>
@@ -28,19 +29,7 @@ using namespace Eigen;
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
 VectorXd currentA_vector(12, 1);
-//values to calculate forward kinematics
-static VectorXf a(8);
-static VectorXf d(8);
-static VectorXf alpha(8);
 
-//Matrix4f get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
-//  Matrix4f ret_mat(4,4);
-//  ret_mat << cos(theta), -sin(theta), 0, a,
-//      sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
-//      sin(theta) * sin(alpha), cos(theta)*sin(alpha), cos(alpha), d * cos(alpha),
-//      0, 0, 0, 1;
-//  return ret_mat;
-//}
 
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states,
               ros::NodeHandle &nh)
@@ -59,25 +48,40 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   //Initialize container for PC message, for the filtered cloud and pointer to PC message
   pcl::PCLPointCloud2* cloud = new pcl::PCLPointCloud2;
   pcl::PCLPointCloud2ConstPtr cloudPtr(cloud);
-  pcl::PCLPointCloud2 pc2_cloud_filtered;
+  pcl::PCLPointCloud2 pc2_cloud_subsample;
 
   // Convert to PCL data type
   pcl_conversions::toPCL(*cloud_msg, *cloud);
 
   // Perform the actual filtering
-  pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
-  sor.setInputCloud (cloudPtr);
-  sor.setLeafSize (0.01, 0.01, 0.01);
-  sor.filter (pc2_cloud_filtered);
+  pcl::VoxelGrid<pcl::PCLPointCloud2> vg;
+  vg.setInputCloud (cloudPtr);
+  vg.setLeafSize (0.01, 0.01, 0.01);
+  vg.filter (pc2_cloud_subsample);
 
-
-  //TRANSFORMATION---------------------------------------------------------------------------------------------------------
+  //REMOVING OUTLINERS---------------------------------------------------------------------------------------
   //Initialize container for input and output cloud
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_subsample (new pcl::PointCloud<pcl::PointXYZRGB> ());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
   //write filtered cloud in input cloud
-  pcl::fromPCLPointCloud2(pc2_cloud_filtered, *cloud_filtered);
+  pcl::fromPCLPointCloud2(pc2_cloud_subsample, *cloud_subsample);
+
+  std::cerr << "Cloud before filtering: " << std::endl;
+  std::cerr << *cloud_subsample << std::endl;
+
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
+  sor.setInputCloud(cloud_subsample);
+  sor.setMeanK(50);
+  sor.setStddevMulThresh(1);
+  sor.filter(*cloud_filtered);
+
+  std::cerr << "Cloud after filtering: " << std::endl;
+  std::cerr << *cloud_filtered << std::endl;
+
+  //TRANSFORMATION---------------------------------------------------------------------------------------------------------
+  //Initialize container for output cloud
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
   //hand-eye calibration matrix
   Matrix4f handeye;
@@ -117,14 +121,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
         srv.response.layout.data[12],srv.response.layout.data[13],srv.response.layout.data[14],srv.response.layout.data[15];
    transform = transform*handeye;
 
-  //calculate the transformation matrix from robot base to camera
- // std::array<Matrix4f, 8> a_;
-  //for(int i  = 0; i<8; i++){
-   // a_.at(i) = get_transformationmatrix(joint_states->position[i], a(i), d(i), alpha(i));
-  //}
-  // Matrix4f transform = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*handeye;
-
-
   //Transformation of the filtered cloud
   pcl::transformPointCloud (*cloud_filtered, *cloud_transformed, transform);
 
@@ -138,7 +134,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   crop.setMax(Vector4f(0.7, 0.5, 0.3, 1.0));
   crop.setInputCloud(cloud_transformed);
   crop.filter(*cloud_cropped);
-
 
   //ICP--------------------------------------------------------------------------------------------------------------------------------
   //using ICP for fine alignment
@@ -156,13 +151,14 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
     icp.setInputTarget(stitched_cloud);
 
     //ICP parameters (examples), we still need to adjust them
-    icp.setEuclideanFitnessEpsilon(0.000000000001);
-    icp.setTransformationEpsilon(0.0000001);
-    icp.setMaximumIterations(100);
+    icp.setEuclideanFitnessEpsilon(1);
+    icp.setTransformationEpsilon(1e-9);
+    icp.setMaximumIterations(10);
 
     //align new cloud to stiched cloud and add to the total stiched cloud.
     icp.align(*goal_cloud);
     *stitched_cloud += *goal_cloud;
+    std::cout << "has converged:" << icp.hasConverged() << " score: " << icp.getFitnessScore() << std::endl;
   }
 
   //Define a PC for output and publish it
@@ -176,11 +172,6 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
 int
 main (int argc, char** argv)
 {
-  //Denavit Hartenberg values
-  a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
-  d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
-  alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
-
   ros::init (argc, argv, "PCMatrixTransform");
   ros::NodeHandle nh;
   //Let the publisher publish on topic transformed_clouds
