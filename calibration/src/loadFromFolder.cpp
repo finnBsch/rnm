@@ -1,7 +1,24 @@
+//
+// Created by lars on 02.06.21.
+//
+#include "ros/ros.h"
+#include "sensor_msgs/Image.h"
+#include <image_transport/image_transport.h>
+#include <opencv2/imgcodecs.hpp>
+#include <vector>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/highgui.hpp>
+#include <opencv2/calib3d.hpp>
+#include "calibration/imagepair.h"
+#include "iostream"
+#include <tuple>
+#include <stdlib.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 
-imageprocessor::loadFromFolder() {
-
+void LoadFromFolder(){
   cv::Size rgbFrameSize(2048, 1536);
   cv::Size irFrameSize(640, 576);
   std::vector<cv::String> rgbFileNames;
@@ -41,6 +58,10 @@ imageprocessor::loadFromFolder() {
   }
 
 
+
+
+
+
   // Detect corners of the checkerboard in the RGB Frames
   cv::Mat rgbimg;
   std::size_t i = 0;
@@ -70,6 +91,10 @@ imageprocessor::loadFromFolder() {
     i++;
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
+
+
+
+
 
 
 
@@ -104,7 +129,6 @@ imageprocessor::loadFromFolder() {
     }
     m++;
   }
-
   cout << "All IR Corners detected and safed in ircorners\n";
 
 
@@ -182,8 +206,15 @@ imageprocessor::loadFromFolder() {
 cout << "all Corners found for the stereocalibration"
 }
 
+
+
+
+
+
+
+
 int main(int argc, char** argv)  {
-  ros::init(argc, argv, "loadFromFolder_node");
+  ros::init(argc, argv, "loadFromFolder_no");
 
   // Get a node handle to the private parameters
   // e.g. /node_name/parameter_name can then be
