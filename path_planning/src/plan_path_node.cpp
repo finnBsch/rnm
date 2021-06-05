@@ -48,8 +48,9 @@ int main(int argc, char **argv)
         return 1;
     }
     //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point start = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
-    Point goal = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2};
+    Point start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
+                   static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
+    Point goal = {M_PI, M_PI/2, M_PI/2, M_PI, M_PI/2, M_PI};
     array<array<float, 2>, 6> joint_ranges;
     array<float, 2> range = {0, 2*M_PI};
     joint_ranges[0] = range;
@@ -65,7 +66,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {0.7*M_PI/180, joint_ranges, 36*M_PI/180};
+    rrt_params params_ = {0.1*M_PI/180, joint_ranges, 36*M_PI/180};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -123,6 +124,34 @@ int main(int argc, char **argv)
 
     ROS_INFO_STREAM("Found Path in : " << duration.count());
     auto goal_path = tree->return_goal_path();
+    line_list[1].header.frame_id = "/world"; // TODO Find correct frame
+    line_list[1].header.stamp = ros::Time::now();
+    line_list[1].ns = "plan_path_node";
+    line_list[1].action = visualization_msgs::Marker::ADD;
+    line_list[1].pose.orientation.w = 1.0;
+
+    line_list[1].id = 1;
+
+    line_list[1].type = visualization_msgs::Marker::LINE_STRIP;
+
+
+    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
+    line_list[1].scale.x = 0.009;
+
+    // Line list is red
+    line_list[1].color.b = 1.0;
+    line_list[1].color.a = 1.0;
+    geometry_msgs::Point p;
+    for(auto point:goal_path){
+        boost::array<float, 7> angles;
+        std::copy(point.begin(), point.begin()+6, angles.begin() );
+        srv.request.joint_angles = angles;
+        auto a = client.call(srv);
+        p.x = srv.response.end_effector_pos[0];
+        p.y = srv.response.end_effector_pos[1];
+        p.z = srv.response.end_effector_pos[2];
+        line_list[1].points.push_back(p);
+    }
     /*marker_pub.publish(line_list[0]);
 
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
@@ -152,7 +181,7 @@ int main(int argc, char **argv)
     ros::Rate r(1);
     while(ros::ok()){
         marker_pub.publish(line_list[1]);
-        marker_pub.publish(line_list[0]);
+        //marker_pub.publish(line_list[0]);
         r.sleep();
     }
 }
