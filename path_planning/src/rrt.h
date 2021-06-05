@@ -6,7 +6,7 @@
 #define SRC_RRT_H
 #include "rrt_node.h"
 #include <tuple>
-typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
+typedef  vector<vector<vector<vector<vector<vector<vector<rrt_node*>>>>>>> node_grid;
 
 class rrt {
 private:
@@ -21,12 +21,13 @@ private:
     normal_random_variable* sampler;
     // Sorting grid
     node_grid grid;
-    array<int, 3> num_cells;
-    array<int, 3> return_grid_id(Point point);
+    array<int, 6> num_cells;
+    array<int, 6> return_grid_id(Point point);
 public:
+    long num_nodes = 0;
     rrt(Point start_point, Point goal_point,rrt_params params);
-    tuple<bool, array<array<float, 3>, 2>> expand();
-    vector<array<float, 3>> return_goal_path();
+    tuple<bool, array<Point, 2>> expand();
+    vector<Point> return_goal_path();
 
 };
 

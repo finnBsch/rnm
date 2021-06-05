@@ -13,13 +13,10 @@
 #include <boost/random/normal_distribution.hpp>
 #include <random>
 using namespace std;
-typedef array<float, 3> Point;
+typedef array<float, 6> Point;
 struct rrt_params{
     float step_size;
-    array<float, 2> x_range;
-    array<float, 2> y_range;
-    array<float, 2> z_range;
-    // TODO: find way to choose workspace
+    array<array<float, 2>, 6> joint_ranges;
     float grid_size;
 };
 struct normal_random_variable
@@ -49,7 +46,7 @@ struct normal_random_variable
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
 float euclidean_norm(Point A);
-Point random_point(array<float, 2> range_x, array<float, 2> range_y, array<float, 2> range_z);
+Point random_point(array<array<float, 2>, 6> joint_ranges);
 Point step_forward(Point start, Point goal, float dist);
 
 

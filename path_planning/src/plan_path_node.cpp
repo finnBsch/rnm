@@ -47,13 +47,25 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to call service forward_kin");
         return 1;
     }
-    Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point goal = {0.2, 0.5, 0.3};
-    array<float, 2> range_x = {-1, 1};
-    array<float, 2> range_y = {-1, 1};
-    array<float, 2> range_z = {0, 1.2};
+    //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
+    Point start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    Point goal = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2};
+    array<array<float, 2>, 6> joint_ranges;
+    array<float, 2> range = {0, 2*M_PI};
+    joint_ranges[0] = range;
+    //range = {0, 2*M_PI};
+    joint_ranges[1] = range;
+    //range = {-1, 1};
+    joint_ranges[2] = range;
+    //range = {-1, 1};
+    joint_ranges[3] = range;
+    //range = {-1, 1};
+    joint_ranges[4] = range;
+    //range = {-1, 1};
+    joint_ranges[5] = range;
 
-    rrt_params params_ = {0.01, range_x, range_y, range_z, 0.09};
+
+    rrt_params params_ = {2*M_PI/180, joint_ranges, 360*M_PI/180};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -88,7 +100,7 @@ int main(int argc, char **argv)
         auto return_expand = tree->expand();
         not_found = !(get<0>(return_expand));
 
-        geometry_msgs::Point p;
+        /*geometry_msgs::Point p;
         auto new_line = get<1>(return_expand);
         p.x = new_line.at(0).at(0);
         p.y = new_line.at(0).at(1);
@@ -99,18 +111,20 @@ int main(int argc, char **argv)
         p.z = new_line.at(1).at(2);
         line_list[0].points.push_back(p);
         //ros::spinOnce();
-       // r.sleep();
+        // r.sleep();*/
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
-            ROS_INFO("Number of nodes: %i", line_list[0].points.size()/2);
-            marker_pub.publish(line_list[0]);
+            ROS_INFO("Number of nodes: %i", tree->num_nodes);
             start_time = finish;
         }
+
     }
     std::chrono::duration<double> duration = (finish - start_time_total);
+
     ROS_INFO_STREAM("Found Path in : " << duration.count());
-    marker_pub.publish(line_list[0]);
     auto goal_path = tree->return_goal_path();
+    /*marker_pub.publish(line_list[0]);
+
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
     line_list[1].header.stamp = ros::Time::now();
     line_list[1].ns = "plan_path_node";
@@ -134,7 +148,7 @@ int main(int argc, char **argv)
         p.y = point[1];
         p.z = point[2];
         line_list[1].points.push_back(p);
-    }
+    }*/
     ros::Rate r(1);
     while(ros::ok()){
         marker_pub.publish(line_list[1]);
