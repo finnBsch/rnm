@@ -19,7 +19,8 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
             0, 0.3, 0, 0, 0, 0,
             0, 0, 0.3, 0, 0, 0,
             0, 0, 0, 0.3, 0, 0,
-            0, 0, 0, 0, 0.3, 0;
+            0, 0, 0, 0, 0.3, 0,
+            0, 0, 0, 0, 0, 0.3;
     // save params
     this->goal_point = goal_point;
     this->start_point = start_point;
