@@ -3,6 +3,7 @@
 //
 
 #include "jacobian.h"
+#include "math.h"
 
 MatrixXd calculateJacobian(const VectorXd theta){
 
@@ -410,7 +411,11 @@ cos(theta[0])*sin(theta[2])*sin(theta[3]) + cos(theta[1])*cos(theta[2])*sin(thet
 0,
 0;
 
-
+for(int i=0;i<12;i++){
+    for(int j=0;j<7;j++){
+        jacobian(i,j)= roundf(jacobian(i,j)*10000)/10000;
+    }
+}
 
 return jacobian;
 }

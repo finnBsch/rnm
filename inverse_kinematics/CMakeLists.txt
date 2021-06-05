@@ -7,6 +7,7 @@ project(inverse_kinematics)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 find_package(catkin REQUIRED COMPONENTS
         roscpp
         sensor_msgs
@@ -15,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
         message_generation
         )
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 
 ## System dependencies are found with CMake's conventions
@@ -125,6 +127,7 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIRS}
+        ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -154,9 +157,11 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+set(OpenCV_LIBS opencv_core)
 target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
         ${EIGEN3_LIBRARIES}
+        ${OpenCV_LIBS}
  )
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
