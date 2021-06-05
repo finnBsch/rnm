@@ -29,6 +29,8 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
     this->params = params;
     // init start node
     start_node = new rrt_node(this->start_point);
+    kdtree.addPoints(flann::Matrix<float>(start_node->get_pos_flann()->data(), 1, 6));
+    all_nodes.push_back(start_node);
     auto id = return_grid_id(start_point);
     // initialize grid
     vector<rrt_node*> dummy;
@@ -112,6 +114,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     }
     // TODO: Collision check, feasibility check
     new_node = new rrt_node(stepped_point, nearest_node);
+    kdtree.addPoints(flann::Matrix<float>(new_node->get_pos_flann()->data(), 1, 6));
+    nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), &new_node));
     array<int, 6> id = return_grid_id(stepped_point);
     grid.at(id[0]).at(id[1]).at(id[2]).at(id[3]).at(id[4]).at(id[5]).push_back(new_node);
     num_nodes++;
@@ -135,92 +139,21 @@ array<int, 6> rrt::return_grid_id(Point point) {
 rrt_node *rrt::findNearestNode(Point relative_to) {
     bool no_node_found = true;
     vector<rrt_node*> near_nodes;
-    rrt_node* nearest_node;
-    array<int, 6> base_id = return_grid_id(relative_to);
-    // precalculate loop limits to decrease array accesses
-    int id_a = base_id[0];
-    int id_b = base_id[1];
-    int id_c = base_id[2];
-    int id_d = base_id[3];
-    int id_e = base_id[4];
-    int id_f = base_id[5];
-    int num_a = num_cells[0];
-    int num_b = num_cells[1];
-    int num_c = num_cells[2];
-    int num_d = num_cells[3];
-    int num_e = num_cells[4];
-    int num_f = num_cells[5];
-    int radius = 0;
-    float min_dist = -1;
-    while(no_node_found){
-        int cap_a = min(id_a+radius,num_a-1);
-        int cap_b = min(id_b+radius,num_b-1);
-        int cap_c = min(id_c+radius,num_c-1);
-        int cap_d = min(id_d+radius,num_d-1);
-        int cap_e = min(id_e+radius,num_e-1);
-        int cap_f = min(id_f+radius,num_f-1);
-        for(int a = id_a-radius; a<=cap_a; a++){
-            for(int b = id_b-radius; b<=cap_b; b++){
-                for(int c = id_c-radius; c<=cap_c; c++){
-                    for(int d = id_d-radius; d<=cap_d; d++){
-                        for(int e = id_e-radius; e<=cap_e; e++){
-                            for(int f = id_f-radius; f<=cap_f; f++){
-                                if(abs(id_f-f)==radius || abs(id_e-e)==radius || abs(id_d-d)==radius || abs(id_c-c)==radius || abs(id_b-b)==radius || abs(id_a-a)==radius){
-                                    if(a>= 0 && a<num_a && b>= 0 && b<num_b && c>= 0 && c<num_c &&
-                                       d>= 0 && d<num_d && e>= 0 && e<num_e && f>= 0 && f<num_f) {
-                                        if (!grid.at(a).at(b).at(c).at(d).at(e).at(f).empty()) {
-                                            no_node_found = false;
-                                            for (rrt_node *c_node:grid.at(a).at(b).at(c).at(d).at(e).at(f)) {
-                                                float current_dist = euclidean_dist_sqrd(c_node->get_pos(), relative_to);
-                                                if (current_dist < min_dist || min_dist == -1) {
-                                                    min_dist = current_dist;
-                                                    nearest_node = c_node;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        radius++;
-    }
-    int cap_a = min(id_a+radius,num_a-1);
-    int cap_b = min(id_b+radius,num_b-1);
-    int cap_c = min(id_c+radius,num_c-1);
-    int cap_d = min(id_d+radius,num_d-1);
-    int cap_e = min(id_e+radius,num_e-1);
-    int cap_f = min(id_f+radius,num_f-1);
-    for(int a = id_a-radius; a<=cap_a; a++){
-        for(int b = id_b-radius; b<=cap_b; b++){
-            for(int c = id_c-radius; c<=cap_c; c++) {
-                for (int d = id_d - radius; d <= cap_d; d++) {
-                    for (int e = id_e - radius; e <= cap_e; e++) {
-                        for (int f = id_f - radius; f <= cap_f; f++) {
-                            if (abs(id_f - f) == radius || abs(id_e - e) == radius || abs(id_d - d) == radius ||
-                                abs(id_c - c) == radius || abs(id_b - b) == radius || abs(id_a - a) == radius) {
-                                if (a >= 0 && a < num_a && b >= 0 && b < num_b && c >= 0 && c < num_c &&
-                                    d >= 0 && d < num_d && e >= 0 && e < num_e && f >= 0 && f < num_f) {
-                                    if (!grid.at(a).at(b).at(c).at(d).at(e).at(f).empty()) {
-                                        for (rrt_node *c_node:grid.at(a).at(b).at(c).at(d).at(e).at(f)) {
-                                            float current_dist = euclidean_dist_sqrd(c_node->get_pos(), relative_to);
-                                            if (current_dist < min_dist || min_dist == -1) {
-                                                min_dist = current_dist;
-                                                nearest_node = c_node;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    rrt_node* nearest_node = nullptr;
+    flann::Matrix<float> query;
+    std::vector<float> data(6);
+    point_to_flann(relative_to, data.data());
+    query = flann::Matrix<float>(data.data(), 1,
+                                      sizeof(relative_to) / sizeof(0.0));
+    std::vector<int> i(query.rows);
+    flann::Matrix<int> indices(i.data(), query.rows, 1);
+    std::vector<double> d(query.rows);
+    flann::Matrix<double> dists(d.data(), query.rows, 1);
+
+    int n = kdtree.knnSearch(query, indices, dists, 1, flann::SearchParams());
+
+    Point point;
+    point = flann_to_point(kdtree.getPoint(indices[0][0]));
     return nearest_node;
 }
 
