@@ -10,7 +10,6 @@ class rrt_node {
 private:
     Point position;
     vector<float>  pos;
-    Vector6f pos2;
     rrt_node* parent_node = nullptr;
     list<rrt_node*> children;
 public:
@@ -21,9 +20,6 @@ public:
     };
     vector<float>* get_pos_flann(){
         return &pos;
-    };
-    Vector6f get_pos_vec(){
-        return pos2;
     };
     rrt_node* get_parent(){
         return parent_node;

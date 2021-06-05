@@ -16,9 +16,8 @@ class rrt {
 private:
 
     // Flann
-    flann::Index<flann::L2_Simple<float>> kdtree = flann::Index<flann::L2_Simple<float>>(
-            flann::KDTreeSingleIndexParams());
-
+    flann::Index<flann::L2_Simple<float>> kdtree;
+    vector<rrt_node*> all_nodes;
     std::unordered_map<Point, rrt_node*, std::function<size_t(Point)>> nodemap;
     Point goal_point;
     Point start_point;
@@ -27,7 +26,7 @@ private:
     // RRT Params
     rrt_params params;
     // TODO save obstacles
-    rrt_node* findNearestNode(Point relative_to);
+    rrt_node* findNearestNode(Point& relative_to);
     normal_random_variable* sampler;
     // Sorting grid
     node_grid grid;

@@ -3,6 +3,17 @@
 //
 
 #include "utility.h"
+void point_to_flann(Point p, float* data){
+data[0] = p[0];
+data[1] = p[1];
+data[2] = p[2];
+data[3] = p[3];
+data[4] = p[4];
+data[5] = p[5];
+}
+Point flann_to_point(float* data){
+return (Point){data[0],data[1],data[2],data[3],data[4],data[5]};
+}
 float euclidean_dist(Point A, Point B){
     float distances;
     float total_distance = 0;

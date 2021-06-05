@@ -12,8 +12,10 @@
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
 
-rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
+rrt::rrt(Point start_point, Point goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
     int size = 6;
+    kdtree = flann::Index<flann::L2_Simple<float>>(
+            flann::KDTreeIndexParams());
     Eigen::MatrixXd covar(size,size);
     float cov = 0.1;
     covar << cov, 0, 0, 0, 0, 0,
@@ -34,7 +36,9 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
     point_to_flann(start_node->get_pos(), data.data());
     kdtree.buildIndex(
             flann::Matrix<float>(data.data(), 1, 6));
-    nodemap.insert(pair<Vector6f, rrt_node*>(start_node->get_pos_vec(), reinterpret_cast<rrt_node *const>(&start_node)));
+    all_nodes.push_back(start_node);
+    //kdtree.addPoints(flann::Matrix<float>(start_node->get_pos_flann()->data(), 1, 6));
+    //nodemap.insert(pair<Point, rrt_node*>(start_node->get_pos(), start_node));
 
 }
 tuple<bool, array<Point, 2>> rrt::expand() {
@@ -85,7 +89,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     // TODO: Collision check, feasibility check
     new_node = new rrt_node(stepped_point, nearest_node);
     kdtree.addPoints(flann::Matrix<float>(new_node->get_pos_flann()->data(), 1, 6));
-    nodemap.insert(std::pair<Vector6f, rrt_node*>(new_node->get_pos_vec(), new_node));
+    //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
+    all_nodes.push_back(new_node);
     num_nodes++;
     if(euclidean_dist(new_node->get_pos(), goal_point)<0.05){
         goal_node = new_node;
@@ -104,25 +109,22 @@ array<int, 6> rrt::return_grid_id(Point point) {
     return id;
 }
 
-rrt_node *rrt::findNearestNode(Point relative_to) {
-    bool no_node_found = true;
-    vector<rrt_node*> near_nodes;
-    rrt_node* nearest_node = nullptr;
+rrt_node *rrt::findNearestNode(Point& relative_to) {
     flann::Matrix<float> query;
     std::vector<float> data(6);
     point_to_flann(relative_to, data.data());
     query = flann::Matrix<float>(data.data(), 1,
-                                      sizeof(relative_to) / sizeof(0.0));
+                                      relative_to.size());
     std::vector<int> i(query.rows);
-    flann::Matrix<int> indices(i.data(), query.rows, 1);
+    flann::Matrix<int> indices(new int[query.rows], query.rows, 1);
     std::vector<float> d(query.rows);
-    flann::Matrix<float> dists(d.data(), query.rows, 1);
+    flann::Matrix<float> dists(new float[query.rows], query.rows, 1);
 
     int n = kdtree.knnSearch(query, indices, dists, 1, flann::SearchParams());
 
-    Point point;
-    point = flann_to_point(kdtree.getPoint(indices[0][0]));
-    return nodemap[point_to_vec(point)];
+    //Point point;
+    //point = flann_to_point(kdtree.getPoint(indices[0][0]));
+    return all_nodes[indices[0][0]];
 }
 
 vector<Point> rrt::return_goal_path() {
