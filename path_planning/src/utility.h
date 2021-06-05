@@ -13,12 +13,29 @@
 #include <boost/random/normal_distribution.hpp>
 #include <random>
 using namespace std;
+using namespace Eigen;
 typedef array<float, 6> Point;
 struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;
     float grid_size;
 };
+void point_to_flann(Point p, float* data){
+    data[0] = p[0];
+    data[1] = p[1];
+    data[2] = p[2];
+    data[3] = p[3];
+    data[4] = p[4];
+    data[5] = p[5];
+}
+Point flann_to_point(float* data){
+    return (Point){data[0],data[1],data[2],data[3],data[4],data[5]};
+}
+Vector6f point_to_vec(Point& a){
+    Vector6f b;
+    b << a[0], a[1],a[2],a[3],a[4],a[5];
+    return b;
+}
 struct normal_random_variable
 {
     normal_random_variable(Eigen::MatrixXd const& covar)

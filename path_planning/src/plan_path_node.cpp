@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         return 1;
     }
     //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    Point start = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
     Point goal = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2};
     array<array<float, 2>, 6> joint_ranges;
     array<float, 2> range = {0, 2*M_PI};

@@ -12,8 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
         sensor_msgs
         std_msgs
         forward_kin
-        )
 
+        )
+find_package( PkgConfig REQUIRED)
+pkg_check_modules( flann REQUIRED flann )
+find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -106,6 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
         #  INCLUDE_DIRS include
         #  LIBRARIES path_planning
+        DEPENDS EIGEN3
         #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs
         #  DEPENDS system_lib
 )
@@ -118,6 +122,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
         # include
+        ${EIGEN3_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
 )
 
@@ -149,7 +154,8 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
-        ${catkin_LIBRARIES}
+        ${catkin_LIBRARIES} lz4
+        ${EIGEN3_LIBRARIES}
         )
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
