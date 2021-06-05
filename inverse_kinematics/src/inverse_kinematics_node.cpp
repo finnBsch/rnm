@@ -37,7 +37,7 @@ private:
 public:
     std::string text = "vorher";
     explicit IncrementalInverseKinematics(ros::ServiceClient* client, int size): size_(size), client_(client),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1){
-        incrementalStepSize = 100.0;
+        incrementalStepSize = 1000.0;
 
     }
 
@@ -107,7 +107,7 @@ public:
                     srv.response.layout.data[3], srv.response.layout.data[7], srv.response.layout.data[11];
         } else{
             current_transformationmatrix_vector_ << srv.response.end_effector_pos[0], srv.response.end_effector_pos[1],
-                                                    srv.response.end_effector_pos[2], 0, 0, 0;
+                                                    srv.response.end_effector_pos[2];
         }
 
         //---------------- DO INCREMENTAL CALCULATION ----------------
@@ -115,27 +115,30 @@ public:
             if (size_ == 12) {
             final_transformationmatrix_vector_
                     << 0.20077, -0.894, -0.40058, 0.40058, 0.44807, -0.79923, 0.894, 0, 0.44807, 0.21926, 0, 0.62827; // ONLY FOR TESTING
+            //<< 0.2760,-0.8509,   0.4470, -0.4470, -0.5253, -0.7240, 0.8509, 0, -0.5253, 0.3670, 0.8315,0;
+
             } else{
-                final_transformationmatrix_vector_<< 0,0,0,0,0,0;
+                final_transformationmatrix_vector_ << 0.5,0.5,0.5;
             }
             initializing = false;
         }
 
         // calculate the difference
         VectorXd delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
-       // ROS_INFO("Joint Angle %f",joint_angles_(0));
-        VectorXd test_delta(12,1);
-        for (int i=0;i<7;i++){
+        ROS_INFO("Joint Angle %f",joint_angles_(0));
+
+        VectorXd test_delta(size_,1);
+        for (int i=0;i<size_;i++){
             if(delta_A(i)<0){
                 test_delta(i)=-delta_A(i);
             }
         }
-        if (test_delta.maxCoeff() <= 0.03) {
+        if (test_delta.maxCoeff() <= 0.05) {
             ROS_INFO("I am finished: %f",test_delta.maxCoeff());
             ROS_INFO("A1 %f",current_transformationmatrix_vector_(0));
             ROS_INFO("A2 %f",current_transformationmatrix_vector_(1));
             ROS_INFO("A3 %f",current_transformationmatrix_vector_(2));
-            ROS_INFO("A4 %f",current_transformationmatrix_vector_(3));
+           ROS_INFO("A4 %f",current_transformationmatrix_vector_(3));
             ROS_INFO("A5 %f",current_transformationmatrix_vector_(4));
             ROS_INFO("A5 %f",current_transformationmatrix_vector_(5));
             ROS_INFO("A6 %f",current_transformationmatrix_vector_(6));
@@ -155,9 +158,9 @@ public:
            // MatrixXd JM= J*J.transpose();
             //pinvJ =  J.transpose() * JM.inverse() ;
             //cvInvert(&J, &pinvJ, 0);
-                ROS_INFO("jacobian(12,7) %f",J(11,6));
             } else{
-                MatrixXd J;
+                MatrixXd J = calculateJacobian(joint_angles_);
+                pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
                 //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
             }
 
