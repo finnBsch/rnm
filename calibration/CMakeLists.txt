@@ -136,6 +136,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_get_node src/get_images.cpp src/imagehandler.cpp src/imagehandler.h)
 add_executable(${PROJECT_NAME}_process_node src/process_images.cpp src/imageprocessor.cpp src/imageprocessor.h)
+add_executable(${PROJECT_NAME}_node src/loadFromFolder.cpp)
 
 
 ## Rename C++ executable without prefix
