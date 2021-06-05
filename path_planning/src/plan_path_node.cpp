@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {2*M_PI/180, joint_ranges, 360*M_PI/180};
+    rrt_params params_ = {2*M_PI/180, joint_ranges, 36*M_PI/180};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;

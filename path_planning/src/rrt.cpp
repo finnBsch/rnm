@@ -15,12 +15,14 @@
 rrt::rrt(Point start_point, Point goal_point, rrt_params params) {
     int size = 6;
     Eigen::MatrixXd covar(size,size);
-    covar << 0.3, 0, 0, 0, 0, 0,
-            0, 0.3, 0, 0, 0, 0,
-            0, 0, 0.3, 0, 0, 0,
-            0, 0, 0, 0.3, 0, 0,
-            0, 0, 0, 0, 0.3, 0,
-            0, 0, 0, 0, 0, 0.3;
+    float cov = 0.1;
+    covar << cov, 0, 0, 0, 0, 0,
+            0, cov, 0, 0, 0, 0,
+            0, 0, cov, 0, 0, 0,
+            0, 0, 0, cov, 0, 0,
+            0, 0, 0, 0, cov, 0,
+            0, 0, 0, 0, 0, cov;
+    sampler = new normal_random_variable {covar};
     // save params
     this->goal_point = goal_point;
     this->start_point = start_point;
@@ -71,7 +73,30 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     bool n_feasible = true;
     while(n_feasible) {
         //sample_point = random_point(params.x_range, params.y_range, params.z_range);
-        sample_point = random_point(params.joint_ranges);
+        auto sampled = sampler->operator()();
+        bool not_feasible = true;
+        while(not_feasible){
+            sampled = sampler->operator()();
+            sampled[0] += goal_point[0];
+            sampled[1] += goal_point[1];
+            sampled[2] += goal_point[2];
+            sampled[3] += goal_point[3];
+            sampled[4] += goal_point[4];
+            sampled[5] += goal_point[5];
+            for(int i = 0; i<sampled.size(); i++){
+                if(sampled[0] < params.joint_ranges[i][0] || sampled[0] > params.joint_ranges[i][1] ){
+                    not_feasible = true;
+                    break;
+                }
+                else{
+                    not_feasible = false;
+                }
+            }
+        }
+        for(int i = 0; i<sampled.size(); i++){
+            sample_point[i] =  (float)sampled[i];
+        }
+        //sample_point = random_point(params.joint_ranges);
         nearest_node = findNearestNode(sample_point);
         stepped_point = step_forward(nearest_node->get_pos(), sample_point, params.step_size);
         for(int i = 0; i<stepped_point.size();i++){
