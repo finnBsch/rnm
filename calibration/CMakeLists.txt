@@ -139,6 +139,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(get_images_node src/get_images.cpp)
 add_executable(write_images_node src/write_images.cpp)
+add_executable(calibrate_from_folder_node src/calibrate_from_folder.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,15 +152,11 @@ add_executable(write_images_node src/write_images.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(get_images_node
-        ${catkin_LIBRARIES}
-        )
-target_link_libraries(write_images_node
-        ${catkin_LIBRARIES}
-)
-target_link_libraries(write_images_node
-        ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so
-)
+target_link_libraries(get_images_node ${catkin_LIBRARIES})
+target_link_libraries(write_images_node ${catkin_LIBRARIES})
+target_link_libraries(write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(calibrate_from_folder_node ${catkin_LIBRARIES})
+target_link_libraries(calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 
 #############
 ## Install ##
