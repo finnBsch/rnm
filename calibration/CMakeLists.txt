@@ -12,8 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
         rospy
         cv_bridge
         image_transport
+        message_generation
         sensor_msgs
-)
+        )
 find_package( OpenCV REQUIRED )
 
 ## System dependencies are found with CMake's conventions
@@ -50,11 +51,12 @@ find_package( OpenCV REQUIRED )
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+        FILES
+        imagepair.msg
+        #   Message1.msg
+        #   Message2.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -71,10 +73,11 @@ find_package( OpenCV REQUIRED )
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+        DEPENDENCIES
+        sensor_msgs
+        #   std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,10 +109,10 @@ find_package( OpenCV REQUIRED )
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES calibration
-#  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
+        #  INCLUDE_DIRS include
+        #  LIBRARIES calibration
+        CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+        #  DEPENDS system_lib
 )
 
 ###########
@@ -119,7 +122,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+        # include
         ${catkin_INCLUDE_DIRS}
         ${OpenCV_INCLUDE_DIRS}
 )
@@ -137,9 +140,10 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(get_images_node src/get_images.cpp)
-add_executable(write_images_node src/write_images.cpp)
-add_executable(calibrate_from_folder_node src/calibrate_from_folder.cpp)
+add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
+add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
+add_executable(${PROJECT_NAME}_calibrate_from_folder_node src/calibrate_from_folder.cpp)
+add_executable(${PROJECT_NAME}_calibrate_from_folder_node_2 src/calibrate_from_folder_2.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -152,11 +156,11 @@ add_executable(calibrate_from_folder_node src/calibrate_from_folder.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(get_images_node ${catkin_LIBRARIES})
-target_link_libraries(write_images_node ${catkin_LIBRARIES})
-target_link_libraries(write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
-target_link_libraries(calibrate_from_folder_node ${catkin_LIBRARIES})
-target_link_libraries(calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 
 #############
 ## Install ##
