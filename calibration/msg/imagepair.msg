@@ -1,2 +1,0 @@
-sensor_msgs/Image rgbimage
-sensor_msgs/Image irimage

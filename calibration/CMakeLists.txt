@@ -9,9 +9,8 @@ project(calibration)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rospy
   std_msgs
-        sensor_msgs
-        message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -48,11 +47,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
- add_message_files(
-   FILES
-   imagepair.msg
+# add_message_files(
+#   FILES
+#   Message1.msg
 #   Message2.msg
- )
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -69,10 +68,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-   DEPENDENCIES
-   sensor_msgs
- )
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,7 +105,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES calibration
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+#  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
@@ -134,10 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_get_node src/get_images.cpp src/imagehandler.cpp src/imagehandler.h)
-add_executable(${PROJECT_NAME}_process_node src/process_images.cpp src/imageprocessor.cpp src/imageprocessor.h)
-add_executable(${PROJECT_NAME}_node src/loadFromFolder.cpp)
-
+add_executable(${PACKAGE_NAME}_node src/get_images.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,10 +146,7 @@ add_executable(${PROJECT_NAME}_node src/loadFromFolder.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${PROJECT_NAME}_process_node
-   ${catkin_LIBRARIES}
- )
-target_link_libraries(${PROJECT_NAME}_get_node
+target_link_libraries(${PACKAGE_NAME}_node
         ${catkin_LIBRARIES}
         )
 
