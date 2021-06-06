@@ -17,7 +17,7 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params):kdtree(flann::K
     kdtree = flann::Index<flann::L2_Simple<float>>(
             flann::KDTreeIndexParams());
     Eigen::MatrixXd covar(size,size);
-    float cov = 0.001;
+    float cov = 0.1;
     covar << cov, 0, 0, 0, 0, 0,
             0, cov, 0, 0, 0, 0,
             0, 0, cov, 0, 0, 0,
@@ -48,7 +48,6 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     Point stepped_point;
     bool n_feasible = true;
     while(n_feasible) {
-        //sample_point = random_point(params.x_range, params.y_range, params.z_range);
         auto sampled = sampler->operator()();
         bool not_feasible = true;
         while(not_feasible){
@@ -60,7 +59,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             sampled[4] += goal_point[4];
             sampled[5] += goal_point[5];
             for(int i = 0; i<sampled.size(); i++){
-                if(sampled[0] < params.joint_ranges[i][0] || sampled[0] > params.joint_ranges[i][1] ){
+                if(sampled[i] < params.joint_ranges[i][0] || sampled[i] > params.joint_ranges[i][1] ){
                     not_feasible = true;
                     break;
                 }
@@ -76,7 +75,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
         nearest_node = findNearestNode(sample_point);
         stepped_point = step_forward(nearest_node->get_pos(), sample_point, params.step_size);
         for(int i = 0; i<stepped_point.size();i++){
-            if(stepped_point[0]>params.joint_ranges[i][0] && stepped_point[0]<params.joint_ranges[i][1])
+            if(stepped_point[i]>params.joint_ranges[i][0] && stepped_point[i]<params.joint_ranges[i][1])
             {
                 n_feasible = false;
             }
