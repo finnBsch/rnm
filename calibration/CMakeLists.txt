@@ -161,6 +161,8 @@ target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node_2 ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node_2 ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 
 #############
 ## Install ##

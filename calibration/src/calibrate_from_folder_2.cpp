@@ -9,13 +9,16 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
-#include "calibration/imagepair.h"
+//#include "calibration/imagepair.h"
 #include "iostream"
 #include <tuple>
 #include <stdlib.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+
+using namespace std;
+using namespace cv;
 
 
 void LoadFromFolder(){
@@ -152,7 +155,7 @@ void LoadFromFolder(){
     bool found2 = cv::findChessboardCorners(gray2, patternSize, corners2,
                                             CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
 
-    vector<Point3f> obj;
+    std::vector<cv::Point3f> obj;
     for (int j = 1; j < checkerBoard[1]; j++){
       for (int k = 1; k < checkerBoard[0]; k++) {
         obj.push_back(Point3f((float) k * fieldSize, (float) j * fieldSize, 0));
@@ -186,7 +189,7 @@ void LoadFromFolder(){
 
   for (int i = 0; i < imagePoints1.size(); i++) {
     vector<Point2f> v1, v2;
-    for (int j = 0; j < imagePoints1[i].size(); j++) {
+    for (int j = 0; j < imagePoints1.size(); j++) {
       v1.push_back(Point2f((double) imagePoints1[i][j].x, (double) imagePoints1[i][j].y));
       v2.push_back(Point2f((double) imagePoints2[i][j].x, (double) imagePoints2[i][j].y));
     }
@@ -194,7 +197,7 @@ void LoadFromFolder(){
     right_img_points.push_back(imagePoints2[i]);
   }
 
-  cout << "all Corners found for the stereocalibration"
+  cout << "all Corners found for the stereocalibration" << endl;
 }
 
 
@@ -213,6 +216,6 @@ int main(int argc, char** argv)  {
   nh.getParam("queue_size", queue_size);
 
   // Register a callback function (a function that is called every time a new message arrives)
-  ros::ServiceServer service = nh.advertiseService("get_endeffector", get_end_effector);
+  //ros::ServiceServer service = nh.advertiseService("get_endeffector", get_end_effector);
   ros::spin();
 }
