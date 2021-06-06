@@ -6,19 +6,15 @@
 
 using namespace std;
 
-
-ros::NodeHandle n; // node initialisation
-ros::Publisher rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
-ros::Publisher ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
 // global image matrices
 // going to be published
-//cv::Mat rgbImg;
+sensor_msgs::ImageConstPtr& rgbmsg;
+sensor_msgs::ImageConstPtr& irmsg;
 //cv::Mat irImg;
 
 //// callbacks:
 // fetch current image from sensor_msgs and convert to cv::Mat
-void fetchRgbImg(const sensor_msgs::ImageConstPtr& msg) {
-  rgb_pub.publish(msg);
+void fetchRgbImg(const sensor_msgs::ImageConstPtr& rgbmsg) {
   // try {
   //     // convert image from ros msg to bgr8 (cv)
   //     rgbImg = cv_bridge::toCvShare(msg, "bgr8")->image;
@@ -30,8 +26,7 @@ void fetchRgbImg(const sensor_msgs::ImageConstPtr& msg) {
   //   }
 }
 
-void fetchIrImg(const sensor_msgs::ImageConstPtr& msg) {
-  ir_pub.publish(msg);
+void fetchIrImg(const sensor_msgs::ImageConstPtr& irmsg) {
   // try {
   //     // convert image from ros msg to bgr8 (cv)
   //     rgbImg = cv_bridge::toCvShare(msg, "bgr8")->image;
@@ -46,7 +41,7 @@ void fetchIrImg(const sensor_msgs::ImageConstPtr& msg) {
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "get_images");
-  //ros::NodeHandle n; // node initialisation
+  ros::NodeHandle n; // node initialisation
   image_transport::ImageTransport it(n);
 
   // subscribe to camera topics
@@ -54,11 +49,13 @@ int main(int argc, char **argv) {
   image_transport::Subscriber rgb_sub = it.subscribe("/k4a/rgb/image_raw", 1, fetchRgbImg);
   image_transport::Subscriber ir_sub = it.subscribe("/k4a/ir/image_raw", 1, fetchIrImg);
 
-  // publish images
-  //ros::Publisher rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
-  //ros::Publisher ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
+  // create publishers
+  ros::Publisher rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
+  ros::Publisher ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
 
   while (ros::ok()) {
+    ir_pub.publish(rgbmsg);
+    ir_pub.publish(irmsg);
     cout << "Press key to select most recent frame" << endl;
     // wait until any key gets pressed
     while (cin.ignore()) {
