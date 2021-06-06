@@ -2,40 +2,33 @@
 #include <iostream>
 #include "sensor_msgs/Image.h"
 #include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
 
 using namespace std;
 
-// global image matrices
-// going to be published
-sensor_msgs::ImageConstPtr& rgbmsg;
-sensor_msgs::ImageConstPtr& irmsg;
-//cv::Mat irImg;
+// create publishers globally
+ros::Publisher rgb_pub;
+ros::Publisher ir_pub;
 
 //// callbacks:
-// fetch current image from sensor_msgs and convert to cv::Mat
+// fetch current image from sensor_msgs and publish it
 void fetchRgbImg(const sensor_msgs::ImageConstPtr& rgbmsg) {
-  // try {
-  //     // convert image from ros msg to bgr8 (cv)
-  //     rgbImg = cv_bridge::toCvShare(msg, "bgr8")->image;
-  //
-  //     std::cout << "rgb image converted successfully" << endl;
-  //   }
-  //   catch (cv_bridge::Exception &e) {
-  //     std::cout << "Error: rgb image could not be converted !!!!" << endl;
-  //   }
+  try {
+    rgb_pub.publish(rgbmsg);
+    cout << "rgb message published successfully" << endl;
+  }
+  catch (const std::exception&) {
+    ROS_ERROR("Could not publish rgb message !!!!");
+  }
 }
 
 void fetchIrImg(const sensor_msgs::ImageConstPtr& irmsg) {
-  // try {
-  //     // convert image from ros msg to bgr8 (cv)
-  //     rgbImg = cv_bridge::toCvShare(msg, "bgr8")->image;
-  //
-  //     std::cout << "ir image converted successfully" << endl;
-  //   }
-  //   catch (cv_bridge::Exception &e) {
-  //     std::cout << "Error: ir image could not be converted !!!!" << endl;
-  //   }
+  try {
+    ir_pub.publish(irmsg);
+    cout << "ir  message published successfully" << endl;
+  }
+  catch (const std::exception&) {
+    ROS_ERROR("Could not publish ir message !!!!");
+  }
 }
 
 
@@ -45,17 +38,15 @@ int main(int argc, char **argv) {
   image_transport::ImageTransport it(n);
 
   // subscribe to camera topics
-  // callbacks to fetch and convert current images
+  // callbacks to fetch current images
   image_transport::Subscriber rgb_sub = it.subscribe("/k4a/rgb/image_raw", 1, fetchRgbImg);
   image_transport::Subscriber ir_sub = it.subscribe("/k4a/ir/image_raw", 1, fetchIrImg);
 
-  // create publishers
-  ros::Publisher rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
-  ros::Publisher ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
+  // update publishers
+  rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
+  ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
 
   while (ros::ok()) {
-    ir_pub.publish(rgbmsg);
-    ir_pub.publish(irmsg);
     cout << "Press key to select most recent frame" << endl;
     // wait until any key gets pressed
     while (cin.ignore()) {

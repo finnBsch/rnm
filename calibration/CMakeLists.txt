@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         image_transport
         sensor_msgs
 )
+find_package( OpenCV REQUIRED )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -119,7 +120,8 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
+        ${catkin_INCLUDE_DIRS}
+        ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -136,6 +138,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(get_images_node src/get_images.cpp)
+add_executable(write_images_node src/write_images.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +154,12 @@ add_executable(get_images_node src/get_images.cpp)
 target_link_libraries(get_images_node
         ${catkin_LIBRARIES}
         )
+target_link_libraries(write_images_node
+        ${catkin_LIBRARIES}
+)
+target_link_libraries(write_images_node
+        ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so
+)
 
 #############
 ## Install ##
