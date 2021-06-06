@@ -9,13 +9,18 @@
 class rrt_node {
 private:
     Point position;
+    vector<float>  pos;
+
     rrt_node* parent_node = nullptr;
     list<rrt_node*> children;
 public:
-    rrt_node(Point position);
-    rrt_node(Point position, rrt_node* parent_node);
+    rrt_node(const Point position);
+    rrt_node(const Point position, rrt_node* parent_node);
     Point& get_pos(){
         return position;
+    };
+    vector<float>* get_pos_flann(){
+        return &pos;
     };
     rrt_node* get_parent(){
         return parent_node;

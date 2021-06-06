@@ -52,8 +52,11 @@ int main(int argc, char **argv)
     array<float, 2> range_x = {-1, 1};
     array<float, 2> range_y = {-1, 1};
     array<float, 2> range_z = {0, 1.2};
-
-    rrt_params params_ = {0.01, range_x, range_y, range_z, 0.09};
+    array<array<float, 2>,3> ranges;
+    ranges[0]=(range_x);
+    ranges[1]=(range_y);
+    ranges[2]=(range_z);
+    rrt_params params_ = {0.01,ranges};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;

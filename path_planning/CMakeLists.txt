@@ -13,7 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         forward_kin
         )
-
+find_package( PkgConfig REQUIRED)
+pkg_check_modules( flann REQUIRED flann )
+find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -149,7 +151,8 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
-        ${catkin_LIBRARIES}
+        ${catkin_LIBRARIES} lz4
+        ${EIGEN3_LIBRARIES}
         )
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
