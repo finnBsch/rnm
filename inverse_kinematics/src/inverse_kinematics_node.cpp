@@ -14,7 +14,6 @@
 #include <eigen_conversions/eigen_msg.h>
 #include "inverse_kinematics/unserService.h"
 #include <opencv2/core/core.hpp>
-#include <opencv2/core_c.h>
 #include <libfranka/franka/model.h>
 #include <libfranka/franka/robot.h>
 #include <libfranka/franka/robot_state.h>
