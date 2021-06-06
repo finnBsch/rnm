@@ -43,10 +43,10 @@ int main(int argc, char **argv) {
   image_transport::Subscriber ir_sub = it.subscribe("/k4a/ir/image_raw", 1, fetchIrImg);
 
   // update publishers
-  rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1); //Note to self: maybe try it (im trans).
+  rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1);
   ir_pub = n.advertise<sensor_msgs::Image>("calibration_ir_img", 1);
 
-  while (ros::ok()) {
+  while (ros::ok()) { // didnt work
     cout << "Press key to select most recent frame" << endl;
     // wait until any key gets pressed
     while (cin.ignore()) {

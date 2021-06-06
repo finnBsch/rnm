@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
       + cv::CALIB_FIX_TAUX_TAUY
       + cv::CALIB_RATIONAL_MODEL; //used to compute k4-k6
 
-  std::cout << "Calibrating rgb intrinsics...\n" << std::endl;
+  std::cout << "Calibrating rgb intrinsics...\n" << endl;
 
 
   float rgberror = cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);

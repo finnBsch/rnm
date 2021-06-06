@@ -26,9 +26,9 @@ void LoadFromFolder(){
   cv::Size irFrameSize(640, 576);
   std::vector<cv::String> rgbFileNames;
   std::vector<cv::String> irFileNames;
-  std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
+  std::string rgbFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/bgr/*.jpg");
   cv::glob(rgbFolder, rgbFileNames, true);  // load rgb images into opencv
-  std::string irFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/ir/*.jpg");
+  std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/ir/*.jpg");
   cv::glob(irFolder, irFileNames, true);
 
   std::vector<std::vector<cv::Point3f>> irObjP;   // Checkerboard world coordinates

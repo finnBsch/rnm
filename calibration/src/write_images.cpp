@@ -157,6 +157,8 @@ int main(int argc, char** argv) {
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
 
+  std::cout << "ready" << endl;
+
   ros::spin();
   return 0;
 }
