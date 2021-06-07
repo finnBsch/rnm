@@ -136,7 +136,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -flto" )
 add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/rrt_node.h src/plan_path_node.cpp src/utility.cpp src/utility.h) # TODO: insert correct NODE cpp
 
 ## Rename C++ executable without prefix
@@ -150,7 +150,7 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_node
+        target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES} lz4
         ${EIGEN3_LIBRARIES}
         )
