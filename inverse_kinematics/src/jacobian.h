@@ -8,4 +8,4 @@
 #include "sensor_msgs/JointState.h"
 #endif //SRC_JACOBIAN_H
 using namespace Eigen;
-MatrixXd calculateJacobian(const VectorXd jointAngles);
+MatrixXd calculateJacobian(const VectorXd jointAngles, int size);

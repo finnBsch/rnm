@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         sensor_msgs
         std_msgs
-        forward_kin
+        #forward_kin
         message_generation
         )
 find_package(Eigen3 REQUIRED)
