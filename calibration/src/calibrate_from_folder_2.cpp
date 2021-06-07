@@ -201,6 +201,9 @@ void LoadFromFolder(){
 }
 
 
+
+
+
 int main(int argc, char** argv)  {
   ros::init(argc, argv, "loadFromFolder_no");
 
