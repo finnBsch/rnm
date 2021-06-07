@@ -11,41 +11,66 @@
  * possible things to do:
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
-using namespace Eigen;
-static VectorXd a(8);
-static VectorXd d(8);
-static VectorXd alpha(8);
 
-MatrixXd get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
-    MatrixXd ret_mat(4,4);
-    ret_mat << cos(theta), -sin(theta), 0, a,
-            sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
-            sin(theta) * sin(alpha), cos(theta)*sin(alpha), cos(alpha), d * cos(alpha),
+
+
+Matrix<double, 4, 4> get_transformationmatrix(const double theta, const double a, const double d, const double alpha){
+    Matrix<double, 4, 4> ret_mat;
+    double st = sin(theta);
+    double ca = cos(alpha);
+    double sa = sin(alpha);
+    double ct = cos(theta);
+    ret_mat << ct, -st, 0, a,
+            st * ca, ct*ca, -sa, -d * sa,
+            st * sa, ct*sa, ca, d * ca,
             0, 0, 0, 1;
     return ret_mat;
 }
+void get_transformationmatrix2(const double theta, const double a, const double d, const double alpha, Matrix<double, 4, 4>& in){
+    double st = sin(theta);
+    double ca = cos(alpha);
+    double sa = sin(alpha);
+    double ct = cos(theta);
+    in(0,0) = ct;
+    in(0,1) = -st;
+    in(0,2) = 0;
+    in(0,3) = a;
+    in(1, 0) = st*ca;
+    in(1, 1) = ct*ca;
+    in(1,2 ) = -sa;
+    in(1,3) = -d*sa;
+    in(2,0) = st*sa;
+    in(2,1) = ct*sa;
+    in(2, 2) = ca;
+    in(2,3) = d*ca;
+    in(3,0) = 0;
+    in(3,1) = 0;
+    in(3,2) = 0;
+    in(3,3) = 1;
+}
 
-bool get_end_effector(forward_kin::get_endeffector::Request  &req,
-                      forward_kin::get_endeffector::Response &res) {
-    std::array<MatrixXd, 8> a_;
+Point rrt::get_end_effector(joint_angles angles){
+    boost::array<MatrixXd, 8> a_;
     for(int i  = 0; i<7; i++){
-        a_.at(i) = get_transformationmatrix(req.joint_angles[i], a(i), d(i), alpha(i));
+        a_.at(i) = get_transformationmatrix(angles[i], a(i), d(i), alpha(i));
     }
     a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
     VectorXd in(4);
     in << 0, 0, 0, 1;
     VectorXd out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
-    res.end_effector_pos =  {out[0], out[1], out[2]};
     //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
-    return true;
+    return (Point){out[0], out[1], out[2]};
 }
 
 rrt::rrt(Point start_point, Point goal_point, rrt_params params, joint_angles init):kdtree(flann::KDTreeIndexParams()) {
+    a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
+    d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+    alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     int size = 3; // Dimensionality (rows)
-    kdtree = flann::Index<flann::L2_Simple<float>>(
+    kdtree = flann::Index<flann::L2_Simple<double>>(
             flann::KDTreeIndexParams());
     Eigen::MatrixXd covar(size,size);
-    float cov = 0.18;
+    float cov = 1.9;
     covar << cov, 0, 0,
             0, cov, 0,
             0, 0, cov/2;
@@ -56,10 +81,10 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params, joint_angles in
     this->params = params;
     // init start node
     start_node = new rrt_node(this->start_point, init);
-    std::vector<float> data(3);
+    std::vector<double> data(3);
     point_to_flann(start_node->get_pos(), data.data());
     kdtree.buildIndex(
-            flann::Matrix<float>(data.data(), 1, 3));
+            flann::Matrix<double>(data.data(), 1, 3));
     all_nodes.push_back(start_node);
 }
 tuple<bool, array<Point, 2>> rrt::expand() {
@@ -88,7 +113,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             }
         }
         for(int i = 0; i<sampled.size(); i++){
-            sample_point[i] =  (float)sampled[i];
+            sample_point[i] =  sampled[i];
         }
         //sample_point = random_point(params.ranges);
         nearest_node = findNearestNode(sample_point);
@@ -109,12 +134,11 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 
     //srv.request.joint_angles =
     auto new_angles = generateSuccessor(nearest_node, stepped_point);
-    new_node = new rrt_node(srv.response.end_effector_pos, nearest_node, new_angles);
-    kdtree.addPoints(flann::Matrix<float>(new_node->get_pos_flann()->data(), 1, 3));
+    new_node = new rrt_node(get_end_effector(new_angles), nearest_node, new_angles);
+    kdtree.addPoints(flann::Matrix<double>(new_node->get_pos_flann()->data(), 1, 3));
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
-    num_nodes++;
-    if(euclidean_dist(new_node->get_pos(), goal_point)<0.01){
+    if(euclidean_dist(new_node->get_pos(), goal_point)<0.05){
         goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
@@ -125,15 +149,15 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 
 
 rrt_node *rrt::findNearestNode(Point& relative_to) {
-    flann::Matrix<float> query;
-    std::vector<float> data(3);
+    flann::Matrix<double> query;
+    std::vector<double> data(3);
     point_to_flann(relative_to, data.data());
-    query = flann::Matrix<float>(data.data(), 1,
+    query = flann::Matrix<double>(data.data(), 1,
                                  relative_to.size());
     std::vector<int> i(query.rows);
     flann::Matrix<int> indices(new int[query.rows], query.rows, 1);
-    std::vector<float> d(query.rows);
-    flann::Matrix<float> dists(new float[query.rows], query.rows, 1);
+    std::vector<double> d(query.rows);
+    flann::Matrix<double> dists(new double[query.rows], query.rows, 1);
 
     int n = kdtree.knnSearch(query, indices, dists, 1, flann::SearchParams());
 
@@ -142,41 +166,67 @@ rrt_node *rrt::findNearestNode(Point& relative_to) {
     return all_nodes[indices[0][0]];
 }
 
-vector<Point> rrt::return_goal_path() {
+vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     rrt_node* current_node = goal_node;
-    vector<Point> goal_path;
-    Point point;
+    vector<tuple<Point, joint_angles>> goal_path;
     do {
-        point = current_node->get_pos();
-        goal_path.push_back(point);
+        goal_path.push_back(make_tuple(current_node->get_pos(), current_node->get_angle()));
         current_node = current_node->get_parent();
     } while(current_node->get_parent() != nullptr);
-    point = current_node->get_pos();
-    goal_path.push_back(point);
-
+    goal_path.push_back(make_tuple(current_node->get_pos(), current_node->get_angle()));
     return goal_path;
 }
 
 boost::array<double, 7> rrt::generateSuccessor(rrt_node *root, Point goal_point) {
+    //TODO  precalculate matrices for forward kinematics
     boost::array<double, 7> best_set;
     auto arr = root->get_angle();
     float min = -1;
     boost::array<double, 7> temp;
-    temp[6] = 0;
-    for(int i = -2; i<=2; i++){
-        temp[0] = arr[0]+ i*0.5*M_PI/180;
-        for(int j = -2; j<=2; j++){
-            temp[1] = arr[1]+ j*0.5*M_PI/180;
-            for(int k = -2; k<=2; k++){
-                temp[2] =arr[2]+  k*0.5*M_PI/180;
-                for(int  l= -2; l<=2; l++){
-                    temp[3] = arr[3]+ l*0.5*M_PI/180;
-                    for(int m = -2; m<=2; m++){
-                        temp[4] = arr[4]+  m*0.5*M_PI/180;
-                        for(int n = -2; n<=2; n++){
-                            temp[5] =arr[5]+   n*0.5*M_PI/180;
-                            float temp_ = euclidean_dist_sqrd_boost(srv.response.end_effector_pos, goal_point);
-                            if(min ==-1 || euclidean_dist_sqrd_boost(srv.response.end_effector_pos, goal_point) < min){
+    temp[6] = arr[6];
+
+    Matrix<double, 4, 4> joint0;
+    Matrix<double, 4, 4> joint1;
+    Matrix<double, 4, 4> joint2;
+    Matrix<double, 4, 4> joint3;
+    Matrix<double, 4, 4> joint4;
+    Matrix<double, 4, 4> joint5;
+    Matrix<double, 4, 4> joint6;
+    Matrix<double, 4, 4> joint7;
+    get_transformationmatrix2(0, a(6), d(6), alpha(6), joint6);
+    get_transformationmatrix2(0, a(7), d(7), alpha(7), joint7);
+    Matrix<double, 4, 4> last_product = joint6*joint7;
+    Matrix<double, 4, 1> in;
+    Matrix<double, 4, 1> out;
+    int steps = 1;
+    float fac = 1.3;
+    in << 0, 0, 0, 1;
+    for(int i = -steps; i<=steps; i++){
+        temp[0] = arr[0]+ i*fac*M_PI/180;
+        get_transformationmatrix2(temp[0], a(0), d(0), alpha(0), joint0);
+        for(int j = -steps; j<=steps; j++){
+            temp[1] = arr[1]+ j*fac*M_PI/180;
+            get_transformationmatrix2(temp[1], a(1), d(1), alpha(1), joint1);
+            joint1 = joint0*joint1;
+            for(int k = -steps; k<=steps; k++){
+                temp[2] =arr[2]+  k*fac*M_PI/180;
+                get_transformationmatrix2(temp[2], a(2), d(2), alpha(2), joint2);
+                joint2 = joint1*joint2;
+                for(int  l= -steps; l<=steps; l++){
+                    temp[3] = arr[3]+ l*fac*M_PI/180;
+                    get_transformationmatrix2(temp[3], a(3), d(3), alpha(3), joint3);
+                    joint3= joint2*joint3;
+                    for(int m = -steps; m<=steps; m++){
+                        temp[4] = arr[4]+  m*fac*M_PI/180;
+                        get_transformationmatrix2(temp[4], a(4), d(4), alpha(4), joint4);
+                        joint4=joint3*joint4;
+                        for(int n = -steps; n<=steps; n++){
+                            temp[5] =arr[5]+   n*fac*M_PI/180;
+                            get_transformationmatrix2(temp[5], a(5), d(5), alpha(5), joint5);
+                            joint5=joint4*joint5;
+                            out = joint5*last_product*in;
+                            float temp_ = euclidean_dist_sqrd_boost((boost::array<double, 3>){out[0], out[1], out[2]}, goal_point);
+                            if(min ==-1 || temp_ < min){
                                 min = temp_;
                                 best_set = temp;
                             }

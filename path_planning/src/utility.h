@@ -22,8 +22,8 @@ struct rrt_params{
     array<array<float, 2>, 3> ranges;
     // TODO: find way to choose workspace
 };
-void point_to_flann(Point p, float* data);
-Point flann_to_point(float* data);
+void point_to_flann(Point p, double* data);
+Point flann_to_point(double* data);
 struct normal_random_variable
 {
     normal_random_variable(Eigen::MatrixXd const& covar)

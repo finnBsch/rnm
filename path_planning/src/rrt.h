@@ -13,11 +13,14 @@
 #include <eigen3/Eigen/Dense>
 #include "forward_kin/get_endeffector.h"
 typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
-
+using namespace Eigen;
 class rrt {
 private:
+    Matrix<double, 8, 1> a;
+    Matrix<double, 8, 1> d;
+    Matrix<double, 8, 1> alpha;
     // Flann
-    flann::Index<flann::L2_Simple<float>> kdtree;
+    flann::Index<flann::L2_Simple<double>> kdtree;
     vector<rrt_node*> all_nodes;
     Point goal_point;
     Point start_point;
@@ -30,14 +33,15 @@ private:
     normal_random_variable* sampler;
     forward_kin::get_endeffector srv;
     joint_angles generateSuccessor(rrt_node* root, Point goal_point);
-
+    Point get_end_effector(joint_angles angles);
+    //MatrixXd get_transformationmatrix(const float theta, const float a, const float d, const float alpha);
 
 
 public:
     long num_nodes = 0;
     rrt(Point start_point, Point goal_point,rrt_params params, joint_angles init);
     tuple<bool, array<Point, 2>> expand();
-    vector<Point> return_goal_path();
+    vector<tuple<Point, joint_angles>> return_goal_path();
 
 };
 

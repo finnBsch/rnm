@@ -70,8 +70,8 @@ public:
             }
             t_f_+=0.1;
         }
-        ROS_INFO_STREAM("Executing trajectory in t : " << t_f_ << " with " << ceil(t_f_*1000) << " steps");
-        // precalculate trajectory
+        ROS_INFO_STREAM("Executing trajectory.msg in t : " << t_f_ << " with " << ceil(t_f_*1000) << " steps");
+        // precalculate trajectory.msg
         trajectory.reserve(ceil(t_f_*1000));
         std::vector<double> joint_angles_trajectory;
         joint_angles_trajectory.reserve(7);

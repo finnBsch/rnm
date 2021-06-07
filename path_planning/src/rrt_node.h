@@ -9,7 +9,7 @@
 class rrt_node {
 private:
     Point position;
-    vector<float>  pos;
+    vector<double>  pos;
     joint_angles angles;
     rrt_node* parent_node = nullptr;
     list<rrt_node*> children;
@@ -22,7 +22,7 @@ public:
     joint_angles & get_angle(){
         return angles;
     };
-    vector<float>* get_pos_flann(){
+    vector<double>* get_pos_flann(){
         return &pos;
     };
     rrt_node* get_parent(){
