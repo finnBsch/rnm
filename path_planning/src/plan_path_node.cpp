@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     ranges[1]=(range_y);
     ranges[2]=(range_z);
     rrt_params params_ = {0.01,ranges};
-    rrt* tree = new rrt(start, goal, params_);
+    rrt* tree = new rrt(start, goal,  params_,arr, &client);
     bool not_found = true;
     float f = 0.0;
     visualization_msgs::Marker lines, goal_lines;

@@ -12,8 +12,11 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <random>
+#include <boost/array.hpp>
+
 using namespace std;
-typedef array<float, 3> Point;
+typedef boost::array<double, 3> Point;
+typedef boost::array<double, 7> joint_angles;
 struct rrt_params{
     float step_size;
     array<array<float, 2>, 3> ranges;
@@ -47,6 +50,7 @@ struct normal_random_variable
 };
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
+float euclidean_dist_sqrd_boost(boost::array<double,3> A, Point B);
 float euclidean_norm(Point A);
 Point random_point(array<array<float, 2>, 3> joint_ranges);
 Point step_forward(Point start, Point goal, float dist);
