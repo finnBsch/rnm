@@ -18,7 +18,7 @@ private:
     // Flann
     flann::Index<flann::L2_Simple<float>> kdtree;
     vector<rrt_node*> all_nodes;
-    std::unordered_map<Point, rrt_node*, std::function<size_t(Point)>> nodemap;
+
     Point goal_point;
     Point start_point;
     rrt_node* start_node;
