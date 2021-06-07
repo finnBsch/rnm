@@ -4,10 +4,9 @@
 
 #include "jacobian.h"
 #include "math.h"
-
+MatrixXd jacobian(12,7);
 MatrixXd calculateJacobian(const VectorXd theta, int size){
 
-MatrixXd jacobian(12,7);
 if(size == 12) {
     jacobian <<
 

@@ -38,7 +38,14 @@ private:
     VectorXd a;
     VectorXd d;
     VectorXd alpha;
-
+    MatrixXd A_total;
+    VectorXd vector;
+    MatrixXd ret_mat;
+    std::array<MatrixXd, 8> a_;
+    MatrixXd J;
+    MatrixXd pinvJ;
+    VectorXd delta_A;
+    VectorXd deltaQ;
 
 public:
     std::string text = "vorher";
@@ -48,11 +55,14 @@ public:
         counter_ = 0;
     }*/
 
-    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8){
-        incrementalStepSize = 100000.0;
+    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4){
+        incrementalStepSize = 10000.0;
         limit_ = 10000;
         counter_ = 0;
         client_ = nullptr;
+        a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
+        d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+        alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     }
 
 
@@ -87,7 +97,6 @@ public:
     //__________________________________________BEGIN OF FORWARD
 
     MatrixXd get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
-        MatrixXd ret_mat(4,4);
         ret_mat << cos(theta), -sin(theta), 0, a,
                 sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
                 sin(theta) * sin(alpha), cos(theta)*sin(alpha), cos(alpha), d * cos(alpha),
@@ -96,21 +105,20 @@ public:
     }
 
     VectorXd get_transformation_Vector() {
-        std::array<MatrixXd, 8> a_;
         for(int i  = 0; i<7; i++){
             a_.at(i) = get_transformationmatrix(joint_angles_(i), a(i), d(i), alpha(i));
         }
         a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
-        VectorXd in(4);
-        in << 0, 0, 0, 1;
-        MatrixXd A_total=a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7);
+        //VectorXd in(4);
+        //in << 0, 0, 0, 1;
+        A_total=a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7);
         //VectorXd out = A_total*in;
 
-        VectorXd vector(12,1);
-        vector<< A_total(0), A_total(4), A_total(8),
-                A_total(1), A_total(5), A_total(9),
-                A_total(2), A_total(6), A_total(10),
-                A_total(3), A_total(7), A_total(11);
+
+        vector<< A_total(0,0), A_total(1,0), A_total(2,0),
+                A_total(0,1), A_total(1,1), A_total(2,1),
+                A_total(0,2), A_total(1,2), A_total(2,2),
+                A_total(0,3), A_total(1,3), A_total(2,3);
 
         return vector;
     }
@@ -188,11 +196,11 @@ public:
 
 
         // DIFFERENCE CALCULATION
-        VectorXd delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
+         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
         //output
         ROS_INFO("counter: %i", counter_);
-        for(int i=0; i<delta_A.rows();i++){
-            ROS_INFO("current A%f",current_transformationmatrix_vector_(i));
+        for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
+            ROS_INFO("current A: %f",current_transformationmatrix_vector_(i));
         }
         ROS_INFO("--------------------------");
         // Calculate the absolute of the delta_A Vector
@@ -201,12 +209,12 @@ public:
             abs_delta_A(i) = abs(delta_A(i));
         }
 
-        if (abs_delta_A.maxCoeff() <= 0.1 || counter_ == limit_) {
+        if (abs_delta_A.maxCoeff() <= 0.1 ) {//|| counter_ == limit_) {
             for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
                 ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
             }
             if(counter_ == limit_) {
-                ROS_ERROR("Limit ueberstritten: %i", counter_);
+               // ROS_ERROR("Limit ueberstritten: %i", counter_);
             } else {
                 ROS_INFO("FINISHED");
             }
@@ -215,9 +223,6 @@ public:
         } else {
 
             // CALCULATE PSEODOINVERSE OF JACOBIAN
-            MatrixXd J;
-            MatrixXd pinvJ;
-
                 //TODO include if statement for size_ in calculateJacobian
                 J = calculateJacobian(joint_angles_, size_);
                 pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
@@ -228,7 +233,7 @@ public:
                 //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
 
             //CALCULATE CHANGE IN JOINT ANGLES
-            VectorXd deltaQ = pinvJ * delta_A;
+             deltaQ = pinvJ * delta_A;
             //output change
             /*for(int i=0; i<deltaQ.rows();i++){
                 ROS_INFO("deltaQ %f",deltaQ(i));
