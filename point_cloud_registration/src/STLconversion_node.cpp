@@ -2,9 +2,30 @@
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <iostream>
+#include <thread>
+#include <pcl/common/angles.h> // for pcl::deg2rad
+#include <pcl/features/normal_3d.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/console/parse.h>
+#include <pcl/filters/voxel_grid.h>
 
-  //const std::string meshFileName = "~/Documents/RNM/provided_data_scanning/Skeleton.stl";
+using namespace std::chrono_literals;
+  pcl::visualization::PCLVisualizer::Ptr simpleVis (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
+  {
+    // --------------------------------------------
+    // -----Open 3D viewer and add point cloud-----
+    // --------------------------------------------
+    pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+    viewer->setBackgroundColor (255, 255, 255);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgb(cloud);
+    viewer->addPointCloud<pcl::PointXYZRGB> (cloud, "sample cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+    viewer->addCoordinateSystem (1.0);
+    viewer->initCameraParameters ();
+    return (viewer);
+  }
 
 int main(int argc, char** argv)
 {
@@ -15,7 +36,7 @@ int main(int argc, char** argv)
 
   const std::string STL_file_name =  "/home/niklas/Documents/RNM/provided_data_scanning/Skeleton.stl";
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr skeleton_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr skeleton_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PolygonMesh mesh;
 
   vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
@@ -23,23 +44,44 @@ int main(int argc, char** argv)
   pcl::io::mesh2vtk(mesh, polydata); //Convert PolygonMesh object into vtkPolyData object
   pcl::io::vtkPolyDataToPointCloud(polydata, *skeleton_cloud);
 
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer("The name"));
-  viewer->initCameraParameters();
-  int v1(0), v2(1);
-  viewer->createViewPort(0.0, 0.0, 100, 100, v1);//xmin,ymin,xmax,ymax
-  viewer->createViewPort(0.5, 0,  100,    100, v2);
-  viewer->setBackgroundColor(0, 1, 0, v1);
-  viewer->setBackgroundColor(0, 0, 1, v2);
-  viewer->createViewPortCamera(v1);//Create a new camera to make the view operation of the two windows independent
-  //viewer->createViewPortCamera(v2);
-  viewer->addPolygonMesh(mesh, "mesh",v1);
-  viewer->addPointCloud(skeleton_cloud, "points",v2);
-  viewer->addCoordinateSystem(1);
+
+  for (int i = 0; i < skeleton_cloud->points.size(); i++)
+  {
+    skeleton_cloud->points[i].x /=1000 ;
+    skeleton_cloud->points[i].y /=1000 ;
+    skeleton_cloud->points[i].z /=1000 ;
+    //skeleton_cloud_scaled->points.push_back(pcl::PointXYZRGB(pt.x * xStretch, pt.y * yStretch, pt.z * zStretch));
+  }
+  //SUBSAMPLE---------------------------------------------------------------------------------------------------------------
+   //Initialize container for PC message, for the filtered cloud and pointer to PC message
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr skeleton_cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
+  // Convert to PCL data type
+  //pcl_conversions::toPCL(*cloud_msg, *cloud);
+
+  // Perform the actual filtering
+  pcl::VoxelGrid<pcl::PointXYZRGB> vg;
+  vg.setInputCloud (skeleton_cloud);
+  vg.setLeafSize (0.005, 0.005, 0.005);
+  vg.filter (*skeleton_cloud);
+
+  pcl::visualization::PCLVisualizer::Ptr viewer2;
+      viewer2 = simpleVis(skeleton_cloud);
+
 
   sensor_msgs::PointCloud2 output;
 
   pcl::toROSMsg(*skeleton_cloud, output);
+  output.header.frame_id = "point_link";
   publisher.publish (output);
+
+  //--------------------
+  // -----Main loop-----
+  //--------------------
+  while (!viewer2->wasStopped ())
+  {
+    viewer2->spinOnce (100);
+    std::this_thread::sleep_for(100ms);
+  }
   ros::spin ();
   return 0;
 }
