@@ -6,10 +6,19 @@
 #define SRC_RRT_H
 #include "rrt_node.h"
 #include <tuple>
+
+#include <flann/algorithms/dist.h>
+#include <flann/algorithms/kdtree_single_index.h>
+#include <flann/flann.hpp>
+#include <eigen3/Eigen/Dense>
 typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
 
 class rrt {
 private:
+    // Flann
+    flann::Index<flann::L2_Simple<float>> kdtree;
+    vector<rrt_node*> all_nodes;
+    std::unordered_map<Point, rrt_node*, std::function<size_t(Point)>> nodemap;
     Point goal_point;
     Point start_point;
     rrt_node* start_node;
@@ -17,16 +26,14 @@ private:
     // RRT Params
     rrt_params params;
     // TODO save obstacles
-    rrt_node* findNearestNode(Point relative_to);
+    rrt_node* findNearestNode(Point& relative_to);
+    normal_random_variable* sampler;
 
-    // Sorting grid
-    node_grid grid;
-    array<int, 3> num_cells;
-    array<int, 3> return_grid_id(Point point);
 public:
+    long num_nodes = 0;
     rrt(Point start_point, Point goal_point,rrt_params params);
-    tuple<bool, array<array<float, 3>, 2>> expand();
-    vector<array<float, 3>> return_goal_path();
+    tuple<bool, array<Point, 2>> expand();
+    vector<Point> return_goal_path();
 
 };
 

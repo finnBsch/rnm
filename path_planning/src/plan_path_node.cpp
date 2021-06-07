@@ -7,6 +7,7 @@
 #include "rrt.h"
 #include <chrono>
 #include "forward_kin/get_endeffector.h"
+using namespace std::chrono;
 class RRT_Publisher
 {
 public:
@@ -47,12 +48,15 @@ int main(int argc, char **argv)
         return 1;
     }
     Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point goal = {0.2, 1.8, 0.1};
-    array<float, 2> range_x = {-2, 2};
-    array<float, 2> range_y = {-2, 2};
+    Point goal = {0.2, 0.5, 0.3};
+    array<float, 2> range_x = {-1, 1};
+    array<float, 2> range_y = {-1, 1};
     array<float, 2> range_z = {0, 1.2};
-
-    rrt_params params_ = {0.1, range_x, range_y, range_z, 0.09};
+    array<array<float, 2>,3> ranges;
+    ranges[0]=(range_x);
+    ranges[1]=(range_y);
+    ranges[2]=(range_z);
+    rrt_params params_ = {0.01,ranges};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -78,8 +82,10 @@ int main(int argc, char **argv)
     line_list[0].color.r = 1.0;
     line_list[0].color.a = 1.0;
     auto start_time = std::chrono::high_resolution_clock::now();
+    auto start_time_total = start_time;
     auto finish = start_time;
     marker_pub.publish(line_list[1]);
+
     while (not_found && ros::ok())
     {
         auto return_expand = tree->expand();
@@ -104,6 +110,8 @@ int main(int argc, char **argv)
             start_time = finish;
         }
     }
+    std::chrono::duration<double> duration = (finish - start_time_total);
+    ROS_INFO_STREAM("Found Path in : " << duration.count());
     marker_pub.publish(line_list[0]);
     auto goal_path = tree->return_goal_path();
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
