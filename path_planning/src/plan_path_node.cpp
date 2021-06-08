@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
     Point start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
-    Point goal = {M_PI, M_PI/2, M_PI/2, M_PI, M_PI/2, M_PI/2};
+    Point goal = {M_PI*0, M_PI/8, M_PI/2*0, M_PI*0, M_PI/8, M_PI/8};
     array<array<float, 2>, 6> joint_ranges;
     array<float, 2> range = {-M_PI, M_PI};
     joint_ranges[0] = range;
