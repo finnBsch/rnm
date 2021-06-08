@@ -50,7 +50,17 @@ int main(int argc, char **argv)
         return 1;
     }
     Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point goal = {-0.6, -0.6, 0.3};
+
+    float x_;
+    float y_;
+    float z_;
+    x_ = -0.6;
+    y_ = -0.6;
+    z_ = 0.3;
+    ros::param::get("~x", x_);
+    ros::param::get("~y", y_);
+    ros::param::get("~z", z_);
+    Point goal = {x_, y_, z_};
     array<float, 2> range_x = {-1, 1};
     array<float, 2> range_y = {-1, 1};
     array<float, 2> range_z = {0, 1.2};

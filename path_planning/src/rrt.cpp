@@ -181,6 +181,13 @@ boost::array<double, 7> rrt::generateSuccessor(rrt_node *root, Point goal_point)
     //TODO  precalculate matrices for forward kinematics
     boost::array<double, 7> best_set;
     auto arr = root->get_angle();
+    joint_angles arr2;
+    if(root->get_parent()) {
+        arr2 = root->get_parent()->get_angle();
+    }
+    else{
+        arr2 = arr;
+    }
     float min = -1;
     boost::array<double, 7> temp;
     temp[6] = arr[6];
@@ -202,26 +209,26 @@ boost::array<double, 7> rrt::generateSuccessor(rrt_node *root, Point goal_point)
     float fac = 1.3;
     in << 0, 0, 0, 1;
     for(int i = -steps; i<=steps; i++){
-        temp[0] = arr[0]+ i*fac*M_PI/180;
+        temp[0] = arr[0]+ (arr[0]-arr2[0] + i*fac*M_PI/180)/2;
         get_transformationmatrix2(temp[0], a(0), d(0), alpha(0), joint0);
         for(int j = -steps; j<=steps; j++){
-            temp[1] = arr[1]+ j*fac*M_PI/180;
+            temp[1] = arr[1]+ (arr[1] - arr2[1] + j*fac*1.2*M_PI/180)/2;
             get_transformationmatrix2(temp[1], a(1), d(1), alpha(1), joint1);
             joint1 = joint0*joint1;
             for(int k = -steps; k<=steps; k++){
-                temp[2] =arr[2]+  k*fac*M_PI/180;
+                temp[2] =arr[2]+ (arr[2] - arr2[2] + k*fac*1.4*M_PI/180)/2;
                 get_transformationmatrix2(temp[2], a(2), d(2), alpha(2), joint2);
                 joint2 = joint1*joint2;
                 for(int  l= -steps; l<=steps; l++){
-                    temp[3] = arr[3]+ l*fac*M_PI/180;
+                    temp[3] = arr[3]+ (arr[3]-arr2[3] + l*fac*1.6*M_PI/180)/2;
                     get_transformationmatrix2(temp[3], a(3), d(3), alpha(3), joint3);
                     joint3= joint2*joint3;
                     for(int m = -steps; m<=steps; m++){
-                        temp[4] = arr[4]+  m*fac*M_PI/180;
+                        temp[4] = arr[4]+  (arr[4] - arr2[4] + m*fac*1.8*M_PI/180)/2;
                         get_transformationmatrix2(temp[4], a(4), d(4), alpha(4), joint4);
                         joint4=joint3*joint4;
                         for(int n = -steps; n<=steps; n++){
-                            temp[5] =arr[5]+   n*fac*M_PI/180;
+                            temp[5] =arr[5]+ (arr[5] - arr2[5] + n*2*M_PI/180)/2;
                             get_transformationmatrix2(temp[5], a(5), d(5), alpha(5), joint5);
                             joint5=joint4*joint5;
                             out = joint5*last_product*in;

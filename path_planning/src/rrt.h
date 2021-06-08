@@ -38,6 +38,7 @@ private:
 
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long num_nodes = 0;
     rrt(Point start_point, Point goal_point,rrt_params params, joint_angles init);
     tuple<bool, array<Point, 2>> expand();
