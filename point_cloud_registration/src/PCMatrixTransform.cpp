@@ -61,27 +61,27 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
 
   //REMOVING OUTLINERS---------------------------------------------------------------------------------------
   //Initialize container for input and output cloud
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_subsample (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB> ());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZRGB> ());
+ // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
   //write filtered cloud in input cloud
-  pcl::fromPCLPointCloud2(pc2_cloud_subsample, *cloud_subsample);
+  pcl::fromPCLPointCloud2(pc2_cloud_subsample, *cloud_xyz);
 
   std::cerr << "Cloud before filtering: " << std::endl;
-  std::cerr << *cloud_subsample << std::endl;
+  std::cerr << *cloud_xyz << std::endl;
 
   pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-  sor.setInputCloud(cloud_subsample);
+  sor.setInputCloud(cloud_xyz);
   sor.setMeanK(50);
   sor.setStddevMulThresh(1);
-  sor.filter(*cloud_filtered);
+  sor.filter(*cloud_xyz);
 
   std::cerr << "Cloud after filtering: " << std::endl;
-  std::cerr << *cloud_filtered << std::endl;
+  std::cerr << *cloud_xyz << std::endl;
 
   //TRANSFORMATION---------------------------------------------------------------------------------------------------------
   //Initialize container for output cloud
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZRGB> ());
+  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZRGB> ());
 
   //hand-eye calibration matrix
   Matrix4f handeye;
@@ -122,18 +122,18 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
    transform = transform*handeye;
 
   //Transformation of the filtered cloud
-  pcl::transformPointCloud (*cloud_filtered, *cloud_transformed, transform);
+  pcl::transformPointCloud (*cloud_xyz, *cloud_xyz, transform);
 
 
   //CROPPING-------------------------------------------------------------------------------------------------------------------------
   //Crop the point cloud, so it mainly contains the skeleton
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cropped (new pcl::PointCloud<pcl::PointXYZRGB>);
+  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cropped (new pcl::PointCloud<pcl::PointXYZRGB>);
 
   pcl::CropBox<pcl::PointXYZRGB> crop;
   crop.setMin(Vector4f(0.15, -0.5, 0.02, 1.0));
   crop.setMax(Vector4f(0.7, 0.5, 0.3, 1.0));
-  crop.setInputCloud(cloud_transformed);
-  crop.filter(*cloud_cropped);
+  crop.setInputCloud(cloud_xyz);
+  crop.filter(*cloud_xyz);
 
   //ICP--------------------------------------------------------------------------------------------------------------------------------
   //using ICP for fine alignment
@@ -142,12 +142,12 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   // Else stitch the arrived cloud to the total stitched cloud
   if (stitched_cloud->empty() == 1){
     std::cout << "first initialization";
-    *stitched_cloud = *cloud_cropped;
+    *stitched_cloud = *cloud_xyz;
   }else{
     //Set clouds for the ICP algorithm
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr goal_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-    icp.setInputSource(cloud_cropped);
+    icp.setInputSource(cloud_xyz);
     icp.setInputTarget(stitched_cloud);
 
     //ICP parameters (examples), we still need to adjust them
@@ -166,6 +166,10 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
 
   pcl::toROSMsg(*stitched_cloud, output);
   publisher.publish (output);
+  // Safe stitched cloud from bagfile
+  //if( msg_counter == 140){
+   // pcl::io::savePCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud, true ); // Binary format
+ // }
   }
 }
 
@@ -187,7 +191,6 @@ main (int argc, char** argv)
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::JointState> MySyncPolicy;
   message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(150), filtered_cloud, joint_states);
   sync.registerCallback(boost::bind(&cloud_cb, _1, _2, boost::ref(nh)));
-
   ros::spin ();
 }
 
