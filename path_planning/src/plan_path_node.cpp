@@ -6,6 +6,7 @@
 #include <sensor_msgs/JointState.h>
 #include "rrt.h"
 #include <chrono>
+#include "trajectory_msgs/JointTrajectory.h"
 #include "forward_kin/get_endeffector.h"
 using namespace std::chrono;
 class RRT_Publisher
@@ -29,6 +30,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "plan_path_node");
     ros::NodeHandle n;
     ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    ros::Publisher traj_pub = n.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10);
     forward_kin::get_endeffector srv;
     sensor_msgs::JointState joint_state_msg;
     joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
@@ -170,14 +172,23 @@ int main(int argc, char **argv)
 
     // Line list is red
     line_list[1].color.b = 1.0;
-    line_list[1].color.a = 1.0;
+    line_list[1].color.a = 1.0;*/
     geometry_msgs::Point p;
-    for(auto point:goal_path){
-        p.x = point[0];
-        p.y = point[1];
-        p.z = point[2];
+    trajectory_msgs::JointTrajectory traj_msg;
+    trajectory_msgs::JointTrajectoryPoint pt;
+    int i = 0;
+
+    for(auto point_path_pair:goal_path){
+        p.x = (std::get<0>(point_path_pair))[0];
+        p.y = (std::get<0>(point_path_pair))[1];
+        p.z = (std::get<0>(point_path_pair))[2];
+        pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
+        traj_msg.points.push_back(pt);
+        i++;
         line_list[1].points.push_back(p);
-    }*/
+    }
+    std::reverse(traj_msg.points.begin(),traj_msg.points.end());
+    traj_pub.publish(traj_msg);
     ros::Rate r(1);
     while(ros::ok()){
         marker_pub.publish(line_list[1]);

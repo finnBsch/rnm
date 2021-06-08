@@ -6,12 +6,13 @@
 #define SRC_RRT_H
 #include "rrt_node.h"
 #include <tuple>
+#include "ros/ros.h"
 #include <flann/algorithms/dist.h>
 #include <flann/algorithms/kdtree_single_index.h>
 #include <flann/flann.hpp>
 #include <eigen3/Eigen/Dense>
-typedef  vector<vector<vector<vector<vector<vector<vector<rrt_node*>>>>>>> node_grid;
-
+typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
+using namespace Eigen;
 class rrt {
 private:
     Matrix<float, 8, 1> a;
@@ -31,11 +32,8 @@ private:
     // TODO save obstacles
     rrt_node* findNearestNode(Point& relative_to);
     normal_random_variable* sampler;
-    // Sorting grid
-    node_grid grid;
-    array<int, 6> num_cells;
-    array<int, 6> return_grid_id(Point point);
-    array<float, 3>  get_end_effector(Point angles);
+
+    Point get_end_effector(Point angles);
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long num_nodes = 0;

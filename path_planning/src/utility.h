@@ -12,17 +12,13 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <random>
-#include <boost/functional/hash.hpp>
+#include <boost/array.hpp>
 
-template <typename T, int N>
-static std::size_t hasharray(const T (&arr)[N])
-{
-    return boost::hash_range(arr, arr+N);
-}
 using namespace std;
 using namespace Eigen;
-typedef array<float, 6> Point;
-typedef array<float, 7> joint_angles;
+typedef boost::array<float, 3> Point;
+typedef boost::array<float, 7> joint_angles;
+
 struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;
@@ -56,7 +52,6 @@ struct normal_random_variable
 };
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
-float euclidean_dist_sqrd_2(array<float, 3> A, array<float, 3> B);
 float euclidean_norm(Point A);
 Point random_point(array<array<float, 2>, 6> joint_ranges);
 Point step_forward(Point start, Point goal, float dist);

@@ -120,7 +120,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
     num_nodes++;
-    if(euclidean_dist_sqrd_2(get_end_effector(new_node->get_pos()), goal_p)<0.1){
+    if(euclidean_dist_sqrd(get_end_effector(new_node->get_pos()), goal_p)<0.1){
         goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
@@ -129,13 +129,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 
 }
 
-array<int, 6> rrt::return_grid_id(Point point) {
-    array<int, 6> id;
-    for(int i = 0; i < point.size(); i++){
-        id[i] = floor((float)(point[0] - params.joint_ranges[i][0])/params.grid_size);
-    }
-    return id;
-}
+
 
 rrt_node *rrt::findNearestNode(Point& relative_to) {
     flann::Matrix<float> query;
@@ -155,16 +149,13 @@ rrt_node *rrt::findNearestNode(Point& relative_to) {
     return all_nodes[indices[0][0]];
 }
 
-vector<Point> rrt::return_goal_path() {
+vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     rrt_node* current_node = goal_node;
-    vector<Point> goal_path;
-    Point point;
+    vector<tuple<Point, joint_angles>> goal_path;
     do {
-        point = current_node->get_pos();
-        goal_path.push_back(point);
+        goal_path.push_back(make_tuple(current_node->get_pos(), current_node->get_angle()));
         current_node = current_node->get_parent();
     } while(current_node->get_parent() != nullptr);
-    point = current_node->get_pos();
-    goal_path.push_back(point);
+    goal_path.push_back(make_tuple(current_node->get_pos(), current_node->get_angle()));
     return goal_path;
 }
