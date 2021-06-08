@@ -70,7 +70,7 @@ rrt::rrt(Point start_point, Point goal_point, rrt_params params, joint_angles in
     kdtree = flann::Index<flann::L2_Simple<double>>(
             flann::KDTreeIndexParams());
     Eigen::MatrixXd covar(size,size);
-    float cov = 1.9;
+    float cov = 5;
     covar << cov, 0, 0,
             0, cov, 0,
             0, 0, cov/2;
