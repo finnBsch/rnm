@@ -3,7 +3,7 @@
 //
 
 #include "utility.h"
-void point_to_flann(Point p, float* data){
+void point_to_flann(joint_angles p, float* data){
 data[0] = p[0];
 data[1] = p[1];
 data[2] = p[2];
@@ -11,8 +11,8 @@ data[3] = p[3];
 data[4] = p[4];
 data[5] = p[5];
 }
-Point flann_to_point(float* data){
-return (Point){data[0],data[1],data[2],data[3],data[4],data[5]};
+joint_angles flann_to_point(float* data){
+return (joint_angles){data[0],data[1],data[2],data[3],data[4],data[5]};
 }
 float euclidean_dist(Point A, Point B){
     float distances;
@@ -32,7 +32,7 @@ float euclidean_dist_sqrd(Point A, Point B){
     }
     return total_distance;
 }
-float euclidean_norm(Point A){
+float euclidean_norm(joint_angles A){
     float distances;
     float total_distance = 0;
     for(int i = 0; i < A.size(); i++){
@@ -42,8 +42,8 @@ float euclidean_norm(Point A){
     return sqrt(total_distance);
 }
 
-Point random_point(array<array<float, 2>, 6> joint_ranges){
-    Point sampled;
+joint_angles random_point(array<array<float, 2>, 6> joint_ranges){
+    joint_angles sampled;
     float LO;
     float HI;
     float sampled_angle;
@@ -58,8 +58,8 @@ Point random_point(array<array<float, 2>, 6> joint_ranges){
     return sampled;
 }
 
-Point step_forward(Point start, Point goal, float dist){
-    Point diff;
+joint_angles step_forward(joint_angles start, joint_angles goal, float dist){
+    joint_angles diff;
     for(int i = 0; i<start.size(); i++){
         diff[i] = goal[i]-start[i];
     }

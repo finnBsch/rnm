@@ -17,15 +17,16 @@
 using namespace std;
 using namespace Eigen;
 typedef boost::array<float, 3> Point;
-typedef boost::array<float, 7> joint_angles;
+typedef boost::array<float, 6> joint_angles;
+typedef boost::array<float, 7> joint_angles_full;
 
 struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;
     float grid_size;
 };
-void point_to_flann(Point p, float* data);
-Point flann_to_point(float* data);
+void point_to_flann(joint_angles p, float* data);
+joint_angles flann_to_point(float* data);
 struct normal_random_variable
 {
     normal_random_variable(Eigen::MatrixXd const& covar)
@@ -52,9 +53,9 @@ struct normal_random_variable
 };
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
-float euclidean_norm(Point A);
-Point random_point(array<array<float, 2>, 6> joint_ranges);
-Point step_forward(Point start, Point goal, float dist);
+float euclidean_norm(joint_angles A);
+joint_angles random_point(array<array<float, 2>, 6> joint_ranges);
+joint_angles step_forward(joint_angles start, joint_angles goal, float dist);
 
 
 

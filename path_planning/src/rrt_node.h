@@ -9,17 +9,21 @@
 class rrt_node {
 private:
     Point position;
-    vector<float>  pos;
+    joint_angles angles;
+    vector<float> angles_;
     rrt_node* parent_node = nullptr;
     list<rrt_node*> children;
 public:
-    rrt_node(const Point position);
-    rrt_node(const Point position, rrt_node* parent_node);
-    Point& get_pos(){
+    rrt_node(const joint_angles angles, const Point position);
+    rrt_node(const joint_angles angles, const Point position, rrt_node* parent_node);
+    joint_angles & get_angles(){
+        return angles;
+    };
+    Point& get_position(){
         return position;
     };
-    vector<float>* get_pos_flann(){
-        return &pos;
+    vector<float>* get_angles_flann(){
+        return &angles_;
     };
     rrt_node* get_parent(){
         return parent_node;

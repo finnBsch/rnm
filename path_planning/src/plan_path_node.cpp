@@ -50,21 +50,34 @@ int main(int argc, char **argv)
         return 1;
     }
     //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    Point start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
+    joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
-    Point goal = {M_PI*0, M_PI/8, M_PI/2*0, M_PI*0, M_PI/8, M_PI/8};
+
+    float a_ = 0;
+    float b_ = M_PI/2;
+    float c_ = M_PI/2;
+    float d_ = M_PI/4;
+    float e_ = 0;
+    float f_ = M_PI/3;
+    ros::param::get("~a", a_);
+    ros::param::get("~b", b_);
+    ros::param::get("~c", c_);
+    ros::param::get("~d", d_);
+    ros::param::get("~e", e_);
+    ros::param::get("~f", f_);
+    joint_angles goal = {a_,b_,c_,d_,e_,f_};
     array<array<float, 2>, 6> joint_ranges;
-    array<float, 2> range = {-M_PI, M_PI};
+    array<float, 2> range = {-2.8973, 2.8973};
     joint_ranges[0] = range;
-    //range = {0, 2*M_PI};
+    range = {-1.7628, 1.7628};
     joint_ranges[1] = range;
-    //range = {-1, 1};
+    range = {-2.8973, 2.8973};
     joint_ranges[2] = range;
-    //range = {-1, 1};
+    range = {-3.0718, -0.0698};
     joint_ranges[3] = range;
-    //range = {-1, 1};
+    range = {-2.8973, 2.8973};
     joint_ranges[4] = range;
-    //range = {-1, 1};
+    range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
 
 
@@ -103,7 +116,7 @@ int main(int argc, char **argv)
         auto return_expand = tree->expand();
         not_found = !(get<0>(return_expand));
 
-        /*geometry_msgs::Point p;
+        geometry_msgs::Point p;
         auto new_line = get<1>(return_expand);
         p.x = new_line.at(0).at(0);
         p.y = new_line.at(0).at(1);
@@ -114,10 +127,11 @@ int main(int argc, char **argv)
         p.z = new_line.at(1).at(2);
         line_list[0].points.push_back(p);
         //ros::spinOnce();
-        // r.sleep();*/
+        // r.sleep();
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
-            ROS_INFO("Number of nodes: %i", tree->num_nodes);
+            ROS_INFO("Number of nodes: %i and min dist %f", tree->num_nodes, tree->min_dist);
+            marker_pub.publish(line_list[0]);
             start_time = finish;
         }
 
@@ -125,6 +139,7 @@ int main(int argc, char **argv)
     std::chrono::duration<double> duration = (finish - start_time_total);
 
     ROS_INFO_STREAM("Found Path in : " << duration.count());
+    marker_pub.publish(line_list[0]);
     auto goal_path = tree->return_goal_path();
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
     line_list[1].header.stamp = ros::Time::now();
@@ -144,36 +159,6 @@ int main(int argc, char **argv)
     line_list[1].color.b = 1.0;
     line_list[1].color.a = 1.0;
     geometry_msgs::Point p;
-    for(auto point:goal_path){
-        boost::array<float, 7> angles;
-        std::copy(point.begin(), point.begin()+6, angles.begin() );
-        srv.request.joint_angles = angles;
-        auto a = client.call(srv);
-        p.x = srv.response.end_effector_pos[0];
-        p.y = srv.response.end_effector_pos[1];
-        p.z = srv.response.end_effector_pos[2];
-        line_list[1].points.push_back(p);
-    }
-    /*marker_pub.publish(line_list[0]);
-
-    line_list[1].header.frame_id = "/world"; // TODO Find correct frame
-    line_list[1].header.stamp = ros::Time::now();
-    line_list[1].ns = "plan_path_node";
-    line_list[1].action = visualization_msgs::Marker::ADD;
-    line_list[1].pose.orientation.w = 1.0;
-
-    line_list[1].id = 1;
-
-    line_list[1].type = visualization_msgs::Marker::LINE_STRIP;
-
-
-    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
-    line_list[1].scale.x = 0.009;
-
-    // Line list is red
-    line_list[1].color.b = 1.0;
-    line_list[1].color.a = 1.0;*/
-    geometry_msgs::Point p;
     trajectory_msgs::JointTrajectory traj_msg;
     trajectory_msgs::JointTrajectoryPoint pt;
     int i = 0;
@@ -192,7 +177,7 @@ int main(int argc, char **argv)
     ros::Rate r(1);
     while(ros::ok()){
         marker_pub.publish(line_list[1]);
-        //marker_pub.publish(line_list[0]);
+        marker_pub.publish(line_list[0]);
         r.sleep();
     }
 }

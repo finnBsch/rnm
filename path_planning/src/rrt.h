@@ -21,25 +21,25 @@ private:
     // Flann
     flann::Index<flann::L2_Simple<float>> kdtree;
     vector<rrt_node*> all_nodes;
-    std::unordered_map<Point, rrt_node*, std::function<size_t(Point)>> nodemap;
-    Point goal_point;
-    array<float, 3> goal_p;
-    Point start_point;
+    joint_angles goal_point;
+    Point goal_p;
+    joint_angles start_point;
     rrt_node* start_node;
     rrt_node* goal_node = nullptr;
     // RRT Params
     rrt_params params;
     // TODO save obstacles
-    rrt_node* findNearestNode(Point& relative_to);
+    rrt_node* findNearestNode(joint_angles& relative_to);
     normal_random_variable* sampler;
 
-    Point get_end_effector(Point angles);
+    Point get_end_effector(joint_angles angles);
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long num_nodes = 0;
-    rrt(Point start_point, Point goal_point,rrt_params params);
+    float min_dist = -1;
+    rrt(joint_angles start_point, joint_angles goal_point,rrt_params params);
     tuple<bool, array<Point, 2>> expand();
-    vector<Point> return_goal_path();
+    vector<tuple<Point, joint_angles>> return_goal_path();
 
 };
 

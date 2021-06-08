@@ -3,12 +3,14 @@
 //
 
 #include "rrt_node.h"
-rrt_node::rrt_node(const Point position):pos(6) {
+rrt_node::rrt_node(const joint_angles angles, const Point position):angles_(6) {
     this->position = position;
-    pos = {position[0],position[1],position[2],position[3],position[4],position[5]};
+    this->angles = angles;
+    angles_ = {angles[0],angles[1],angles[2],angles[3],angles[4],angles[5]};
 }
-rrt_node::rrt_node(const Point position, rrt_node* parent_node):pos(6) {
+rrt_node::rrt_node(const joint_angles angles, const Point position, rrt_node* parent_node):angles_(6) {
     this->position = position;
+    this->angles = angles;
     this->parent_node = parent_node;
-    pos = {position[0],position[1],position[2],position[3],position[4],position[5]};
+    angles_ = {angles[0],angles[1],angles[2],angles[3],angles[4],angles[5]};
 }
