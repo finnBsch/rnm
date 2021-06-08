@@ -5,11 +5,15 @@
  * last edited: 8.8.21
  *
  *
- * PARAMS:
+ * WORKING FOR PARAMS:
  *
  * initial joint angles : -1.04, 0.32, 2.43, -1.97, -1.67119, 1.45099, 0.321082
- * finial A : 
- *
+ * finial A (12x1 order): < 0.244948, 0.96417, 0.101854, 0.076194, -0.123872, 0.989368, 0.966538, -0.234584, -0.103804, 0.250202, 0.444379, 0.632892;
+ * incrementalStepSize: 0.00001
+ * abort value: 0.05
+ * no rounding
+ * setZero() before their initialization: current_transformationmatrix_vector_, delta_A, abs_delta_A
+ * pinvJ calculated with pinvJ = J.completeOrthogonalDecomposition().pseudoInverse()
  *
  *
  *
@@ -99,12 +103,7 @@ public:
                 M(0, 3), M(1, 3), M(2, 3);
         return v;
     }
-/*
-    void startIncrementalInverseKinvematics(){
-        std::cout << "START FUNCTION";
-        service = node_handle_.advertiseService("unserService",ik_jointAngles);
-    }
-*/
+
     boost::array<double, 7> transformVectorToArray(VectorXd &vector) {
         return (boost::array<double, 7>){vector[0], vector[1], vector[2],
                                          vector[3], vector[4], vector[5],
@@ -170,14 +169,6 @@ public:
         //forward_kin::get_endeffector srv; $$$$$$$$$$$
         //srv.request.joint_angles = transformVectorToArray(joint_angles_);
 
-        /* //ROUND JOINT ANGLES
-        for(int i=0;i<7;i++){
-            joint_angles_(i)= roundf(joint_angles_(i)*1000)/1000;
-        }
-        */
-
-
-
 
         // CONNECTION CHECK
         /*auto a = client_->call(srv);
@@ -231,17 +222,12 @@ public:
         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
         //output
         ROS_INFO("counter: %i", counter_);
-        /*for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
-            ROS_INFO("current A: %f",current_transformationmatrix_vector_(i));
-        }*/
+
 
         abs_delta_A.setZero();
         // Calculate the absolute of the delta_A Vector
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
-            //abs_delta_A(i)= roundf(abs_delta_A(i)*100)/100;
-            ROS_INFO("DELTA A %f",abs_delta_A(i));
-
         }
 
         if (abs_delta_A.maxCoeff() < 0.05) {//|| counter_ == limit_) {
@@ -265,15 +251,6 @@ public:
 
             pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
 
-            /*
-            for(int i=0;i<pinvJ.rows();i++) {
-                for (int j = 0; j < pinvJ.cols(); j++) {
-                    pinvJ(i, j)= roundf(pinvJ(i, j)*100)/100;
-                }
-            }*/
-
-
-
             //pinvJ = pinv_eigen_based(J);
             //pinvJ =  J.transpose() * (J*J.transpose()).inverse() ;
             //cvInvert(&J, &pinvJ, 0);
@@ -281,10 +258,6 @@ public:
 
             //CALCULATE CHANGE IN JOINT ANGLES
              deltaQ = pinvJ * delta_A;
-            //output change
-            /*for(int i=0; i<deltaQ.rows();i++){
-                ROS_INFO("deltaQ %f",deltaQ(i));
-            }*/
 
             joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
 
