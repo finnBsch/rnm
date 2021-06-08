@@ -32,6 +32,15 @@ float euclidean_dist_sqrd(Point A, Point B){
     }
     return total_distance;
 }
+float euclidean_dist_sqrd_2(array<float, 3> A, array<float, 3> B){
+    float distances;
+    float total_distance = 0;
+    for(int i = 0; i < A.size(); i++){
+        distances = A[i] - B[i];
+        total_distance += distances*distances;
+    }
+    return total_distance;
+}
 float euclidean_norm(Point A){
     float distances;
     float total_distance = 0;

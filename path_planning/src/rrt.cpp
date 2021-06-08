@@ -3,7 +3,7 @@
 //
 
 #include "rrt.h"
-
+#define T 7
 /* Performance improvements:
  * euclidean dist: remove redudant array calls, implement euclidean dist sqrd (no need for sqrt)
  * generally decrease amount of array at(x) calls
@@ -11,8 +11,37 @@
  * possible things to do:
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
+Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
+    Matrix<float, 4, 4> ret_mat;
+    float st = sin(theta);
+    float ca = cos(alpha);
+    float sa = sin(alpha);
+    float ct = cos(theta);
+    ret_mat << ct, -st, 0, a,
+            st * ca, ct*ca, -sa, -d * sa,
+            st * sa, ct*sa, ca, d * ca,
+            0, 0, 0, 1;
+    return ret_mat;
+}
+
+array<float, 3> rrt::get_end_effector(Point angles){
+    array<Matrix<float, 4, 4>, 8> a_;
+    for(int i  = 0; i<T; i++){
+        a_.at(i) = get_transformationmatrix(angles[i], a(i), d(i), alpha(i));
+    }
+    a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
+    Matrix<float, 4, 1> in;
+    in << 0, 0, 0, 1;
+    Matrix<float, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+    //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+    return (array<float, 3>){out[0], out[1], out[2]};
+}
 
 rrt::rrt(Point start_point, Point goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
+    goal_p = get_end_effector(goal_point);
+    a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
+    d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+    alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     int size = 6;
     kdtree = flann::Index<flann::L2_Simple<float>>(
             flann::KDTreeIndexParams());
@@ -91,7 +120,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
     num_nodes++;
-    if(euclidean_dist(new_node->get_pos(), goal_point)<0.05){
+    if(euclidean_dist_sqrd_2(get_end_effector(new_node->get_pos()), goal_p)<0.1){
         goal_node = new_node;
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_pos(), new_node->get_pos()});
     }
