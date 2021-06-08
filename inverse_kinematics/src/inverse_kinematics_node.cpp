@@ -1,9 +1,25 @@
 /*
  * This is the example of Tutorial 5 to test and understand incremental inverse kinematics
  * author: Sean Maroofi
- * added: 29.5.21
- * last edited: 29.5.21
+ * added: 8.8.21
+ * last edited: 8.8.21
+ *
+ *
+ * PARAMS:
+ *
+ * initial joint angles : -1.04, 0.32, 2.43, -1.97, -1.67119, 1.45099, 0.321082
+ * finial A : 
+ *
+ *
+ *
+ *
  */
+
+
+
+
+
+
 
 #include <ros/ros.h>
 #include "sensor_msgs/JointState.h"
@@ -38,14 +54,15 @@ private:
     VectorXd a;
     VectorXd d;
     VectorXd alpha;
-    MatrixXd A_total;
+    Matrix4d A_total;
     VectorXd vector;
-    MatrixXd ret_mat;
+    Matrix4d ret_mat;
     std::array<MatrixXd, 8> a_;
     MatrixXd J;
     MatrixXd pinvJ;
     VectorXd delta_A;
     VectorXd deltaQ;
+    VectorXd abs_delta_A;
 
 public:
     std::string text = "vorher";
@@ -55,8 +72,8 @@ public:
         counter_ = 0;
     }*/
 
-    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4){
-        incrementalStepSize = 10000.0;
+    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1){
+        incrementalStepSize = 0.00001;
         limit_ = 10000;
         counter_ = 0;
         client_ = nullptr;
@@ -123,6 +140,16 @@ public:
         return vector;
     }
 
+    double getMaxEntry(VectorXd vector){
+        double maxValue = 0.0;
+        for (int i=0; i<vector.rows(); i++){
+            if (maxValue < vector(i)){
+                maxValue = vector(i);
+            }
+        }
+        return maxValue;
+    }
+
     //_______________________________________________ END OF FORWARD
 
 
@@ -166,6 +193,7 @@ public:
 
         // GET CURRENT TRANSFORMATION MATRIX
         if(size_ ==12) {
+            current_transformationmatrix_vector_.setZero();
             current_transformationmatrix_vector_ << get_transformation_Vector();
             /*
                     << srv.response.layout.data[0], srv.response.layout.data[4], srv.response.layout.data[8],
@@ -185,7 +213,10 @@ public:
         if(initializing) {
             if (size_ == 12) {
             final_transformationmatrix_vector_
-                    << 0.244948, 0.076194, 0.966538, 0.250202, 0.96417, -0.123872, -0.234584, 0.444379, 0.101854, 0.989368, -0.103804, 0.6328920001; // ONLY FOR TESTING
+                    << 0.244948, 0.96417, 0.101854,
+                       0.076194, -0.123872, 0.989368,
+                       0.966538, -0.234584, -0.103804,
+                       0.250202, 0.444379, 0.632892;      // ONLY FOR TESTING
                     //<< 0.2760,-0.8509,   0.4470, -0.4470, -0.5253, -0.7240, 0.8509, 0, -0.5253, 0.3670, 0.8315,0;
 
             } else{
@@ -196,25 +227,29 @@ public:
 
 
         // DIFFERENCE CALCULATION
-         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
+        delta_A.setZero();
+        delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
         //output
         ROS_INFO("counter: %i", counter_);
-        for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
+        /*for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
             ROS_INFO("current A: %f",current_transformationmatrix_vector_(i));
-        }
-        ROS_INFO("--------------------------");
+        }*/
+
+        abs_delta_A.setZero();
         // Calculate the absolute of the delta_A Vector
-        VectorXd abs_delta_A(size_,1);
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
+            //abs_delta_A(i)= roundf(abs_delta_A(i)*100)/100;
+            ROS_INFO("DELTA A %f",abs_delta_A(i));
+
         }
 
-        if (abs_delta_A.maxCoeff() <= 0.1 ) {//|| counter_ == limit_) {
+        if (abs_delta_A.maxCoeff() < 0.05) {//|| counter_ == limit_) {
             for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
                 ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
             }
             if(counter_ == limit_) {
-               // ROS_ERROR("Limit ueberstritten: %i", counter_);
+               ROS_ERROR("Limit ueberstritten: %i", counter_);
             } else {
                 ROS_INFO("FINISHED");
             }
@@ -223,14 +258,26 @@ public:
         } else {
 
             // CALCULATE PSEODOINVERSE OF JACOBIAN
-                //TODO include if statement for size_ in calculateJacobian
-                J = calculateJacobian(joint_angles_, size_);
-                pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
-                //pinvJ = pinv_eigen_based(J);
-                // MatrixXd JM= J*J.transpose();
-                //pinvJ =  J.transpose() * JM.inverse() ;
-                //cvInvert(&J, &pinvJ, 0);
-                //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
+            //J = calculateJacobian(joint_angles_, size_);
+
+            J = calculateJacobian(joint_angles_, size_);
+
+
+            pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
+
+            /*
+            for(int i=0;i<pinvJ.rows();i++) {
+                for (int j = 0; j < pinvJ.cols(); j++) {
+                    pinvJ(i, j)= roundf(pinvJ(i, j)*100)/100;
+                }
+            }*/
+
+
+
+            //pinvJ = pinv_eigen_based(J);
+            //pinvJ =  J.transpose() * (J*J.transpose()).inverse() ;
+            //cvInvert(&J, &pinvJ, 0);
+            //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
 
             //CALCULATE CHANGE IN JOINT ANGLES
              deltaQ = pinvJ * delta_A;
@@ -239,8 +286,10 @@ public:
                 ROS_INFO("deltaQ %f",deltaQ(i));
             }*/
 
-            joint_angles_ = joint_angles_ + deltaQ / incrementalStepSize;
-            /*for (int i=0; i< joint_angles_.rows();i++){
+            joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
+
+            /*
+            for (int i=0; i< joint_angles_.rows();i++){
                 ROS_INFO("Angles: %f", joint_angles_(i));
             }*/
             return incrementalStep();
