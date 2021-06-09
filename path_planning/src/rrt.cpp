@@ -117,6 +117,13 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     }
     // TODO: Collision check, feasibility check
     new_node = new rrt_node(stepped_point, get_end_effector(stepped_point), nearest_node);
+    auto near = findNearNodes(stepped_point);
+    for(rrt_node* no:near){
+        float temp = new_node->cost+ euclidean_dist_sqrd_joint(new_node->get_angles(), no->get_angles());
+        if(no->cost > temp){
+            no->set_parent(new_node, temp);
+        }
+    }
     kdtree.addPoints(flann::Matrix<float>(new_node->get_angles_flann()->data(), 1, 6));
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
@@ -158,6 +165,29 @@ rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
     //Point point;
     //point = flann_to_point(kdtree.getPoint(indices[0][0]));
     return all_nodes[indices[0][0]];
+}
+
+vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
+    flann::Matrix<float> query;
+    std::vector<float> data(6);
+    std::vector<rrt_node*> near_nodes;
+    point_to_flann(relative_to, data.data());
+    query = flann::Matrix<float>(data.data(), 1,
+                                 data.size());
+    std::vector<int> i(query.rows);
+    flann::Matrix<int> indices(new int[query.rows], query.rows, 1);
+    std::vector<float> d(query.rows);
+    flann::Matrix<float> dists(new float[query.rows], query.rows, 1);
+
+    int n = kdtree.radiusSearch(query, indices, dists, 0.2, flann::SearchParams());
+
+    //Point point;
+    //point = flann_to_point(kdtree.getPoint(indices[0][0]));
+    near_nodes.reserve(indices.rows);
+    for(int i = 0; i<indices.rows;i++){
+        near_nodes.push_back(all_nodes[indices[i][i]]);
+    }
+    return near_nodes;
 }
 
 vector<tuple<Point, joint_angles>> rrt::return_goal_path() {

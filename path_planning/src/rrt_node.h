@@ -9,6 +9,7 @@
 class rrt_node {
 private:
     Point position;
+
     joint_angles angles;
     vector<float> angles_;
     rrt_node* parent_node = nullptr;
@@ -16,6 +17,12 @@ private:
 public:
     rrt_node(const joint_angles angles, const Point position);
     rrt_node(const joint_angles angles, const Point position, rrt_node* parent_node);
+    float cost = 0;
+    float cost_to_parent = 0;
+    void set_parent(rrt_node* parent, float cost){
+        this->parent_node = parent;
+
+    }
     joint_angles & get_angles(){
         return angles;
     };

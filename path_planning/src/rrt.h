@@ -30,6 +30,7 @@ private:
     rrt_params params;
     // TODO save obstacles
     rrt_node* findNearestNode(joint_angles& relative_to);
+    vector<rrt_node*> findNearNodes(joint_angles& relative_to)
     normal_random_variable* sampler;
 
     Point get_end_effector(joint_angles angles);
