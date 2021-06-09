@@ -23,6 +23,15 @@ float euclidean_dist(Point A, Point B){
     }
     return sqrt(total_distance);
 }
+float euclidean_dist_sqrd_joint(joint_angles A, joint_angles B){
+    float distances;
+    float total_distance = 0;
+    for(int i = 0; i < A.size(); i++){
+        distances = A[i] - B[i];
+        total_distance += distances*distances;
+    }
+    return total_distance;
+}
 float euclidean_dist_sqrd(Point A, Point B){
     float distances;
     float total_distance = 0;

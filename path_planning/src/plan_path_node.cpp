@@ -59,6 +59,10 @@ int main(int argc, char **argv)
     float d_ = M_PI/4;
     float e_ = 0;
     float f_ = M_PI/3;
+    float step_size = 1.5*M_PI/180;
+    bool goal_joint = true;
+    ros::param::get("~ss", step_size);
+    ros::param::get("~gj", goal_joint);
     ros::param::get("~a", a_);
     ros::param::get("~b", b_);
     ros::param::get("~c", c_);
@@ -81,7 +85,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {1.5*M_PI/180, joint_ranges, 36*M_PI/180};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;

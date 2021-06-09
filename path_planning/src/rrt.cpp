@@ -77,8 +77,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     joint_angles stepped_point;
     bool n_feasible = true;
     while(n_feasible) {
-        auto sampled = sampler->operator()();
         bool not_feasible = true;
+        /*auto sampled = sampler->operator()();
         while(not_feasible){
             sampled = sampler->operator()();
             sampled[0] += goal_point[0];
@@ -96,7 +96,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                     not_feasible = false;
                 }
             }
-        }
+        }*/
+        auto sampled = random_point(params.joint_ranges);
         for(int i = 0; i<sampled.size(); i++){
             sample_point[i] =  (float)sampled[i];
         }
@@ -120,7 +121,13 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
     num_nodes++;
-    auto dist = euclidean_dist_sqrd(new_node->get_position(), goal_p);
+    float dist;
+    if(params.goal_joint){
+        dist = euclidean_dist_sqrd_joint(new_node->get_angles(), goal_point);
+    }
+    else{
+        dist = euclidean_dist_sqrd(new_node->get_position(), goal_p);
+    }
     if (dist < min_dist || min_dist == -1){
         min_dist = dist;
     }
