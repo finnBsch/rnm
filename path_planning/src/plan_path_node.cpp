@@ -61,8 +61,10 @@ int main(int argc, char **argv)
     float f_ = M_PI/3;
     float step_size = 1.5*M_PI/180;
     bool goal_joint = true;
+    int num_nodes_min = 200000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);
+    ros::param::get("~nn", num_nodes_min);
     ros::param::get("~a", a_);
     ros::param::get("~b", b_);
     ros::param::get("~c", c_);
@@ -75,7 +77,7 @@ int main(int argc, char **argv)
     joint_ranges[0] = range;
     range = {-1.7628, 1.7628};
     joint_ranges[1] = range;
-    range = {-2.8973, 2.8973};
+    range = {-M_PI/2, M_PI/2};
     joint_ranges[2] = range;
     range = {-3.0718, -0.0698};
     joint_ranges[3] = range;
@@ -85,7 +87,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {step_size, joint_ranges, goal_joint};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -120,7 +122,7 @@ int main(int argc, char **argv)
         auto return_expand = tree->expand();
         not_found = !(get<0>(return_expand));
 
-        geometry_msgs::Point p;
+        /*geometry_msgs::Point p;
         auto new_line = get<1>(return_expand);
         p.x = new_line.at(0).at(0);
         p.y = new_line.at(0).at(1);
@@ -131,11 +133,16 @@ int main(int argc, char **argv)
         p.z = new_line.at(1).at(2);
         line_list[0].points.push_back(p);
         //ros::spinOnce();
-        // r.sleep();
+        // r.sleep();*/
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
-            ROS_INFO("Number of nodes: %i and min dist %f", tree->num_nodes, tree->min_dist);
-            marker_pub.publish(line_list[0]);
+            if(tree->goal_node!= nullptr){
+                ROS_INFO("Number of nodes: %i and min dist %f and cost %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost);
+            }
+            else{
+                ROS_INFO("Number of nodes: %i and min dist %f and cost %f", tree->num_nodes, tree->min_dist);
+            }
+            //marker_pub.publish(line_list[0]);
             start_time = finish;
         }
 
@@ -143,7 +150,7 @@ int main(int argc, char **argv)
     std::chrono::duration<double> duration = (finish - start_time_total);
 
     ROS_INFO_STREAM("Found Path in : " << duration.count());
-    marker_pub.publish(line_list[0]);
+    //marker_pub.publish(line_list[0]);
     auto goal_path = tree->return_goal_path();
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
     line_list[1].header.stamp = ros::Time::now();

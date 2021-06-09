@@ -24,7 +24,7 @@ struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;
     bool goal_joint;
-    float grid_size;
+    int num_nodes_min;
 };
 void point_to_flann(joint_angles p, float* data);
 joint_angles flann_to_point(float* data);
@@ -55,6 +55,7 @@ struct normal_random_variable
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
 float euclidean_dist_sqrd_joint(joint_angles A, joint_angles B);
+float euclidean_dist_joint(joint_angles A, joint_angles B);
 float euclidean_norm(joint_angles A);
 joint_angles random_point(array<array<float, 2>, 6> joint_ranges);
 joint_angles step_forward(joint_angles start, joint_angles goal, float dist);
