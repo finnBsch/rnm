@@ -1,8 +1,8 @@
 /*
  * This is the example of Tutorial 5 to test and understand incremental inverse kinematics
  * author: Sean Maroofi
- * added: 8.8.21
- * last edited: 8.8.21
+ * added: 29.5.21
+ * last edited: 9.6.21
  *
  *
  * WORKING FOR PARAMS:
@@ -43,6 +43,7 @@ using namespace Eigen;
 class IncrementalInverseKinematics {
 
 private:
+
     double incrementalStepSize;
     bool initializing = true;
     boost::array<double, 7> desired_joint_angles_;
@@ -70,12 +71,15 @@ private:
 
 public:
     std::string text = "vorher";
+
+    // CONTRUCTOR FOR SERVICE CONNECTION WITH FORWARD KIN
     /*IncrementalInverseKinematics(ros::ServiceClient* client, int size): size_(size), client_(client),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1){
         incrementalStepSize = 100000.0;
         limit_ = 10000;
         counter_ = 0;
     }*/
 
+    // CONTRUCTOR FOR INVERSE KINEMATICS WITHOUT FORWARD KIN SERVICE CONNECTION
     explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1){
         incrementalStepSize = 0.00001;
         limit_ = 10000;
@@ -90,7 +94,7 @@ public:
 
 
     /*
- * This function takes A 4x4 Matrix and converts it to a 1x12 vector
+ * This function takes a 4x4 Matrix and converts it to a 1x12 vector
  *
  * @param: MatrixXd M
  * returns: VectorXd v
@@ -104,14 +108,27 @@ public:
         return v;
     }
 
+    /*
+ * This function takes a 7x1 Vector and converts it into an array
+ *
+ * @param: VectorXd v
+ * returns: <double,7> array
+ */
     boost::array<double, 7> transformVectorToArray(VectorXd &vector) {
         return (boost::array<double, 7>){vector[0], vector[1], vector[2],
                                          vector[3], vector[4], vector[5],
                                          vector[6]};
     }
 
-    //__________________________________________BEGIN OF FORWARD
+    // ------------------------- FORWARD KINEMATICS -----------------------------
 
+
+    /*
+* This function return the 4x4 Transformationmatrix for the given Denavit Hagen Parameters
+*
+* @param: float theta, float a, float d, float alpha
+* returns: MatrixXd A
+*/
     MatrixXd get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
         ret_mat << cos(theta), -sin(theta), 0, a,
                 sin(theta) * cos(alpha), cos(theta)*cos(alpha), -sin(alpha), -d * sin(alpha),
@@ -120,6 +137,13 @@ public:
         return ret_mat;
     }
 
+
+    /*
+* This function performs the Forward kinematics and returns the overall transformation matrix to the goal position as a vector
+*
+* @param: -
+* returns: VectorXd v
+*/
     VectorXd get_transformation_Vector() {
         for(int i  = 0; i<7; i++){
             a_.at(i) = get_transformationmatrix(joint_angles_(i), a(i), d(i), alpha(i));
@@ -139,26 +163,16 @@ public:
         return vector;
     }
 
-    double getMaxEntry(VectorXd vector){
-        double maxValue = 0.0;
-        for (int i=0; i<vector.rows(); i++){
-            if (maxValue < vector(i)){
-                maxValue = vector(i);
-            }
-        }
-        return maxValue;
-    }
-
-    //_______________________________________________ END OF FORWARD
+    //END OF FORWARD
 
 
 
 
 
 /*
- * This recursive function performs the incremental inverse kinematics. It takes the current joint angles, the current A and final A Matrix as 12x1 vectors. It returns the desired joint angles for the desired position of the robot
+ * This recursive function performs the incremental inverse kinematics. It returns the desired joint angles for the desired position of the robot
  *
- * @param: VectorXd thetas, VectorXd currentA. VectorXd finalA
+ * @param: -
  * returns: VectorXd desiredThetas
  */
     boost::array<double, 7> incrementalStep() {
@@ -166,9 +180,9 @@ public:
         // FOR TESTING
         counter_ = counter_ + 1;
 
+        // ------------- FOR SERVICE CONNECTION ------------------------------
         //forward_kin::get_endeffector srv; $$$$$$$$$$$
         //srv.request.joint_angles = transformVectorToArray(joint_angles_);
-
 
         // CONNECTION CHECK
         /*auto a = client_->call(srv);
@@ -180,19 +194,22 @@ public:
             ROS_ERROR("Failed to call service forward_kin");
             exit; //TODO find better solution
         }*/
+        // -------------------------------------------------------------------
 
 
         // GET CURRENT TRANSFORMATION MATRIX
         if(size_ ==12) {
-            current_transformationmatrix_vector_.setZero();
+            //current_transformationmatrix_vector_.setZero();
             current_transformationmatrix_vector_ << get_transformation_Vector();
+
+            // ------------- FOR SERVICE CONNECTION ------------------------------
             /*
                     << srv.response.layout.data[0], srv.response.layout.data[4], srv.response.layout.data[8],
                     srv.response.layout.data[1], srv.response.layout.data[5], srv.response.layout.data[9],
                     srv.response.layout.data[2], srv.response.layout.data[6], srv.response.layout.data[10],
                     srv.response.layout.data[3], srv.response.layout.data[7], srv.response.layout.data[11];
             */
-
+            // -------------------------------------------------------------------
         } else{
             //current_transformationmatrix_vector_ << srv.response.end_effector_pos[0], srv.response.end_effector_pos[1],
               //                                      srv.response.end_effector_pos[2];
@@ -217,20 +234,28 @@ public:
         }
 
 
-        // DIFFERENCE CALCULATION
-        delta_A.setZero();
+        // DIFFERENCE CALCULATION OF DELTA_A
+        //delta_A.setZero();
         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
-        //output
+
+
+        //output of Iteration step
         ROS_INFO("counter: %i", counter_);
 
 
-        abs_delta_A.setZero();
+        //abs_delta_A.setZero();
         // Calculate the absolute of the delta_A Vector
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
         }
 
-        if (abs_delta_A.maxCoeff() < 0.05) {//|| counter_ == limit_) {
+        ROS_INFO("X-COOR: %f", current_transformationmatrix_vector_(9));
+        ROS_INFO("Y-COOR: %f", current_transformationmatrix_vector_(10));
+        ROS_INFO("Z-COOR: %f", current_transformationmatrix_vector_(11));
+
+
+        // check if largest entry of absolute is smaller than error
+        if (abs_delta_A.maxCoeff() < 0.05) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
             for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
                 ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
             }
@@ -243,28 +268,20 @@ public:
 
         } else {
 
-            // CALCULATE PSEODOINVERSE OF JACOBIAN
-            //J = calculateJacobian(joint_angles_, size_);
-
+            // calculate Jacobian and pseudoinverse
             J = calculateJacobian(joint_angles_, size_);
-
-
             pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
 
-            //pinvJ = pinv_eigen_based(J);
+            // alternative functions
+            //pinvJ = pinv_eigen_based(J); // function is commented below
             //pinvJ =  J.transpose() * (J*J.transpose()).inverse() ;
             //cvInvert(&J, &pinvJ, 0);
             //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
 
-            //CALCULATE CHANGE IN JOINT ANGLES
-             deltaQ = pinvJ * delta_A;
-
+            //correction of joint angles
+            deltaQ = pinvJ * delta_A;
             joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
 
-            /*
-            for (int i=0; i< joint_angles_.rows();i++){
-                ROS_INFO("Angles: %f", joint_angles_(i));
-            }*/
             return incrementalStep();
         }
     }
@@ -272,17 +289,15 @@ public:
     bool ik_jointAngles(inverse_kinematics::unserService::Request &req,
                         inverse_kinematics::unserService::Response &res) {
 
-        // FOR TESTING LATER DELETE
-        text = "nachher";
-
+        // request joint angles
         for(int i=0;i<7;i++) {
             joint_angles_(i) = req.initial_joint_angles[i];
         }
 
         //TODO goal pos in service
+        //PERFORM INVERSE KINEMATICS
         desired_joint_angles_ = incrementalStep();
 
-        std::cout << desired_joint_angles_[0] << desired_joint_angles_[1];
         res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
@@ -318,23 +333,28 @@ public:
 };
 
 int main(int argc, char** argv)  {
+
     // create inverse-kinematics node
     ros::init(argc,argv, "inverse_kinematics_node");
     ros::NodeHandle node_handle("~");
 
-    //-------------------- Joint Angles ---------------------------
+
     // Parse parameters specified in the .launch file
     std::string topic_name;
     int queue_size;
     node_handle.getParam("topic_name", topic_name);
     node_handle.getParam("queue_size", queue_size);
+
+    // ------------- FOR SERVICE CONNECTION ------------------------------
     //auto client = node_handle.serviceClient<forward_kin::get_endeffector>(
-      //      "/forward_kin_node/get_endeffector"); $$$$$$$$$$$$$$$
-    int size = 12;
+    //"/forward_kin_node/get_endeffector"); $$$$$$$$$$$$$$$
     //IncrementalInverseKinematics inverse_kinematics(&client, size);
+    // -------------------------------------------------------------------
+
+    // SIZE OF JACOBIAN, RIGHT NOW ONLY 12 WORKS
+    int size = 12;
     IncrementalInverseKinematics inverse_kinematics(size);
     ros::ServiceServer service = node_handle.advertiseService("unserService",&IncrementalInverseKinematics::ik_jointAngles,&inverse_kinematics);
-    // inverse_kinematics.startIncrementalInverseKinvematics();
     std::cout << inverse_kinematics.text;
 
     ros::spin();

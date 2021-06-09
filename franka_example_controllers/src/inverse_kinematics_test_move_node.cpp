@@ -32,6 +32,7 @@ public:
         ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("inverse_kinematics_node/unserService");
         inverse_kinematics::unserService srv;
 
+        srv.request.initial_joint_angles = {-1.04, 0.32, 2.43, -1.97, -1.67119, 1.45099, 0.321082};
         auto a = client.call(srv);
         if (a)
         {
@@ -42,6 +43,8 @@ public:
             ROS_ERROR("Failed to call service inverse_kinematics");
             exit; //TODO find better solution
         }
+
+
 
         sensor_msgs::JointState joint_state_msg;
         finalJointAngles = {srv.response.ik_jointAngles[0],srv.response.ik_jointAngles[1],srv.response.ik_jointAngles[2],
