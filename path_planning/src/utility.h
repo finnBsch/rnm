@@ -25,6 +25,7 @@ struct rrt_params{
     array<array<float, 2>, 6> joint_ranges;
     bool goal_joint;
     int num_nodes_min;
+    float steercost;
 };
 void point_to_flann(joint_angles p, float* data);
 joint_angles flann_to_point(float* data);
@@ -59,7 +60,6 @@ float euclidean_dist_joint(joint_angles A, joint_angles B);
 float euclidean_norm(joint_angles A);
 joint_angles random_point(array<array<float, 2>, 6> joint_ranges);
 joint_angles step_forward(joint_angles start, joint_angles goal, float dist);
-
 
 
 

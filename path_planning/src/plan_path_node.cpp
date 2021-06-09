@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min, 0.1};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;

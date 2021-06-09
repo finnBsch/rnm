@@ -3,6 +3,7 @@
 //
 
 #include "rrt.h"
+
 #define T 6
 /* Performance improvements:
  * euclidean dist: remove redudant array calls, implement euclidean dist sqrd (no need for sqrt)
@@ -60,7 +61,7 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):k
     this->start_point = start_point;
     this->params = params;
     // init start node
-    start_node = new rrt_node(this->start_point, get_end_effector(this->start_point));
+    start_node = new rrt_node(this->start_point, get_end_effector(this->start_point), params);
     std::vector<float> data(6);
     //point_to_flann(start_node->get_angles_flann(), data.data());
     kdtree.buildIndex(
@@ -116,11 +117,32 @@ tuple<bool, array<Point, 2>> rrt::expand() {
         }
     }
     // TODO: Collision check, feasibility check
-    new_node = new rrt_node(stepped_point, get_end_effector(stepped_point), nearest_node);
+    new_node = new rrt_node(stepped_point, get_end_effector(stepped_point), params, nearest_node);
     auto near = findNearNodes(stepped_point);
     for(rrt_node* no:near){
-        float temp2 = euclidean_dist_joint(new_node->get_angles(), no->get_angles());
-        float temp = new_node->cost+ temp2;
+        float temp2;
+        if(no == start_node){
+            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
+        }
+        else{
+            auto temp_ = no->cost_two_joints(no, new_node);
+            temp2 = std::get<0>(temp_) + std::get<1>(temp_)*params.steercost;
+        }
+        float temp = no->cost + temp2;
+        if(new_node->cost > temp){
+            new_node->set_parent(no, temp, temp2);
+        }
+    }
+    for(rrt_node* no:near){
+        float temp2;
+        if(no == start_node){
+            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
+        }
+        else{
+            auto temp_ = no->cost_two_joints(no, new_node);
+            temp2 = std::get<0>(temp_) + std::get<1>(temp_)*params.steercost;
+        }
+        float temp = new_node->cost + temp2;
         if(no->cost > temp){
             no->set_parent(new_node, temp, temp2);
         }

@@ -13,11 +13,13 @@ private:
     vector<float> angles_;
     rrt_node* parent_node = nullptr;
     list<rrt_node*> children;
-
+    rrt_params params;
 public:
     bool has_child;
-    rrt_node(const joint_angles angles, const Point position);
-    rrt_node(const joint_angles angles, const Point position, rrt_node* parent_node);
+    bool has_parent = true;
+    tuple<float, float> cost_two_joints(rrt_node* init, rrt_node* stepped);
+    rrt_node(const joint_angles angles, const Point position,rrt_params params);
+    rrt_node(const joint_angles angles, const Point position,rrt_params params, rrt_node* parent_node);
     float cost = 0;
     float cost_to_parent = 0;
     void set_parent(rrt_node* parent, float cost, float cost_to_parent){

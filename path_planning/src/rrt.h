@@ -11,6 +11,7 @@
 #include <flann/algorithms/kdtree_single_index.h>
 #include <flann/flann.hpp>
 #include <eigen3/Eigen/Dense>
+#include <boost/math/interpolators/cubic_b_spline.hpp>
 typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
 using namespace Eigen;
 class rrt {
