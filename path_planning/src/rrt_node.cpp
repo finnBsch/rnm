@@ -43,6 +43,6 @@ tuple<float, float> rrt_node::cost_two_joints(rrt_node* init, rrt_node* stepped)
         ang_cost+=A[i]*B[i];
     }
     ang_cost=ang_cost/(euclidean_norm(A)*euclidean_norm(B));
-    ang_cost = abs(acos(ang_cost));
+    ang_cost = pow(acos(ang_cost),2);
     return make_tuple(euclidean_dist_joint(init->get_angles(), stepped->get_angles()),ang_cost);
 }

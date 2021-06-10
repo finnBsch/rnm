@@ -72,6 +72,8 @@ int main(int argc, char **argv)
     ros::param::get("~e", e_);
     ros::param::get("~f", f_);
     joint_angles goal = {a_,b_,c_,d_,e_,f_};
+    ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f", a_, b_, c_, d_, e_, f_);
+
     array<array<float, 2>, 6> joint_ranges;
     array<float, 2> range = {-2.8973, 2.8973};
     joint_ranges[0] = range;
@@ -87,7 +89,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min, 0.1};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min, 1};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -140,7 +142,7 @@ int main(int argc, char **argv)
                 ROS_INFO("Number of nodes: %i and min dist %f and cost %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost);
             }
             else{
-                ROS_INFO("Number of nodes: %i and min dist %f and cost %f", tree->num_nodes, tree->min_dist);
+                ROS_INFO("Number of nodes: %i and min dist %f", tree->num_nodes, tree->min_dist);
             }
             //marker_pub.publish(line_list[0]);
             start_time = finish;
