@@ -2,14 +2,10 @@
 // Created by lars on 02.06.21.
 //
 #include "ros/ros.h"
-#include "sensor_msgs/Image.h"
-#include <image_transport/image_transport.h>
 #include <opencv2/imgcodecs.hpp>
 #include <vector>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
-//#include "calibration/imagepair.h"
+
 #include "iostream"
 #include <tuple>
 #include <stdlib.h>

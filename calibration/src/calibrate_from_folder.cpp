@@ -21,9 +21,11 @@ int main(int argc, char **argv) {
 
   std::vector<cv::String> rgbFileNames;
   std::vector<cv::String> irFileNames;
-  std::string rgbFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/bgr/*.jpg");
+  std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
+  // std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/bgr/*.jpg");
   cv::glob(rgbFolder, rgbFileNames, true); // load rgb images into opencv
-  std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/ir/*.jpg");
+  // std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/ir/*.jpg");
+  std::string irFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/ir/*.jpg");
   cv::glob(irFolder, irFileNames, true);
 
   std::vector<std::vector<cv::Point3f >> irObjP;// Checkerboard world coordinates
@@ -62,34 +64,47 @@ int main(int argc, char **argv) {
 
   //Detect corners of the checkerboard in the RGB Frames
   cv::Mat rgbimg;
+  std::size_t i2 = 0;
   std::size_t i = 0;
+  std::size_t i_deleted = 0;
   for (auto const &f : rgbFileNames){
     std::cout << std::string(f) << std::endl;
-    rgbimg = cv::imread(rgbFileNames[i]); //Load the images
+    rgbimg = cv::imread(f); //Load the images
     cv::Mat rgbgray;//grayscale the image
     cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
-    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i],
+    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i2],
+
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
-                                                     + cv::CALIB_CB_NORMALIZE_IMAGE
-                                                     + cv::CALIB_CB_FILTER_QUADS);
+                                                     //+ cv::CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv::CALIB_CB_FILTER_QUADS
+                                                     );
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
-      cv::cornerSubPix(rgbgray, rgbcorners[i], cv::Size(11, 11), cv::Size(-1, -1),
-                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.00001));
+      cv::cornerSubPix(rgbgray, rgbcorners[i2], cv::Size(5, 5), cv::Size(-1, -1),
+                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 50, 0.01));
       rgbObjP.push_back(rgbobjp);
+   i2++;
     }
     else {
-      rgbcorners.erase(next(rgbcorners.begin(), i));
+      rgbcorners.erase(next(rgbcorners.begin(), i-i_deleted));
       cout << endl << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
+      i_deleted++;
     }
 
-    // Display the detected pattern on the chessboard
-    // cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], rgbPatternFound);
-    //cv::imshow("RGB chessboard corner detection", rgbimg);
-    //cv::waitKey(1);
+
     i++;
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
+
+
+
+//for(int i =0; i <  rgbFileNames.size() ; i++){
+//  // Display the detected pattern on the chessboard
+//  rgbimg = ;
+//  cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
+//  cv::imshow("RGB chessboard corner detection", rgbimg);
+//  cv::waitKey(0);
+//}
 
 
   //Detect corners of the checkerboard in the IR Frames
@@ -180,8 +195,8 @@ int main(int argc, char **argv) {
     cv::remap(rgbimg, rgbimgUndistorted, rgbmapX, rgbmapY, cv::INTER_LINEAR);
 
 //Display the undistorted images
-    cv::imshow("undistorted image", rgbimgUndistorted);
-    cv::waitKey(0);
+  //  cv::imshow("undistorted image", rgbimgUndistorted);
+   // cv::waitKey(0);
   }
 
   ///////////////////////////////////////////////////////
@@ -194,6 +209,7 @@ int main(int argc, char **argv) {
   //Size board_size = Size(board_width, board_height);
   // int board_n = board_width * board_height;
   int num_deleted = 0;
+  int t =0;
   for (int i = 0; i < rgbFileNames.size(); i++) {
 
 
@@ -206,6 +222,7 @@ int main(int argc, char **argv) {
 
     bool found1 = cv::findChessboardCorners(gray1, patternSize, corners1,
                                             CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_FILTER_QUADS);
+//CALIB_CB_NORMALIZE_IMAGE);
 
     bool found2 = cv::findChessboardCorners(gray2, patternSize, corners2,
                                             CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
@@ -227,7 +244,8 @@ int main(int argc, char **argv) {
                        cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.1));
 
       cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
-      cout << i << "good framepairs" << endl;
+      cout << t << "good framepairs" << endl;
+      t++;
       imagePoints1.push_back(corners1);
       imagePoints2.push_back(corners2);
       object_points.push_back(obj);
