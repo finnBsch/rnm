@@ -59,9 +59,9 @@ int main(int argc, char **argv)
     float d_ = M_PI/4;
     float e_ = 0;
     float f_ = M_PI/3;
-    float step_size = 1.5*M_PI/180;
-    bool goal_joint = true;
-    int num_nodes_min = 200000;
+    float step_size = 3*M_PI/180;
+    bool goal_joint = false;
+    int num_nodes_min = 250000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);
     ros::param::get("~nn", num_nodes_min);

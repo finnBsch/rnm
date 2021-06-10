@@ -9,7 +9,8 @@
 #include <list>
 #include <cmath>
 #include "eigen3/Eigen/Dense"
-#include "eigen3/unsupported/Eigen/Splines"
+#include "ecl/geometry.hpp"
+#include <ecl/geometry/tension_spline.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <random>
@@ -20,8 +21,6 @@ using namespace Eigen;
 typedef boost::array<float, 3> Point;
 typedef boost::array<float, 6> joint_angles;
 typedef boost::array<float, 7> joint_angles_full;
-typedef Eigen::Spline<float, 6> Spline6d;
-typedef Eigen::Matrix<float, 6, 1> Vector6d;
 struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;

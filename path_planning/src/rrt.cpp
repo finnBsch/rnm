@@ -229,43 +229,60 @@ vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
 vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     rrt_node* current_node = goal_node;
     vector<tuple<Point, joint_angles>> goal_path;
-    array<vector<float>, 6> joints;
-    vector<joint_angles> joints_smooth;
+    array<vector<float>, 6> joints_smooth;
     vector<Point> points;
     joint_angles temp;
+
+    int counter = 0;
+    while(current_node!= nullptr){
+        counter++;
+        current_node = current_node->get_parent();
+    }
+    array<ecl::Array<double>, 6> joints;
+    ecl::Array<double> temp_(counter);
+    joints[0] = temp_;
+    joints[1] = temp_;
+    joints[2] = temp_;
+    joints[3] = temp_;
+    joints[4] = temp_;
+    joints[5] = temp_;
+    ecl::Array<double> x_set(counter);
+    counter = 0;
+    current_node = goal_node;
     while(current_node!= nullptr) {
+        x_set.at(counter) = counter;
+
         temp = current_node->get_angles();
         points.push_back(current_node->get_position());
         if(current_node == start_node){
             ROS_INFO("USING START NODE");
         }
         for(int i = 0; i<joints.size(); i++){
-            joints[i].push_back(temp[i]);
+            joints[i].at(counter) =  temp[i];
         }
+        counter++;
         current_node = current_node->get_parent();
     }
-    MatrixXf joints_(6, joints[0].size());
-    for(int i=0; i<joints.size(); i++){
-        for(int j=0; j<joints[i].size(); j++){
-            joints_(i, j) = joints[i][j];
+    for(int i = 0; i<joints.size(); i++){
+        ecl::TensionSpline spline = ecl::TensionSpline::Natural(x_set, joints[i], 1);
+        for(int j = 0; j<joints[i].size()*10; j++){
+            joints_smooth[i].push_back(spline((float)j/(float(10))));
         }
     }
-    MatrixXf knots(6, 2);
-    for(int i=0; i<joints.size(); i++) {
-        knots(i,0) = joints_(i, 0);
-        knots(i,1) = joints_(i, joints[0].size()-1);
-    }
-    const Spline6d spline = SplineFitting<Spline6d>::Interpolate(joints_, joints[0].size() - 1, knots);
-    for(int i = 0; i<joints[0].size()*10; i++){
-        Vector6d vec = spline((float)i/(float)10);
-        joints_smooth.push_back((joint_angles){vec(0), vec(1), vec(2), vec(3), vec(4), vec(5)});
-    }
 
-    Point start  = get_end_effector(joints_smooth[joints_smooth.size()-1]);
+
+    Point start  = get_end_effector((joint_angles){joints_smooth[0].at(joints_smooth[0].size()-1), joints_smooth[1].at(joints_smooth[0].size()-1),
+                                                   joints_smooth[2].at(joints_smooth[0].size()-1), joints_smooth[3].at(joints_smooth[0].size()-1),
+                                                   joints_smooth[4].at(joints_smooth[0].size()-1), joints_smooth[5].at(joints_smooth[0].size()-1)});
     ROS_INFO("Start without smoothing: %f, %f, %f", start_node->get_position()[0],start_node->get_position()[1],start_node->get_position()[2]);
     ROS_INFO("Start with smoothing: %f, %f, %f", start[0], start[1], start[2]);
-    for(int i = 0; i<joints_smooth.size(); i++){
-        goal_path.push_back(make_tuple(get_end_effector(joints_smooth[i]), joints_smooth[i]));
+    for(int i = 0; i<joints_smooth[0].size(); i++){
+        goal_path.push_back(make_tuple(get_end_effector((joint_angles){joints_smooth[0].at(i), joints_smooth[1].at(i),
+                                                                       joints_smooth[2].at(i), joints_smooth[3].at(i),
+                                                                       joints_smooth[4].at(i), joints_smooth[5].at(i)}),
+                                       (joint_angles){joints_smooth[0].at(i), joints_smooth[1].at(i),
+                                                      joints_smooth[2].at(i), joints_smooth[3].at(i),
+                                                      joints_smooth[4].at(i), joints_smooth[5].at(i)}));
     }
     return goal_path;
 }
