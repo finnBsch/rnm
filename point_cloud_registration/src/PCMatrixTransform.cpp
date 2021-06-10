@@ -16,6 +16,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include "forward_kin/get_endeffector.h"
+#include "point_cloud_registration/PCJScombined.h"
 
 //Public publisher
 ros::Publisher publisher;
@@ -33,12 +34,13 @@ VectorXd currentA_vector(12, 1);
 
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states,
               ros::NodeHandle &nh)
+//void cloud_cb (const point_cloud_registration::PCJScombined::ConstPtr& PCJS, ros::NodeHandle &nh)
 {
   //print out how many messages have been received in total
   msg_counter++;
-  printf("\nReceived messages: ");
-  std::cout << msg_counter;
-  printf("\n");
+  std::cerr <<" \nReceived messages: ";
+  std::cerr << msg_counter;
+  std::cerr <<"\n";
 
   //only take every 20th message for stitching
   if (msg_counter%20 == 0){
@@ -52,14 +54,15 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
 
   // Convert to PCL data type
   pcl_conversions::toPCL(*cloud_msg, *cloud);
+  //pcl_conversions::toPCL(PCJS->PC, *cloud);
 
   // Perform the actual filtering
   pcl::VoxelGrid<pcl::PCLPointCloud2> vg;
   vg.setInputCloud (cloudPtr);
-  vg.setLeafSize (0.01, 0.01, 0.01);
+  vg.setLeafSize (0.003, 0.003, 0.003);
   vg.filter (pc2_cloud_subsample);
 
-  //REMOVING OUTLINERS---------------------------------------------------------------------------------------
+  //REMOVING OUTLIERS---------------------------------------------------------------------------------------
   //Initialize container for input and output cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZRGB> ());
  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -67,17 +70,19 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   //write filtered cloud in input cloud
   pcl::fromPCLPointCloud2(pc2_cloud_subsample, *cloud_xyz);
 
-  std::cerr << "Cloud before filtering: " << std::endl;
-  std::cerr << *cloud_xyz << std::endl;
 
-  pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-  sor.setInputCloud(cloud_xyz);
-  sor.setMeanK(50);
-  sor.setStddevMulThresh(1);
-  sor.filter(*cloud_xyz);
+    std::cerr << "Cloud before filtering: " << std::endl;
+    std::cerr << *cloud_xyz << std::endl;
 
-  std::cerr << "Cloud after filtering: " << std::endl;
-  std::cerr << *cloud_xyz << std::endl;
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
+    sor.setInputCloud(cloud_xyz);
+    sor.setMeanK(50);
+    sor.setStddevMulThresh(0.5);
+    sor.filter(*cloud_xyz);
+
+    std::cerr << "Cloud after filtering: " << std::endl;
+    std::cerr << *cloud_xyz << std::endl;
+
 
   //TRANSFORMATION---------------------------------------------------------------------------------------------------------
   //Initialize container for output cloud
@@ -100,6 +105,10 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
     boost::array<double, 7> angles = {joint_states->position[0], joint_states->position[1],joint_states->position[2],
                                    joint_states->position[3], joint_states->position[4],joint_states->position[5],
                                    joint_states->position[6]};
+   /* boost::array<double, 7> angles = {PCJS->JS.position[0], PCJS->JS.position[1],PCJS->JS.position[2],
+                                      PCJS->JS.position[3], PCJS->JS.position[4],PCJS->JS.position[5],
+                                      PCJS->JS.position[6]};*/
+
     srv.request.joint_angles = angles;
 // --------------- GET A MATRIX -------------------
     // check connection
@@ -151,11 +160,11 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
     icp.setInputTarget(stitched_cloud);
 
     //ICP parameters (examples), we still need to adjust them
-    icp.setEuclideanFitnessEpsilon(1);
-    icp.setTransformationEpsilon(1e-9);
+    //icp.setEuclideanFitnessEpsilon(1);
+    //icp.setTransformationEpsilon(1e-9);
     icp.setMaximumIterations(10);
 
-    //align new cloud to stiched cloud and add to the total stiched cloud.
+    //align new cloud to stitched cloud and add to the total stitched cloud.
     icp.align(*goal_cloud);
     *stitched_cloud += *goal_cloud;
     std::cout << "has converged:" << icp.hasConverged() << " score: " << icp.getFitnessScore() << std::endl;
@@ -167,9 +176,9 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   pcl::toROSMsg(*stitched_cloud, output);
   publisher.publish (output);
   // Safe stitched cloud from bagfile
-  //if( msg_counter == 140){
-   // pcl::io::savePCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud, true ); // Binary format
- // }
+ // if( msg_counter == 140){
+  //  pcl::io::savePCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud, true ); // Binary format
+  //}
   }
 }
 
@@ -181,7 +190,9 @@ main (int argc, char** argv)
   //Let the publisher publish on topic transformed_clouds
   publisher = nh.advertise<sensor_msgs::PointCloud2> ("transformed_clouds", 1);
 
-  //Subscribe to the PC and JointState topic, large queue size where all messages from the bag can fit in
+//  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/PCJScombined", 50, boost::bind(&cloud_cb, _1, boost::ref(nh)));
+
+ //Subscribe to the PC and JointState topic, large queue size where all messages from the bag can fit in
   //-> adjust queue size later
   message_filters::Subscriber<sensor_msgs::PointCloud2> filtered_cloud(nh, "/points2", 150);
   message_filters::Subscriber<sensor_msgs::JointState> joint_states(nh, "/joint_states", 1100);
