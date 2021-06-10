@@ -270,7 +270,7 @@ public:
 
             // calculate Jacobian and pseudoinverse
             J = calculateJacobian(joint_angles_, size_);
-            pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
+            //pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
 
             // alternative functions
             //pinvJ = pinv_eigen_based(J); // function is commented below
@@ -279,7 +279,7 @@ public:
             //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
 
             //correction of joint angles
-            deltaQ = pinvJ * delta_A;
+            deltaQ = J.completeOrthogonalDecomposition().solve(delta_A);
             joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
 
             return incrementalStep();
