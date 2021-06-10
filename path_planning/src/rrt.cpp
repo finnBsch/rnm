@@ -238,36 +238,51 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         counter++;
         current_node = current_node->get_parent();
     }
-    array<ecl::Array<double>, 6> joints;
-    ecl::Array<double> temp_(counter);
+    array<vector<double>, 6> joints;
+    vector<double> temp_(counter);
     joints[0] = temp_;
     joints[1] = temp_;
     joints[2] = temp_;
     joints[3] = temp_;
     joints[4] = temp_;
     joints[5] = temp_;
-    ecl::Array<double> x_set(counter);
+    vector<double> x_set(counter);
+    vector<double> dx_set(counter);
     counter = 0;
     current_node = goal_node;
     while(current_node!= nullptr) {
-        x_set.at(counter) = counter;
-
+        if(counter==0) {
+            x_set[counter] = 0;
+        }
+        dx_set[counter] = 0;
         temp = current_node->get_angles();
         points.push_back(current_node->get_position());
         if(current_node == start_node){
             ROS_INFO("USING START NODE");
         }
         for(int i = 0; i<joints.size(); i++){
-            joints[i].at(counter) =  temp[i];
+            if(counter!=0){
+                dx_set[counter] = max(dx_set[counter], (temp[i]-joints[i].at(counter-1))*5);
+            }
+            joints[i].at(counter) = temp[i];
         }
+        x_set[counter] = x_set[counter-1] + dx_set[counter];
         counter++;
         current_node = current_node->get_parent();
     }
+    vector<tk::spline> splines;
+
     for(int i = 0; i<joints.size(); i++){
-        ecl::TensionSpline spline = ecl::TensionSpline::Natural(x_set, joints[i], 1);
+        tk::spline s(x_set, joints[i], tk::spline::cspline,false,tk::spline::first_deriv, 0.0,
+                     tk::spline::first_deriv, 0.0);
+        splines.push_back(s);
+    }
+    float t_max = x_set[x_set.size()-1];
+    for(int i = 0; i<joints.size(); i++){
         for(int j = 0; j<joints[i].size()*10; j++){
-            joints_smooth[i].push_back(spline((float)j/(float(10))));
+            joints_smooth[i].push_back(splines[i]((float)j/(float)(joints[i].size()*10) * t_max));
         }
+
     }
 
 

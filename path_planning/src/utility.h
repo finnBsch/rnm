@@ -10,6 +10,7 @@
 #include <cmath>
 #include "eigen3/Eigen/Dense"
 #include "ecl/geometry.hpp"
+#include "spline.h"
 #include <ecl/geometry/tension_spline.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
