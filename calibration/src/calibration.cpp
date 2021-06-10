@@ -9,12 +9,12 @@
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
 
-using namespace cv;
-using namespace std;
 
 int main(int argc, char **argv) {
   (void) argc;
   (void) argv;
+  using namespace cv;
+  using namespace std;
 
   cv::Size rgbFrameSize(2048, 1536);
   cv::Size irFrameSize(640, 576);
@@ -22,9 +22,7 @@ int main(int argc, char **argv) {
   std::vector<cv::String> rgbFileNames;
   std::vector<cv::String> irFileNames;
   std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
-  // std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/bgr/*.jpg");
   cv::glob(rgbFolder, rgbFileNames, true); // load rgb images into opencv
-  // std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/ir/*.jpg");
   std::string irFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/ir/*.jpg");
   cv::glob(irFolder, irFileNames, true);
 
@@ -64,47 +62,34 @@ int main(int argc, char **argv) {
 
   //Detect corners of the checkerboard in the RGB Frames
   cv::Mat rgbimg;
-  std::size_t i2 = 0;
   std::size_t i = 0;
-  std::size_t i_deleted = 0;
   for (auto const &f : rgbFileNames){
     std::cout << std::string(f) << std::endl;
-    rgbimg = cv::imread(f); //Load the images
+    rgbimg = cv::imread(rgbFileNames[i]); //Load the images
     cv::Mat rgbgray;//grayscale the image
     cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
-    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i2],
-
+    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i],
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
-                                                     //+ cv::CALIB_CB_NORMALIZE_IMAGE
-                                                     + cv::CALIB_CB_FILTER_QUADS
-                                                     );
+                                                     + cv::CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv::CALIB_CB_FILTER_QUADS);
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
-      cv::cornerSubPix(rgbgray, rgbcorners[i2], cv::Size(5, 5), cv::Size(-1, -1),
-                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 50, 0.01));
+      cv::cornerSubPix(rgbgray, rgbcorners[i], cv::Size(11, 11), cv::Size(-1, -1),
+                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.00001));
       rgbObjP.push_back(rgbobjp);
-   i2++;
     }
     else {
-      rgbcorners.erase(next(rgbcorners.begin(), i-i_deleted));
+      rgbcorners.erase(next(rgbcorners.begin(), i));
       cout << endl << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
-      i_deleted++;
     }
 
-
+    // Display the detected pattern on the chessboard
+    // cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], rgbPatternFound);
+    //cv::imshow("RGB chessboard corner detection", rgbimg);
+    //cv::waitKey(1);
     i++;
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
-
-
-
-//for(int i =0; i <  rgbFileNames.size() ; i++){
-//  // Display the detected pattern on the chessboard
-//  rgbimg = ;
-//  cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
-//  cv::imshow("RGB chessboard corner detection", rgbimg);
-//  cv::waitKey(0);
-//}
 
 
   //Detect corners of the checkerboard in the IR Frames
@@ -152,7 +137,7 @@ int main(int argc, char **argv) {
       + cv::CALIB_FIX_TAUX_TAUY
       + cv::CALIB_RATIONAL_MODEL; //used to compute k4-k6
 
-  std::cout << "Calibrating rgb intrinsics...\n" << endl;
+  std::cout << "Calibrating rgb intrinsics...\n" << std::endl;
 
 
   float rgberror = cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);
@@ -195,8 +180,8 @@ int main(int argc, char **argv) {
     cv::remap(rgbimg, rgbimgUndistorted, rgbmapX, rgbmapY, cv::INTER_LINEAR);
 
 //Display the undistorted images
-  //  cv::imshow("undistorted image", rgbimgUndistorted);
-   // cv::waitKey(0);
+    cv::imshow("undistorted image", rgbimgUndistorted);
+    cv::waitKey(0);
   }
 
   ///////////////////////////////////////////////////////
@@ -209,7 +194,6 @@ int main(int argc, char **argv) {
   //Size board_size = Size(board_width, board_height);
   // int board_n = board_width * board_height;
   int num_deleted = 0;
-  int t =0;
   for (int i = 0; i < rgbFileNames.size(); i++) {
 
 
@@ -222,7 +206,6 @@ int main(int argc, char **argv) {
 
     bool found1 = cv::findChessboardCorners(gray1, patternSize, corners1,
                                             CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_FILTER_QUADS);
-//CALIB_CB_NORMALIZE_IMAGE);
 
     bool found2 = cv::findChessboardCorners(gray2, patternSize, corners2,
                                             CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
@@ -244,8 +227,7 @@ int main(int argc, char **argv) {
                        cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.1));
 
       cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
-      cout << t << "good framepairs" << endl;
-      t++;
+      cout << i << "good framepairs" << endl;
       imagePoints1.push_back(corners1);
       imagePoints2.push_back(corners2);
       object_points.push_back(obj);
@@ -337,67 +319,5 @@ int main(int argc, char **argv) {
 
   cout << "Calibration successful" << std::endl;
   return 0;
-
+}
 //TODO fileformat used for the hand-eye calibration
-
-// Hand-eye calibration based on QR24
-// "Non-orthogonal tool/flange and robot/world calibration"
-// Eye-in-hand calibration solving AX=ZB for simultaneous tool/flange and robot/world calibration
-//Notation based on Tsai-Lenz:
-//G(i)=>E(i): The endeffector coordinate system. That is, the coordinate frame fixed on the robot endeffector and as the robot moves, it moves with the gripper
-//C(i): The camera coordinate system. That is, the coordinate frame fixed on the camera, with the z-axis cooinciding with the optical axis, and the x,y axes parallel to the image X,Y axes
-//CW: The calibration block world coordinate frame. This is an arbitrary selected coordinate frame set on the calibration block so that the coordinate of each target point on the calibration block is known a priori relatie to VW
-//RW: The robot world coordinate frame.It is fixed in the robot work station, and as the robot arm moves around, the encoder output of all the robot joints enables the system to tell where the gripper is relative to RW
-
-
-cv::Mat A(4, 4, CV_64FC1); //Transformation from camera to World Pose matrix of a robot endeffector E
-cv::Mat B(4, 4, CV_64FC1); // Transformation from endeffector E to Robot RW, Pose matrix of a calibration object
-cv::Mat X(4, 4, CV_64FC1); //Transformation from endeffector E to Camera UNKNOWN
-cv::Mat Z(4, 4, CV_64FC1); //Transformation from Robot RW to World CW UNKNOWN
-
-
-//TODO Endeffector to base transformation matrix R_EB
-
-
-
-std::vector<Mat> R_EB, t_EB; //Endeffector to Base
-std::vector<Mat> R_TC, t_TC; //Target to Cam
-
-//Hg defines coordinate transformation from E to RW using EIGEN
-//i<R_...size(); in for condition
-
-cv::Mat Hg;
-  for (size_t i = 0; i< 5; i++)
-{
-  cv::Mat m = Mat::eye(4, 4, CV_64FC1);
-  cv::Mat R = m(Rect(0, 0, 3, 3));
-
-  R_EB[i].convertTo(R, CV_64F);
-  cv::Mat t = m(Rect(3, 0, 1, 3));
-
-  t_EB[i].convertTo(t, CV_64F);
-  Hg.push_back(m);
-}
-
-//Hc defines coordinate transformation from CW to C
-
-cv::Mat Hc;
-for (size_t i = 0; i< 5; i++)
-  {
-    cv::Mat m = Mat::eye(4, 4, CV_64FC1);
-    cv::Mat R = m(Rect(0, 0, 3, 3));
-
-    R_TC[i].convertTo(R, CV_64F);
-    cv::Mat t = m(Rect(3, 0, 1, 3));
-
-    t_TC[i].convertTo(t, CV_64F);
-    Hg.push_back(m);
-  }
-
-
-
-
-
-
-
-}

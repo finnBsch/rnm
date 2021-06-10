@@ -145,7 +145,9 @@ add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibrate_from_folder_node src/calibrate_from_folder.cpp)
 add_executable(${PROJECT_NAME}_load_from_folder_node src/load_from_folder.cpp)
 add_executable(${PROJECT_NAME}_load_live_node src/load_live.cpp)
-add_executable(${PROJECT_NAME}_calibrate_camera_node src/camera_calibration.cpp)
+##add_executable(${PROJECT_NAME}_calibrate_camera_node src/camera_calibration.cpp)
+
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
