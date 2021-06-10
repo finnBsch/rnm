@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
         rospy
         PCL REQUIRED
         forward_kin
+        message_generation
 )
 find_package(Eigen3 REQUIRED)
 
@@ -58,11 +59,10 @@ find_package(Eigen3 REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  PCJScombined.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -79,10 +79,10 @@ find_package(Eigen3 REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  sensor_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -119,6 +119,7 @@ catkin_package(
 #  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
 #  DEPENDS system_lib
         DEPENDS EIGEN3
+        CATKIN_DEPENDS message_runtime
 )
 
 ###########
@@ -154,6 +155,7 @@ add_definitions(${PCL_DEFINITIONS})
 add_executable(VoxelGridFilter src/VoxelGridFilter.cpp)
 add_executable(PCMatrixTransform src/PCMatrixTransform.cpp)
 add_executable(STLconversion_node src/STLconversion_node.cpp)
+add_executable(Synchronizer src/ApproximateTimeSynchronizer.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -170,8 +172,10 @@ target_link_libraries(PCMatrixTransform ${catkin_LIBRARIES})
 target_link_libraries (PCMatrixTransform ${PCL_LIBRARIES})
 target_link_libraries (PCMatrixTransform ${EIGEN3_LIBRARIES})
 target_link_libraries(STLconversion_node ${catkin_LIBRARIES})
+target_link_libraries(Synchronizer ${catkin_LIBRARIES})
 
 add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
+add_dependencies(Synchronizer point_cloud_registration_generate_messages_cpp)
 
 #############
 ## Install ##
