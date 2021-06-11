@@ -9,8 +9,12 @@
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
 #include "image_transport/image_transport.h"
-#include "forward_kin.cpp>
+#include "forward_kin/get_endeffector.h"
+#include "sensor_msgs/Image.h"
+#include <sensor_msgs/JointState.h>
 
+
+class get_endeffector;
 using namespace cv;
 using namespace std;
 
@@ -352,7 +356,9 @@ int main(int argc, char **argv) {
 
 //TODO generate the right input for the calibrateHandEye function
 
-//////// convert joint angles to poses
+// convert joint angles to poses
+    ros::init(argc, argv, "hand_eye_calibration");
+    ros::NodeHandle n;
     forward_kin::get_endeffector srv;
     sensor_msgs::JointState joint_state_msg;
     joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
@@ -371,6 +377,7 @@ int main(int argc, char **argv) {
         ROS_ERROR("Failed to call service forward_kin");
         return 1;
     }
+/*
     R_gripper2base, t_gripper2base;
     allRobotPoses.pushback({(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
 
@@ -392,5 +399,6 @@ int main(int argc, char **argv) {
     Mat R_cam2gripper, t_cam2gripper;
     calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper);
     cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
-    cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
+     cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
+     */
 }

@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/JointState.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -45,7 +47,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg){
   ROS_INFO("frame_id: %s\n", msg->header.frame_id.c_str()); // ?
 }
 
-
 // conversion of depth image
 void depthToCV8UC1(const cv::Mat& float_img, cv::Mat& mono8_img) {
   //Process images
@@ -77,7 +78,6 @@ void depthCallback(const sensor_msgs::ImageConstPtr& original_image) {
   cv::waitKey(1);
 }
 
-
 // writing depth image
 void depthImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   try {
@@ -104,7 +104,6 @@ void depthImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
-
 // ir image writing
 void irImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   try {
@@ -129,7 +128,6 @@ void irImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
-
 // rgb image writing
 void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   try {
@@ -153,6 +151,16 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
+/*
+// rgb image writing
+void jointStatesWrite(const sensor_msgs::JointState& msg) {
+    ofstream myfile;
+    myfile.open ("joint_states.txt");
+    ROS_INFO("position: %d", msg->position[0]);
+    //myfile << msg->position;
+    myfile.close();
+}*/
+
 int main(int argc, char** argv) {
   ros::init(argc, argv,"write_images");
   ros::NodeHandle nh;
@@ -161,11 +169,7 @@ int main(int argc, char** argv) {
   // callbacks. each image type has its own saving callback
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
-  image_transport::Subscriber angles_sub = it.subscribe("/joint_states", 1, irImageWrite);
-
-
-  // additional calibraiton data
-
+  //image_transport::Subscriber joint_states_sub = it.subscribe("/joint_states", 1, jointStatesWrite);
 
   std::cout << "ready" << endl;
 

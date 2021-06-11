@@ -12,8 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
         rospy
         cv_bridge
         image_transport
-        message_generation
+        #message_generation
         sensor_msgs
+        forward_kin
         )
 find_package( OpenCV REQUIRED )
 
@@ -143,7 +144,7 @@ include_directories(
 add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
 add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibrate_from_folder_node src/calibrate_from_folder.cpp)
-##add_executable(${PROJECT_NAME}_loadFromFolder src/LoadFromFolder.cpp)
+add_executable(${PROJECT_NAME}_hand_eye_calibration_node src/hand_eye_calibration.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
