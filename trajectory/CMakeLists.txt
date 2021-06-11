@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(path_planning)
+project(trajectory)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,15 +8,10 @@ project(path_planning)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-        roscpp
-        sensor_msgs
-        std_msgs
-        forward_kin
-        ecl_geometry
-        )
-find_package( PkgConfig REQUIRED)
-pkg_check_modules( flann REQUIRED flann )
-find_package(Eigen3 REQUIRED)
+  roscpp
+  std_msgs
+)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -73,9 +68,9 @@ find_package(Eigen3 REQUIRED)
 
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs#   std_msgs
-# )
+ #  DEPENDENCIES
+  # std_msgs
+ #)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -107,11 +102,10 @@ find_package(Eigen3 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-        #  INCLUDE_DIRS include
-        #  LIBRARIES path_planning
-        DEPENDS EIGEN3
-        #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs
-        #  DEPENDS system_lib
+#  INCLUDE_DIRS include
+#  LIBRARIES trajectory.msg
+  CATKIN_DEPENDS roscpp std_msgs
+#  DEPENDS system_lib
 )
 
 ###########
@@ -121,14 +115,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-        # include
-        ${EIGEN3_INCLUDE_DIRS}
-        ${catkin_INCLUDE_DIRS}
+# include
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/path_planning.cpp
+#   src/${PROJECT_NAME}/trajectory.msg.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -139,9 +132,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -flto" )
-add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/rrt_node.h src/plan_path_node.cpp src/utility.cpp src/utility.h src/spline.h) # TODO: insert correct NODE cpp
+ add_executable(${PROJECT_NAME}_node src/trajectory_test.cpp)
+ add_executable(${PROJECT_NAME}_execution_node src/trajectory_execution.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -154,11 +146,13 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-        target_link_libraries(${PROJECT_NAME}_node
-        ${catkin_LIBRARIES} lz4
-        ${EIGEN3_LIBRARIES}
+ target_link_libraries(${PROJECT_NAME}_node
+   ${catkin_LIBRARIES}
+ )
+target_link_libraries(${PROJECT_NAME}_execution_node
+        ${catkin_LIBRARIES}
         )
-add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
+
 #############
 ## Install ##
 #############
@@ -206,7 +200,7 @@ add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_path_planning.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_trajectory.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

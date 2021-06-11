@@ -34,7 +34,7 @@ void gripperCommandExecuteCallback(
     actionlib::SimpleActionServer<control_msgs::GripperCommandAction>* action_server,
     const control_msgs::GripperCommandGoalConstPtr& goal) {
   auto gripper_command_handler = [goal, grasp_epsilon, default_speed, &gripper]() {
-    // HACK: As one gripper finger is <mimic>, MoveIt!'s trajectory execution manager
+    // HACK: As one gripper finger is <mimic>, MoveIt!'s trajectory.msg execution manager
     // only sends us the width of one finger. Multiply by 2 to get the intended width.
     double target_width = 2 * goal->command.position;
 
