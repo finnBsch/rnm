@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
                                                      );
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
-      cv::cornerSubPix(rgbgray, rgbcorners[i2], cv::Size(5, 5), cv::Size(-1, -1),
-                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 50, 0.01));
+      cv::cornerSubPix(rgbgray, rgbcorners[i2], cv::Size(11, 11), cv::Size(-1, -1),
+                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
       rgbObjP.push_back(rgbobjp);
    i2++;
     }
@@ -235,8 +235,8 @@ int main(int argc, char **argv) {
     }
     if (found1 && found2) {
       //Refine CornerDetection
-      cv::cornerSubPix(gray1, corners1, cv::Size(20, 20), cv::Size(-1, -1),
-                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.1));
+      cv::cornerSubPix(gray1, corners1, cv::Size(11, 11), cv::Size(-1, -1),
+                       cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
 
       cv::drawChessboardCorners(gray1, patternSize, corners1, found1);
 
@@ -340,59 +340,60 @@ int main(int argc, char **argv) {
 
 //TODO fileformat used for the hand-eye calibration
 
-// Hand-eye calibration based on QR24
-// "Non-orthogonal tool/flange and robot/world calibration"
-// Eye-in-hand calibration solving AX=ZB for simultaneous tool/flange and robot/world calibration
-//Notation based on Tsai-Lenz:
+
+
+//HandEyeCalibration: notation based on Tsai-Lenz:
 //G(i)=>E(i): The endeffector coordinate system. That is, the coordinate frame fixed on the robot endeffector and as the robot moves, it moves with the gripper
 //C(i): The camera coordinate system. That is, the coordinate frame fixed on the camera, with the z-axis cooinciding with the optical axis, and the x,y axes parallel to the image X,Y axes
 //CW: The calibration block world coordinate frame. This is an arbitrary selected coordinate frame set on the calibration block so that the coordinate of each target point on the calibration block is known a priori relatie to VW
 //RW: The robot world coordinate frame.It is fixed in the robot work station, and as the robot arm moves around, the encoder output of all the robot joints enables the system to tell where the gripper is relative to RW
 
+//cv::Mat X(4, 4, CV_64FC1); //Transformation from endeffector E to Camera UNKNOWN
+//cv::Mat Z(4, 4, CV_64FC1); //Transformation from Robot RW to World CW UNKNOWN
 
-cv::Mat A(4, 4, CV_64FC1); //Transformation from camera to World Pose matrix of a robot endeffector E
-cv::Mat B(4, 4, CV_64FC1); // Transformation from endeffector E to Robot RW, Pose matrix of a calibration object
-cv::Mat X(4, 4, CV_64FC1); //Transformation from endeffector E to Camera UNKNOWN
-cv::Mat Z(4, 4, CV_64FC1); //Transformation from Robot RW to World CW UNKNOWN
+//TODO generate the right input for the calibrateHandEye function
 
-
-//TODO Endeffector to base transformation matrix R_EB
-
-
-
-std::vector<Mat> R_EB, t_EB; //Endeffector to Base
-std::vector<Mat> R_TC, t_TC; //Target to Cam
-
-//Hg defines coordinate transformation from E to RW using EIGEN
-//i<R_...size(); in for condition
-
-cv::Mat Hg;
-  for (size_t i = 0; i< 5; i++)
-{
-  cv::Mat m = Mat::eye(4, 4, CV_64FC1);
-  cv::Mat R = m(Rect(0, 0, 3, 3));
-
-  R_EB[i].convertTo(R, CV_64F);
-  cv::Mat t = m(Rect(3, 0, 1, 3));
-
-  t_EB[i].convertTo(t, CV_64F);
-  Hg.push_back(m);
 }
 
-//Hc defines coordinate transformation from CW to C
 
-cv::Mat Hc;
-for (size_t i = 0; i< 5; i++)
-  {
-    cv::Mat m = Mat::eye(4, 4, CV_64FC1);
-    cv::Mat R = m(Rect(0, 0, 3, 3));
 
-    R_TC[i].convertTo(R, CV_64F);
-    cv::Mat t = m(Rect(3, 0, 1, 3));
 
-    t_TC[i].convertTo(t, CV_64F);
-    Hg.push_back(m);
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
