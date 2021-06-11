@@ -81,7 +81,7 @@ public:
 
     // CONTRUCTOR FOR INVERSE KINEMATICS WITHOUT FORWARD KIN SERVICE CONNECTION
     explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1){
-        incrementalStepSize = 0.00001;
+        incrementalStepSize = 0.01;
         limit_ = 10000;
         counter_ = 0;
         client_ = nullptr;
@@ -248,14 +248,15 @@ public:
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
         }
-
+        /*
         ROS_INFO("X-COOR: %f", current_transformationmatrix_vector_(9));
         ROS_INFO("Y-COOR: %f", current_transformationmatrix_vector_(10));
         ROS_INFO("Z-COOR: %f", current_transformationmatrix_vector_(11));
-
+        */
+        ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
 
         // check if largest entry of absolute is smaller than error
-        if (abs_delta_A.maxCoeff() < 0.05) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
+        if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
             for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
                 ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
             }
