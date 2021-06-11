@@ -55,28 +55,15 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
     L.setZero();
-    Matrix<float, 6,1 > a1;
-    Matrix<float, 1,6> v1 = {1, 0, 0, 0, 0, 0};
-    for(int i = 0; i<start_point.size(); i++){
-        a1(i) = goal_point[i] - start_point[i];
+    if(params.goal_joint) {
+        calculateC(goal_point);
     }
-    a1 = a1/a1.norm();
-    Matrix<float, 6, 6> M = a1*v1;
-    JacobiSVD<Matrix<float, 6, 6>> svd(M,ComputeFullU | ComputeFullV);
-
-    Matrix<float, 6, 1> vec_temp = {1, 1, 1, 1, 1, svd.matrixU().determinant() * svd.matrixV().determinant()};
-    Matrix<float, 6, 6> temp_ =vec_temp.asDiagonal();
-    C = svd.matrixU() * temp_ * svd.matrixV().transpose();
     a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
     d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
     alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     goal_p = get_end_effector(goal_point);
     kdtree = flann::Index<flann::L2_Simple<float>>(
             flann::KDTreeIndexParams());
-    c_opt = euclidean_dist_joint(start_point, goal_point);
-    for(int i = 0; i<goal_point.size(); i++){
-        center(i) = (goal_point[i] + start_point[i])/2;
-    }
     // save params
     this->goal_point = goal_point;
     this->start_point = start_point;
@@ -100,6 +87,24 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     bool n_feasible = true;
     while(n_feasible) {
         if(params.goal_joint) {
+            bool not_feasible = true;
+            joint_angles sampled;
+            while (not_feasible) {
+                sampled = sample_ellipsoid();
+                for (int i = 0; i < sampled.size(); i++) {
+                    if ((sampled[i] < params.joint_ranges[i][0] || sampled[i] > params.joint_ranges[i][1])) {
+                        not_feasible = true;
+                        break;
+                    } else {
+                        not_feasible = false;
+                    }
+                }
+            }
+            for (int i = 0; i < sampled.size(); i++) {
+                sample_point[i] = (float) sampled[i];
+            }
+        }
+        else if(goal_found){
             bool not_feasible = true;
             joint_angles sampled;
             while (not_feasible) {
@@ -197,13 +202,12 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             min_dist = dist;
         }
     }
-
-    if(dist<0.01 && dist_orient < 0.2){
+    if(dist<0.005 && dist_orient < 0.2){
+        //goal_found = true;
         if(nodesmark_goal_found == 0) {
+            goal_point_found = new_node->get_angles();
+            calculateC(goal_point_found);
             nodesmark_goal_found = num_nodes;
-        }
-        else{
-            ROS_INFO("Optimizing path for %l more nodes", num_nodes-params.num_nodes_extra + nodesmark_goal_found);
         }
         if(goal_node){
             if(new_node->cost < goal_node->cost){
@@ -284,7 +288,7 @@ vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
     std::vector< std::vector<float> > dists;
     std::vector<float> d(query.rows);
 
-    int n = kdtree.radiusSearch(query, indices, dists, 0.09, flann::SearchParams());
+    int n = kdtree.radiusSearch(query, indices, dists, 0.05, flann::SearchParams());
 
     //Point point;
     //point = flann_to_point(kdtree.getPoint(indices[0][0]));
@@ -369,4 +373,23 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
                                                       joints_smooth[4].at(i), joints_smooth[5].at(i)}));
     }
     return goal_path;
+}
+
+void rrt::calculateC(joint_angles gp) {
+    Matrix<float, 6, 1> a1;
+    Matrix<float, 1, 6> v1 = {1, 0, 0, 0, 0, 0};
+    for (int i = 0; i < start_point.size(); i++) {
+        a1(i) = gp[i] - start_point[i];
+    }
+    a1 = a1 / a1.norm();
+    Matrix<float, 6, 6> M = a1 * v1;
+    JacobiSVD<Matrix<float, 6, 6>> svd(M, ComputeFullU | ComputeFullV);
+    Matrix<float, 6, 1> vec_temp = {1, 1, 1, 1, 1, svd.matrixU().determinant() * svd.matrixV().determinant()};
+    Matrix<float, 6, 6> temp_ = vec_temp.asDiagonal();
+    C = svd.matrixU() * temp_ * svd.matrixV().transpose();
+    c_opt = euclidean_dist_joint(start_point, gp);
+    for(int i = 0; i<gp.size(); i++){
+        center(i) = (gp[i] + start_point[i])/2;
+    }
+
 }

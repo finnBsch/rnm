@@ -30,6 +30,8 @@ private:
     flann::Index<flann::L2_Simple<float>> kdtree;
     vector<rrt_node*> all_nodes;
     joint_angles goal_point;
+    joint_angles goal_point_found;
+    bool goal_found = false;
     Point goal_p;
     joint_angles start_point;
     rrt_node* start_node;
@@ -42,6 +44,7 @@ private:
     Point get_end_effector(joint_angles angles);
     Point get_end_effector_normal(joint_angles angles);
     joint_angles sample_ellipsoid();
+    void calculateC(joint_angles gp);
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long long num_nodes = 0;

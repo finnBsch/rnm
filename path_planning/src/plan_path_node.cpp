@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     float e_ = 0;
     float f_ = M_PI/4;
     float step_size = 3*M_PI/180;
-    bool goal_joint = true;
+    bool goal_joint = false;
     int num_nodes_extra = 200000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);
@@ -140,6 +140,8 @@ int main(int argc, char **argv)
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
             if(tree->goal_node!= nullptr){
                 ROS_INFO("Number of nodes: %i and min dist %f and cost %f, %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost, tree->min_dist_orient);
+                ROS_INFO("Optimizing path for %i more nodes with cost %f", tree->num_nodes-(params_.num_nodes_extra + tree->nodesmark_goal_found), tree->goal_node->cost);
+
             }
             else{
                 ROS_INFO("Number of nodes: %i and min dist %f, %f", tree->num_nodes, tree->min_dist, tree->min_dist_orient);
