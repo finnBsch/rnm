@@ -8,6 +8,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <stdio.h>
+#include "image_transport/image_transport.h"
+#include "forward_kin.cpp>
 
 using namespace cv;
 using namespace std;
@@ -67,7 +69,7 @@ int main(int argc, char **argv) {
     std::size_t i2 = 0;
     std::size_t i = 0;
     std::size_t i_deleted = 0;
-    for (auto const &f : rgbFileNames){
+    for (auto const &f : rgbFileNames) {
         std::cout << std::string(f) << std::endl;
         rgbimg = cv::imread(f); //Load the images
         cv::Mat rgbgray;//grayscale the image
@@ -84,9 +86,8 @@ int main(int argc, char **argv) {
                              cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
             rgbObjP.push_back(rgbobjp);
             i2++;
-        }
-        else {
-            rgbcorners.erase(next(rgbcorners.begin(), i-i_deleted));
+        } else {
+            rgbcorners.erase(next(rgbcorners.begin(), i - i_deleted));
             cout << endl << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
             i_deleted++;
         }
@@ -110,7 +111,7 @@ int main(int argc, char **argv) {
     //Detect corners of the checkerboard in the IR Frames
     cv::Mat irimg;
     std::size_t m = 0;
-    std::size_t m2 = 0 ;
+    std::size_t m2 = 0;
     std::size_t m_deleted = 0;
     for (auto const &f : irFileNames) {
         std::cout << std::string(f) << std::endl;
@@ -130,9 +131,8 @@ int main(int argc, char **argv) {
                              cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
             irObjP.push_back(irobjp);
             m2++;
-        }
-        else {
-            ircorners.erase(next(ircorners.begin(), m-m_deleted));
+        } else {
+            ircorners.erase(next(ircorners.begin(), m - m_deleted));
             cout << endl << "!!!!!!!!File " << irFileNames[m] << "not used!!!!!!!!" << endl << endl;
             m_deleted++;
         }
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
     //Size board_size = Size(board_width, board_height);
     // int board_n = board_width * board_height;
     int num_deleted = 0;
-    int t =0;
+    int t = 0;
     for (int i = 0; i < rgbFileNames.size(); i++) {
 
 
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
                                                 CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE);
 
         vector<Point3f> obj;
-        for (int j = 1; j < checkerBoard[1]; j++){
+        for (int j = 1; j < checkerBoard[1]; j++) {
             for (int k = 1; k < checkerBoard[0]; k++) {
                 obj.push_back(Point3f((float) k * fieldSize, (float) j * fieldSize, 0));
             }
@@ -250,10 +250,9 @@ int main(int argc, char **argv) {
             imagePoints2.push_back(corners2);
             object_points.push_back(obj);
             cout << "leftImg: " << rgbFileNames[i] << " and rightImg: " << irFileNames[i] << endl;
-        }
-        else {
-            corners1.erase(next(corners1.begin(), i-num_deleted));
-            corners2.erase(next(corners2.begin(), i-num_deleted));
+        } else {
+            corners1.erase(next(corners1.begin(), i - num_deleted));
+            corners2.erase(next(corners2.begin(), i - num_deleted));
             num_deleted++;
 
             cout << endl << "!!!!!!!!Pairs " << irFileNames[i] << "not used!!!!!!!!" << endl << endl;
@@ -298,7 +297,7 @@ int main(int argc, char **argv) {
 
 
     //Rectification
-    cout <<"Starting Rectification\n";
+    cout << "Starting Rectification\n";
     cv::Mat R1, R2, P1, P2, Q;
     stereoRectify(K1, D1, K2, D2, irFrameSize, R, T, R1, R2, P1, P2, Q);
     printf("Done Rectification\n");
@@ -353,4 +352,45 @@ int main(int argc, char **argv) {
 
 //TODO generate the right input for the calibrateHandEye function
 
+//////// convert joint angles to poses
+    forward_kin::get_endeffector srv;
+    sensor_msgs::JointState joint_state_msg;
+    joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+    ros::ServiceClient client = n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
+    boost::array<double, 7> arr = {joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2],
+                                   joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5],
+                                   joint_state_msg.position[6]};
+    srv.request.joint_angles = arr;
+    auto a = client.call(srv);
+    if (a)
+    {
+        ROS_INFO("Endpos: %f", srv.response.end_effector_pos[0]);
+    }
+    else
+    {
+        ROS_ERROR("Failed to call service forward_kin");
+        return 1;
+    }
+    R_gripper2base, t_gripper2base;
+    allRobotPoses.pushback({(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
+
+
+
+///////////////////////////////////////////////////////////////////
+    ROS_INFO("Starting hand-eye calibration.");
+
+    // collecting transformations for all poses
+
+    for (int i = 0; i < allRobotPoses.size(); i++) {
+        Mat R, t;
+        transform2rv(allRobotPoses[i], R, t);
+        R_gripper2base.push_back(R);
+        t_gripper2base.push_back(t);
+    }
+
+    // performing hand-eye calibration
+    Mat R_cam2gripper, t_cam2gripper;
+    calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper);
+    cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
+    cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
 }
