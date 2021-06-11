@@ -4,6 +4,7 @@
 
 #include "rrt.h"
 
+
 #define T 6
 /* Performance improvements:
  * euclidean dist: remove redudant array calls, implement euclidean dist sqrd (no need for sqrt)
@@ -38,24 +39,44 @@ Point rrt::get_end_effector(joint_angles angles){
     //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
     return (Point){out[0], out[1], out[2]};
 }
+Point rrt::get_end_effector_normal(joint_angles angles){
+    array<Matrix<float, 4, 4>, 8> a_;
+    for(int i  = 0; i<T; i++){
+        a_.at(i) = get_transformationmatrix(angles[i], a(i), d(i), alpha(i));
+    }
+    a_.at(6) = get_transformationmatrix(0, a(6), d(6), alpha(6));
+    a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
+    Matrix<float, 4, 1> in;
+    in << 0, 0, 1, 0;
+    Matrix<float, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+    //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
+    return (Point){out[0], out[1], out[2]};
+}
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
+    L.setZero();
+    Matrix<float, 6,1 > a1;
+    Matrix<float, 1,6> v1 = {1, 0, 0, 0, 0, 0};
+    for(int i = 0; i<start_point.size(); i++){
+        a1(i) = goal_point[i] - start_point[i];
+    }
+    a1 = a1/a1.norm();
+    Matrix<float, 6, 6> M = a1*v1;
+    JacobiSVD<Matrix<float, 6, 6>> svd(M,ComputeFullU | ComputeFullV);
+
+    Matrix<float, 6, 1> vec_temp = {1, 1, 1, 1, 1, svd.matrixU().determinant() * svd.matrixV().determinant()};
+    Matrix<float, 6, 6> temp_ =vec_temp.asDiagonal();
+    C = svd.matrixU() * temp_ * svd.matrixV().transpose();
     a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
     d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
     alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     goal_p = get_end_effector(goal_point);
-    int size = 6;
     kdtree = flann::Index<flann::L2_Simple<float>>(
             flann::KDTreeIndexParams());
-    Eigen::MatrixXd covar(size,size);
-    float cov = 20;
-    covar << cov, 0, 0, 0, 0, 0,
-            0, cov, 0, 0, 0, 0,
-            0, 0, cov, 0, 0, 0,
-            0, 0, 0, cov, 0, 0,
-            0, 0, 0, 0, cov, 0,
-            0, 0, 0, 0, 0, cov;
-    sampler = new normal_random_variable {covar};
+    c_opt = euclidean_dist_joint(start_point, goal_point);
+    for(int i = 0; i<goal_point.size(); i++){
+        center(i) = (goal_point[i] + start_point[i])/2;
+    }
     // save params
     this->goal_point = goal_point;
     this->start_point = start_point;
@@ -78,29 +99,29 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     joint_angles stepped_point;
     bool n_feasible = true;
     while(n_feasible) {
-        bool not_feasible = true;
-        /*auto sampled = sampler->operator()();
-        while(not_feasible){
-            sampled = sampler->operator()();
-            sampled[0] += goal_point[0];
-            sampled[1] += goal_point[1];
-            sampled[2] += goal_point[2];
-            sampled[3] += goal_point[3];
-            sampled[4] += goal_point[4];
-            sampled[5] += goal_point[5];
-            for(int i = 0; i<sampled.size(); i++){
-                if(sampled[i] < params.joint_ranges[i][0] || sampled[i] > params.joint_ranges[i][1] ){
-                    not_feasible = true;
-                    break;
-                }
-                else{
-                    not_feasible = false;
+        if(params.goal_joint) {
+            bool not_feasible = true;
+            joint_angles sampled;
+            while (not_feasible) {
+                sampled = sample_ellipsoid();
+                for (int i = 0; i < sampled.size(); i++) {
+                    if ((sampled[i] < params.joint_ranges[i][0] || sampled[i] > params.joint_ranges[i][1])) {
+                        not_feasible = true;
+                        break;
+                    } else {
+                        not_feasible = false;
+                    }
                 }
             }
-        }*/
-        auto sampled = random_point(params.joint_ranges);
-        for(int i = 0; i<sampled.size(); i++){
-            sample_point[i] =  (float)sampled[i];
+            for (int i = 0; i < sampled.size(); i++) {
+                sample_point[i] = (float) sampled[i];
+            }
+        }
+        else {
+            auto sampled = random_point(params.joint_ranges);
+            for (int i = 0; i < sampled.size(); i++) {
+                sample_point[i] = (float) sampled[i];
+            }
         }
         //sample_point = random_point(params.joint_ranges);
         nearest_node = findNearestNode(sample_point);
@@ -152,16 +173,38 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     all_nodes.push_back(new_node);
     num_nodes++;
     float dist;
+    float dist_orient = 0;
     if(params.goal_joint){
         dist = euclidean_dist_sqrd_joint(new_node->get_angles(), goal_point);
     }
     else{
         dist = euclidean_dist_sqrd(new_node->get_position(), goal_p);
+        auto norm = get_end_effector_normal(new_node->get_angles());
+        float ang_cost = 0;
+        for(int i = 0; i<norm.size(); i++){
+            ang_cost+=norm[i]*goal_normal[i];
+        }
+        dist_orient = abs(acos(ang_cost));
     }
-    if (dist < min_dist || min_dist == -1){
-        min_dist = dist;
+    if(params.goal_joint){
+        if (dist < min_dist || min_dist == -1){
+            min_dist = dist;
+        }
     }
-    if(dist<0.0025){
+    else{
+        if ((dist_orient < min_dist_orient && dist < min_dist )|| (min_dist_orient == -1  && min_dist == -1)){
+            min_dist_orient = dist_orient;
+            min_dist = dist;
+        }
+    }
+
+    if(dist<0.01 && dist_orient < 0.2){
+        if(nodesmark_goal_found == 0) {
+            nodesmark_goal_found = num_nodes;
+        }
+        else{
+            ROS_INFO("Optimizing path for %l more nodes", num_nodes-params.num_nodes_extra + nodesmark_goal_found);
+        }
         if(goal_node){
             if(new_node->cost < goal_node->cost){
                 goal_node = new_node;
@@ -171,19 +214,45 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             goal_node = new_node;
         }
 
-        if(num_nodes>=params.num_nodes_min){
+        if(num_nodes>=(long long) params.num_nodes_extra + nodesmark_goal_found){
             ROS_INFO("Goal pos: x %f y %f z %f", goal_p[0], goal_p[1], goal_p[2]);
             ROS_INFO("Goal pos planned: x %f y %f z %f", goal_node->get_position()[0], goal_node->get_position()[1], goal_node->get_position()[2]);
             return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
         }
         return make_tuple(false, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
     }
+    if(goal_node && num_nodes>=(long long) params.num_nodes_extra + nodesmark_goal_found){
+        ROS_INFO("Goal pos: x %f y %f z %f", goal_p[0], goal_p[1], goal_p[2]);
+        ROS_INFO("Goal pos planned: x %f y %f z %f", goal_node->get_position()[0], goal_node->get_position()[1], goal_node->get_position()[2]);
+        return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
+    }
     // TODO repeat until new node in case of collision
     return make_tuple(false, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
 
 }
 
+joint_angles rrt::sample_ellipsoid(){
+    joint_angles ret;
+    float c_max;
+    if(goal_node) {
+        c_max = goal_node->cost;
+    }
+    else{
+        c_max = 2*c_opt;
+    }
+    float temp = sqrt(c_max*c_max - c_opt*c_opt)/2;
 
+    L(0,0) = c_max/2;
+    for(int i = 1; i<6; i++){
+        L(i, i) = temp;
+    }
+    auto ball_sampled = sample_unit_ball();
+    auto rand_ = C * L * ball_sampled + center;
+    for(int i = 0; i<ret.size(); i++){
+        ret[i] = rand_(i);
+    }
+    return ret;
+}
 
 rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
     flann::Matrix<float> query;
@@ -262,7 +331,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         }
         for(int i = 0; i<joints.size(); i++){
             if(counter!=0){
-                dx_set[counter] = max(dx_set[counter], (temp[i]-joints[i].at(counter-1))*5);
+                dx_set[counter] = max(dx_set[counter], abs(temp[i]-joints[i].at(counter-1))*5);
             }
             joints[i].at(counter) = temp[i];
         }
@@ -279,8 +348,8 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     }
     float t_max = x_set[x_set.size()-1];
     for(int i = 0; i<joints.size(); i++){
-        for(int j = 0; j<joints[i].size()*10; j++){
-            joints_smooth[i].push_back(splines[i]((float)j/(float)(joints[i].size()*10) * t_max));
+        for(long long j = 0; j<joints[i].size()*100; j++){
+            joints_smooth[i].push_back(splines[i]((float)j/(float)(joints[i].size()*100) * t_max));
         }
 
     }

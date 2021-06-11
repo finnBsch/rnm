@@ -54,17 +54,17 @@ int main(int argc, char **argv)
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
 
     float a_ = 0;
-    float b_ = M_PI/2;
-    float c_ = M_PI/2;
-    float d_ = M_PI/4;
+    float b_ = M_PI/4;
+    float c_ = M_PI/4;
+    float d_ = -M_PI/4;
     float e_ = 0;
-    float f_ = M_PI/3;
+    float f_ = M_PI/4;
     float step_size = 3*M_PI/180;
-    bool goal_joint = false;
-    int num_nodes_min = 250000;
+    bool goal_joint = true;
+    int num_nodes_extra = 200000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);
-    ros::param::get("~nn", num_nodes_min);
+    ros::param::get("~nn", num_nodes_extra);
     ros::param::get("~a", a_);
     ros::param::get("~b", b_);
     ros::param::get("~c", c_);
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     joint_ranges[5] = range;
 
 
-    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_min, 1};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, 0.0};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
@@ -139,10 +139,10 @@ int main(int argc, char **argv)
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
             if(tree->goal_node!= nullptr){
-                ROS_INFO("Number of nodes: %i and min dist %f and cost %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost);
+                ROS_INFO("Number of nodes: %i and min dist %f and cost %f, %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost, tree->min_dist_orient);
             }
             else{
-                ROS_INFO("Number of nodes: %i and min dist %f", tree->num_nodes, tree->min_dist);
+                ROS_INFO("Number of nodes: %i and min dist %f, %f", tree->num_nodes, tree->min_dist, tree->min_dist_orient);
             }
             //marker_pub.publish(line_list[0]);
             start_time = finish;

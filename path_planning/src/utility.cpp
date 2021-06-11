@@ -23,6 +23,18 @@ float euclidean_dist(Point A, Point B){
     }
     return sqrt(total_distance);
 }
+Matrix<float, 6, 1> sample_unit_ball(){
+    Matrix<float, 6, 1> r;
+    for(int i = 0; i < r.size(); i++){
+        r[i] = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    }
+    float norm = r.norm();
+    float r2 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    for(int i = 0; i < r.size(); i++){
+        r[i] = r[i]*r2/norm;
+    }
+    return r;
+}
 float euclidean_dist_sqrd_joint(joint_angles A, joint_angles B){
     float distances;
     float total_distance = 0;

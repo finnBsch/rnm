@@ -26,11 +26,12 @@ struct rrt_params{
     float step_size;
     array<array<float, 2>, 6> joint_ranges;
     bool goal_joint;
-    int num_nodes_min;
+    int num_nodes_extra;
     float steercost;
 };
 void point_to_flann(joint_angles p, float* data);
 joint_angles flann_to_point(float* data);
+Matrix<float, 6, 1> sample_unit_ball();
 struct normal_random_variable
 {
     normal_random_variable(Eigen::MatrixXd const& covar)

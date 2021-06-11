@@ -10,7 +10,7 @@ public:
     ros::Publisher pub;
     trajectory_executer(ros::Publisher traj):pub(traj){}
     void execute_trajectory(const trajectory_msgs::JointTrajectoryConstPtr& msg){
-        ros::Rate loop_rate(10);
+        ros::Rate loop_rate(1000);
         std_msgs::Float64MultiArray msg_;
         bool not_finished = true;
         int i = 0;
