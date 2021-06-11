@@ -38,6 +38,7 @@ void read_camcal_data(){
         }
         rows ++;
     }
+    // push to
 
 // reshape to 2d:
     depthImg = depthImg.reshape(1,rows);
@@ -64,7 +65,7 @@ void calculate_pose(){
         return 1;
     }
     R_gripper2base, t_gripper2base;
-    t_gripper2base = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
+    allRobotPoses.pushback({(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
     for(int i=0; i<allRobotPoses.size(); i++){
         Mat R, t;
         transform2rv(allRobotPoses[i], R, t);
