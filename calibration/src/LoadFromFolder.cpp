@@ -26,7 +26,7 @@ void LoadFromFolder(){
   cv::Size irFrameSize(640, 576);
   std::vector<cv::String> rgbFileNames;
   std::vector<cv::String> irFileNames;
-  std::string rgbFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/bgr/*.jpg");
+  std::string rgbFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/rgb/*.jpg");
   cv::glob(rgbFolder, rgbFileNames, true);  // load rgb images into opencv
   std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/ir/*.jpg");
   cv::glob(irFolder, irFileNames, true);
@@ -86,12 +86,12 @@ void LoadFromFolder(){
     }
 
     // Display the detected pattern on the chessboard
-    // cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], rgbPatternFound);
-    // cv::imshow("RGB chessboard corner detection", rgbimg);
-    // cv::waitKey(1);
+    //cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], rgbPatternFound);
+    //cv::imshow("RGB chessboard corner detection", rgbimg);
+    //cv::waitKey(1);
     i++;
   }
-  cout << "All RGB Corners detected and safed in rgbcorners\n";
+  cout << "All RGB Corners detected and saved in rgbcorners\n";
 
 
 
@@ -110,9 +110,9 @@ void LoadFromFolder(){
                                   cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE);
 
     // Display the detected chessboard pattern on the ir frames
-    // cv::drawChessboardCorners(irimg, patternSize, ircorners[m], irpatternFound);
-    // cv::imshow("IR chessboard corner detection", irimg);
-    // cv::waitKey(1);
+    //cv::drawChessboardCorners(irimg, patternSize, ircorners[m], irpatternFound);
+    //cv::imshow("IR chessboard corner detection", irimg);
+    //cv::waitKey(0);
     if (irpatternFound) {
       cv::cornerSubPix(
           irgray, ircorners[m2], cv::Size(20, 20), cv::Size(-1, -1),
@@ -217,7 +217,7 @@ int main(int argc, char** argv)  {
   int queue_size;
   nh.getParam("topic_name", topic_name);
   nh.getParam("queue_size", queue_size);
-
+  LoadFromFolder();
   // Register a callback function (a function that is called every time a new message arrives)
   //ros::ServiceServer service = nh.advertiseService("get_endeffector", get_end_effector);
   ros::spin();

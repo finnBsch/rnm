@@ -6,6 +6,7 @@
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <geometry_msgs/TransformStamped.h>
 
 using namespace cv;
 using namespace std;
@@ -20,6 +21,9 @@ string path = "/home/nico/catkin_ws/src";
 int pose_rgb = 1;
 int pose_ir = 1;
 int pose_depth = 1;
+
+// calibration data
+vector<geometry_msgs::TransformStamped> allRobotPoses;
 
 // function for showing the images from sensor_imgs; default: not used
 void imageCallback(const sensor_msgs::ImageConstPtr& msg){
@@ -107,6 +111,7 @@ void irImageWrite(const sensor_msgs::ImageConstPtr& msg) {
     // convert image from ros msg to bgr8 (cv)
     cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
 
+
     // create filename
     stringstream ss;
     string name = "/frame_reader/cal_imgs/new/ir/pose_";
@@ -156,6 +161,11 @@ int main(int argc, char** argv) {
   // callbacks. each image type has its own saving callback
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
+  image_transport::Subscriber angles_sub = it.subscribe("/joint_states", 1, irImageWrite);
+
+
+  // additional calibraiton data
+
 
   std::cout << "ready" << endl;
 
