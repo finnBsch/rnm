@@ -29,14 +29,38 @@ public:
     // Initialize
     RobotArm(ros::NodeHandle nh, std::string command_topic): nh_(nh), num_joints_(7), command_topic_(command_topic_)
     {
-        ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("inverse_kinematics_node/unserService");
+        ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
         inverse_kinematics::unserService srv;
 
-        srv.request.initial_joint_angles = {-1.04, 0.32, 2.43, -1.97, -1.67119, 1.45099, 0.321082};
+        sensor_msgs::JointState joint_state_msg;
+
+
+        if (command_topic.find("sim") != std::string::npos) {
+            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+        }
+        else {
+            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
+        }
+
+
+        for (size_t i = 0; i < 7; ++i) {
+            init_position[i] = joint_state_msg.position[i];
+        }
+        command_pub = nh_.advertise<std_msgs::Float64MultiArray>(command_topic, 1);
+
+
+        srv.request.initial_joint_angles = {init_position[0],
+                                            init_position[1],
+                                            init_position[2],
+                                            init_position[3],
+                                            init_position[4],
+                                            init_position[5],
+                                            init_position[6]};
+        //{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         auto a = client.call(srv);
         if (a)
         {
-            ROS_INFO("A-Matrix: %f", srv.response.ik_jointAngles);
+            ROS_INFO("Connection Successful");
         }
         else
         {
@@ -45,22 +69,14 @@ public:
         }
 
 
-
-        sensor_msgs::JointState joint_state_msg;
         finalJointAngles = {srv.response.ik_jointAngles[0],srv.response.ik_jointAngles[1],srv.response.ik_jointAngles[2],
-                srv.response.ik_jointAngles[3],srv.response.ik_jointAngles[4],srv.response.ik_jointAngles[5],
-                srv.response.ik_jointAngles[6]};
+                            srv.response.ik_jointAngles[3],srv.response.ik_jointAngles[4],srv.response.ik_jointAngles[5],
+                            srv.response.ik_jointAngles[6]};
+        for( int i=0; i< 7; i++){
+            ROS_INFO("Angles %f", srv.response.ik_jointAngles[i]);
+        }
 
-        if (command_topic.find("sim") != std::string::npos) {
-            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
-        }
-        else {
-            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
-        }
-        for (size_t i = 0; i < 7; ++i) {
-            init_position[i] = joint_state_msg.position[i];
-        }
-        command_pub = nh_.advertise<std_msgs::Float64MultiArray>(command_topic, 1);
+
     }
 
     void sendStepCommand()
@@ -70,16 +86,18 @@ public:
         std::vector<double> goal_position;
         std::vector<double> delta_angle= finalJointAngles;
         double incrementalCounter =counter/1000.;
-            transform(delta_angle.begin(), delta_angle.end(), delta_angle.begin(),
-                      [incrementalCounter](double &c) { return c * incrementalCounter; });
-            //delta_angle =  finalJointAngles*counter/1000.;
-            for (size_t i = 0; i < 7; ++i) {
+            //transform(delta_angle.begin(), delta_angle.end(), delta_angle.begin(),
+              //        [incrementalCounter](double &c) { return c * incrementalCounter; });
+
+            for (int i = 0; i < 7; ++i) {
                 if (i == 4) {
-                    goal_position.push_back(init_position[i] - delta_angle[i]);
+                    goal_position.push_back(delta_angle[i]);
                 } else {
-                    goal_position.push_back(init_position[i] + delta_angle[i]);
+                    goal_position.push_back(delta_angle[i]);
                 }
+
             }
+
         if(incrementalCounter>1) {
             ros::shutdown();
         }

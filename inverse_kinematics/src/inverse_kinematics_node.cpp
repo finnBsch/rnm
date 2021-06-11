@@ -1,22 +1,8 @@
 /*
  * This is the example of Tutorial 5 to test and understand incremental inverse kinematics
- * author: Sean Maroofi
+ * author: Tolga Kartal, Sean Maroofi
  * added: 29.5.21
- * last edited: 9.6.21
- *
- *
- * WORKING FOR PARAMS:
- *
- * initial joint angles : -1.04, 0.32, 2.43, -1.97, -1.67119, 1.45099, 0.321082
- * finial A (12x1 order): < 0.244948, 0.96417, 0.101854, 0.076194, -0.123872, 0.989368, 0.966538, -0.234584, -0.103804, 0.250202, 0.444379, 0.632892;
- * incrementalStepSize: 0.00001
- * abort value: 0.05
- * no rounding
- * setZero() before their initialization: current_transformationmatrix_vector_, delta_A, abs_delta_A
- * pinvJ calculated with pinvJ = J.completeOrthogonalDecomposition().pseudoInverse()
- *
- *
- *
+ * last edited: 11.6.21
  */
 
 
@@ -149,11 +135,7 @@ public:
             a_.at(i) = get_transformationmatrix(joint_angles_(i), a(i), d(i), alpha(i));
         }
         a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
-        //VectorXd in(4);
-        //in << 0, 0, 0, 1;
         A_total=a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7);
-        //VectorXd out = A_total*in;
-
 
         vector<< A_total(0,0), A_total(1,0), A_total(2,0),
                 A_total(0,1), A_total(1,1), A_total(2,1),
@@ -164,7 +146,6 @@ public:
     }
 
     //END OF FORWARD
-
 
 
 
@@ -248,18 +229,14 @@ public:
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
         }
-        /*
-        ROS_INFO("X-COOR: %f", current_transformationmatrix_vector_(9));
-        ROS_INFO("Y-COOR: %f", current_transformationmatrix_vector_(10));
-        ROS_INFO("Z-COOR: %f", current_transformationmatrix_vector_(11));
-        */
+
         ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
 
         // check if largest entry of absolute is smaller than error
         if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
-            for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
+            /*for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
                 ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
-            }
+            }*/
             if(counter_ == limit_) {
                ROS_ERROR("Limit ueberstritten: %i", counter_);
             } else {
@@ -271,13 +248,6 @@ public:
 
             // calculate Jacobian and pseudoinverse
             J = calculateJacobian(joint_angles_, size_);
-            //pinvJ = J.completeOrthogonalDecomposition().pseudoInverse();
-
-            // alternative functions
-            //pinvJ = pinv_eigen_based(J); // function is commented below
-            //pinvJ =  J.transpose() * (J*J.transpose()).inverse() ;
-            //cvInvert(&J, &pinvJ, 0);
-            //J = franka::Model::bodyJacobian(franka::Frame, joint_angles_);
 
             //correction of joint angles
             deltaQ = J.completeOrthogonalDecomposition().solve(delta_A);
@@ -299,38 +269,16 @@ public:
         //PERFORM INVERSE KINEMATICS
         desired_joint_angles_ = incrementalStep();
 
+        VectorXd finalA2 = get_transformation_Vector();
+        for(int i=0; i<finalA2.rows();i++){
+            ROS_INFO("A_Matrix %f",finalA2(i));
+        }
+
         res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
         return true;
     }
-/*
-    Eigen::MatrixXd pinv_eigen_based(Eigen::MatrixXd & origin, const float er = 0) {
-        // perform svd decomposition
-        Eigen::JacobiSVD<Eigen::MatrixXd> svd_holder(origin,
-                                                     Eigen::ComputeThinU |
-                                                     Eigen::ComputeThinV);
-        // Build SVD decomposition results
-        Eigen::MatrixXd U = svd_holder.matrixU();
-        Eigen::MatrixXd V = svd_holder.matrixV();
-        Eigen::MatrixXd D = svd_holder.singularValues();
-
-        // Build the S matrix
-        Eigen::MatrixXd S(V.cols(), U.cols());
-        S.setZero();
-
-        for (unsigned int i = 0; i < D.size(); ++i) {
-
-            if (D(i, 0) > er) {
-                S(i, i) = 1 / D(i, 0);
-            } else {
-                S(i, i) = 0;
-            }
-        }
-
-        // pinv_matrix = V * S * U^T
-        return V * S * U.transpose();
-    }*/
 };
 
 int main(int argc, char** argv)  {
