@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     float e_ = 0;
     float f_ = M_PI/4;
     float step_size = 3*M_PI/180;
-    bool goal_joint = false;
+    bool goal_joint = true;
     int num_nodes_extra = 200000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);

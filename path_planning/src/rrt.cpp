@@ -13,7 +13,10 @@
  * possible things to do:
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
+
+// return Transformation matrices from dvh
 Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
+
     Matrix<float, 4, 4> ret_mat;
     float st = sin(theta);
     float ca = cos(alpha);
@@ -26,6 +29,7 @@ Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, c
     return ret_mat;
 }
 
+// end effector pos from joint angles
 Point rrt::get_end_effector(joint_angles angles){
     array<Matrix<float, 4, 4>, 8> a_;
     for(int i  = 0; i<T; i++){
@@ -39,6 +43,8 @@ Point rrt::get_end_effector(joint_angles angles){
     //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
     return (Point){out[0], out[1], out[2]};
 }
+
+// end-effector normal from joint angles
 Point rrt::get_end_effector_normal(joint_angles angles){
     array<Matrix<float, 4, 4>, 8> a_;
     for(int i  = 0; i<T; i++){
@@ -54,31 +60,40 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 }
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
+    // informed rrt
     L.setZero();
     if(params.goal_joint) {
         calculateC(goal_point);
     }
+
+    // robot params
     a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
     d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
     alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     goal_p = get_end_effector(goal_point);
-    kdtree = flann::Index<flann::L2_Simple<float>>(
-            flann::KDTreeIndexParams());
-    // save params
+
+
+
+    // apply constraints and rrt params
     this->goal_point = goal_point;
     this->start_point = start_point;
     this->params = params;
+
     // init start node
     start_node = new rrt_node(this->start_point, get_end_effector(this->start_point), params);
+
+    // init kd-tree for sorting
+    kdtree = flann::Index<flann::L2_Simple<float>>(
+            flann::KDTreeIndexParams());
     std::vector<float> data(6);
-    //point_to_flann(start_node->get_angles_flann(), data.data());
     kdtree.buildIndex(
             flann::Matrix<float>(start_node->get_angles_flann()->data(), 1, 6));
-    all_nodes.push_back(start_node);
-    //kdtree.addPoints(flann::Matrix<float>(start_node->get_pos_flann()->data(), 1, 6));
-    //nodemap.insert(pair<Point, rrt_node*>(start_node->get_pos(), start_node));
 
+    // start list of all nodes
+    all_nodes.push_back(start_node);
 }
+
+// expand routine
 tuple<bool, array<Point, 2>> rrt::expand() {
     rrt_node* nearest_node;
     rrt_node* new_node;
@@ -90,7 +105,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             bool not_feasible = true;
             joint_angles sampled;
             while (not_feasible) {
-                sampled = sample_ellipsoid();
+                sampled = sample_intelligent();
                 for (int i = 0; i < sampled.size(); i++) {
                     if ((sampled[i] < params.joint_ranges[i][0] || sampled[i] > params.joint_ranges[i][1])) {
                         not_feasible = true;
@@ -128,7 +143,6 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                 sample_point[i] = (float) sampled[i];
             }
         }
-        //sample_point = random_point(params.joint_ranges);
         nearest_node = findNearestNode(sample_point);
         stepped_point = step_forward(nearest_node->get_angles(), sample_point, params.step_size);
         for(int i = 0; i<stepped_point.size();i++){
@@ -144,43 +158,56 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     }
     // TODO: Collision check, feasibility check
     new_node = new rrt_node(stepped_point, get_end_effector(stepped_point), params, nearest_node);
+
+    // find best parent
     auto near = findNearNodes(stepped_point);
     for(rrt_node* no:near){
-        float temp2;
-        if(no == start_node){
-            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-        }
-        else{
-            auto temp_ = no->cost_two_joints(no, new_node);
-            temp2 = std::get<0>(temp_) + std::get<1>(temp_)*params.steercost;
-        }
-        float temp = no->cost + temp2;
-        if(new_node->cost > temp){
-            new_node->set_parent(no, temp, temp2);
+        if(no!=new_node) {
+            float temp2;
+            if (no == start_node) {
+                temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
+            } else {
+                auto temp_ = no->cost_two_joints(no, new_node);
+                temp2 = std::get<0>(temp_) + std::get<1>(temp_) * params.steercost;
+            }
+            float temp = no->cost + temp2;
+            if (new_node->cost > temp) {
+                new_node->set_parent(no, temp, temp2);
+            }
         }
     }
+
+    // check if new node is better parent for other neighbor nodes
     for(rrt_node* no:near){
-        float temp2;
-        if(no == start_node){
-            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-        }
-        else{
-            auto temp_ = no->cost_two_joints(no, new_node);
-            temp2 = std::get<0>(temp_) + std::get<1>(temp_)*params.steercost;
-        }
-        float temp = new_node->cost + temp2;
-        if(no->cost > temp){
-            no->set_parent(new_node, temp, temp2);
+        if(no!=new_node) {
+            float temp2;
+            if (new_node == start_node) {
+                temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
+            } else {
+                auto temp_ = no->cost_two_joints(new_node, no);
+                temp2 = std::get<0>(temp_) + std::get<1>(temp_) * params.steercost;
+            }
+            float temp = new_node->cost + temp2;
+            if (no->cost > temp) {
+                no->set_parent(new_node, temp, temp2);
+            }
         }
     }
+
+    // condition kd-tree
     kdtree.addPoints(flann::Matrix<float>(new_node->get_angles_flann()->data(), 1, 6));
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
     num_nodes++;
+
+    // eval new node
     float dist;
     float dist_orient = 0;
     if(params.goal_joint){
         dist = euclidean_dist_sqrd_joint(new_node->get_angles(), goal_point);
+        if (dist < min_dist || min_dist == -1){
+            min_dist = dist;
+        }
     }
     else{
         dist = euclidean_dist_sqrd(new_node->get_position(), goal_p);
@@ -189,28 +216,32 @@ tuple<bool, array<Point, 2>> rrt::expand() {
         for(int i = 0; i<norm.size(); i++){
             ang_cost+=norm[i]*goal_normal[i];
         }
-        dist_orient = abs(acos(ang_cost));
-    }
-    if(params.goal_joint){
-        if (dist < min_dist || min_dist == -1){
-            min_dist = dist;
+        if(ang_cost<=-1.0){
+            dist_orient = M_PI;
         }
-    }
-    else{
+        else if(ang_cost>=1.0){
+            dist_orient = 0;
+        }
+        else {
+            dist_orient = abs(acos(ang_cost));
+        }
         if ((dist_orient < min_dist_orient && dist < min_dist )|| (min_dist_orient == -1  && min_dist == -1)){
             min_dist_orient = dist_orient;
             min_dist = dist;
         }
+
     }
     if(dist<0.005 && dist_orient < 0.2){
         //goal_found = true;
         if(nodesmark_goal_found == 0) {
             goal_point_found = new_node->get_angles();
-            calculateC(goal_point_found);
+            //calculateC(goal_point_found);
             nodesmark_goal_found = num_nodes;
         }
         if(goal_node){
             if(new_node->cost < goal_node->cost){
+                min_dist_orient = dist_orient;
+                min_dist = dist;
                 goal_node = new_node;
             }
         }
@@ -235,6 +266,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 
 }
 
+
+// informed rrt (from ellipsoid)
 joint_angles rrt::sample_ellipsoid(){
     joint_angles ret;
     float c_max;
@@ -258,6 +291,8 @@ joint_angles rrt::sample_ellipsoid(){
     return ret;
 }
 
+
+// find closest node to given joint angles
 rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
     flann::Matrix<float> query;
     std::vector<float> data(6);
@@ -276,6 +311,8 @@ rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
     return all_nodes[indices[0][0]];
 }
 
+
+// find close nodes to given joint angles within a radius
 vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
     flann::Matrix<float> query;
     std::vector<float> data(6);
@@ -299,14 +336,16 @@ vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
     return near_nodes;
 }
 
+
+// eval goal-path
 vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     rrt_node* current_node = goal_node;
     vector<tuple<Point, joint_angles>> goal_path;
     array<vector<float>, 6> joints_smooth;
     vector<Point> points;
     joint_angles temp;
-
     int counter = 0;
+    // iterate over path
     while(current_node!= nullptr){
         counter++;
         current_node = current_node->get_parent();
@@ -323,6 +362,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     vector<double> dx_set(counter);
     counter = 0;
     current_node = goal_node;
+    // again iterate
     while(current_node!= nullptr) {
         if(counter==0) {
             x_set[counter] = 0;
@@ -333,6 +373,8 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         if(current_node == start_node){
             ROS_INFO("USING START NODE");
         }
+
+        // generate relative time steps for each node by determining the distance (maybe use better metric)
         for(int i = 0; i<joints.size(); i++){
             if(counter!=0){
                 dx_set[counter] = max(dx_set[counter], abs(temp[i]-joints[i].at(counter-1))*5);
@@ -343,6 +385,8 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         counter++;
         current_node = current_node->get_parent();
     }
+
+    // smoothing
     vector<tk::spline> splines;
 
     for(int i = 0; i<joints.size(); i++){
@@ -392,4 +436,15 @@ void rrt::calculateC(joint_angles gp) {
         center(i) = (gp[i] + start_point[i])/2;
     }
 
+}
+
+// with given probability sample goal point (improve convergence of the algorithm)
+joint_angles rrt::sample_intelligent(){
+    float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    if(p<0.01){
+        return goal_point;
+    }
+    else{
+        return random_point(params.joint_ranges);
+    }
 }

@@ -13,10 +13,17 @@
 #include <eigen3/Eigen/Dense>
 #include <boost/math/interpolators/cubic_b_spline.hpp>
 #include <eigen3/Eigen/SVD>
+#include "bullet/btBulletCollisionCommon.h"
 typedef vector<vector<vector<vector<rrt_node*>>>> node_grid;
 using namespace Eigen;
 class rrt {
 private:
+    // collision stuff
+    btCollisionWorld* mColWorld;
+    btDefaultCollisionConfiguration*        mPhysicsConfig;
+    btCollisionDispatcher*                  mPhysicsDispatcher;
+    btBroadphaseInterface*                  mPhysicsCache;
+    btAlignedObjectArray<btCollisionShape*> mPhysicsShapes;
     // informed rrt
     float c_opt;
     Matrix<float, 6, 1> center;
@@ -44,6 +51,7 @@ private:
     Point get_end_effector(joint_angles angles);
     Point get_end_effector_normal(joint_angles angles);
     joint_angles sample_ellipsoid();
+    joint_angles sample_intelligent();
     void calculateC(joint_angles gp);
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

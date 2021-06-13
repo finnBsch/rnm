@@ -5,6 +5,8 @@
 #ifndef SRC_RRT_NODE_H
 #define SRC_RRT_NODE_H
 #include "utility.h"
+#include "ros/ros.h"
+#include "bullet/btBulletCollisionCommon.h"
 
 class rrt_node {
 private:
@@ -15,7 +17,7 @@ private:
     list<rrt_node*> children;
     rrt_params params;
 public:
-    bool has_child;
+    bool has_child = false;
     bool has_parent = true;
     tuple<float, float> cost_two_joints(rrt_node* init, rrt_node* stepped);
     rrt_node(const joint_angles angles, const Point position,rrt_params params);
@@ -33,6 +35,9 @@ public:
     void propagate_costs(){
         for(auto child:children){
             child->cost = child->cost_to_parent + cost;
+            if(child->cost < 0 || child->cost > 1000){
+                ROS_INFO("WTF");
+            }
             child->propagate_costs();
         }
     }

@@ -3,6 +3,8 @@
 //
 
 #include "rrt_node.h"
+#include "ros/ros.h"
+
 rrt_node::rrt_node(const joint_angles angles, const Point position,rrt_params params):angles_(6) {
     this->params = params;
     this->position = position;
@@ -43,7 +45,15 @@ tuple<float, float> rrt_node::cost_two_joints(rrt_node* init, rrt_node* stepped)
         ang_cost+=A[i]*B[i];
     }
     ang_cost=ang_cost/(euclidean_norm(A)*euclidean_norm(B));
-    ang_cost = pow(acos(ang_cost),2);
+    if(ang_cost<=-1.0){
+        ang_cost = M_PI*M_PI;
+    }
+    else if(ang_cost>=1.0){
+        ang_cost = 0;
+    }
+    else {
+        ang_cost = pow(acos(ang_cost), 2);
+    }
     // todo: check if +- 180°
     return make_tuple(euclidean_dist_joint(init->get_angles(), stepped->get_angles()),ang_cost);
 }

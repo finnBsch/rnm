@@ -12,9 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
         sensor_msgs
         std_msgs
         forward_kin
-        ecl_geometry
         )
 find_package( PkgConfig REQUIRED)
+
 pkg_check_modules( flann REQUIRED flann )
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -140,7 +140,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -flto" )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3" )
 add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/rrt_node.h src/plan_path_node.cpp src/utility.cpp src/utility.h src/spline.h) # TODO: insert correct NODE cpp
 
 ## Rename C++ executable without prefix
