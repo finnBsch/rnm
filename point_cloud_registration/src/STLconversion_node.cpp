@@ -24,6 +24,7 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/fpfh.h>
 #include <pcl/registration/ia_ransac.h>
+#include <pcl/registration/icp.h>
 
 //using namespace std::chrono_literals;
 
@@ -285,7 +286,7 @@ int main(int argc, char** argv)
   ros::Publisher publisher_stitch;
   publisher_stitch = nodeHandle.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1);
 
-  const std::string STL_file_name =  "/home/niklas/Documents/RNM/provided_data_scanning/Skeleton.stl";
+  const std::string STL_file_name =  "/home/konrad/Documents/RNM/Scanning/Skeleton.stl";
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr skeleton_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PolygonMesh mesh;
@@ -336,13 +337,27 @@ int main(int argc, char** argv)
   std::vector<FeatureCloud> object_templates;
   object_templates.resize (0);
 
+/*  for (int i = 0; i < 10; ++i) {
+    std::ostringstream oss;
+    oss << "/home/konrad/Documents/RNM/skeleton_part" << i << ".pcd";
+    std::string file = oss.str();
+
     FeatureCloud template_cloud;
-    template_cloud.setInputCloud (skeleton_cloud);
+    template_cloud.loadInputCloud(file);
     object_templates.push_back (template_cloud);
+  }*/
+  FeatureCloud template_cloud;
+  template_cloud.setInputCloud(skeleton_cloud);
+  object_templates.push_back (template_cloud);
+
 
   // load stitched point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+  pcl::io::loadPCDFile( "/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+
+  vg.setInputCloud (stitched_cloud);
+  vg.setLeafSize (0.005, 0.005, 0.005);
+  vg.filter (*stitched_cloud);
 
  // pcl::visualization::PCLVisualizer::Ptr viewer3;
  // viewer3 = simpleVis(stitched_cloud);
@@ -350,17 +365,16 @@ int main(int argc, char** argv)
   // Preprocess the cloud by...
   // ...removing distant points
   //sinn macht das noch nicht so
-  const float depth_limit = 1;
-  pcl::PassThrough<pcl::PointXYZRGB> pass;
-  pass.setInputCloud (stitched_cloud);
-  pass.setFilterFieldName ("z");
-  pass.setFilterLimits (0, depth_limit);
-  pass.filter (*stitched_cloud);
+  //const float depth_limit = 1;
+  //pcl::PassThrough<pcl::PointXYZRGB> pass;
+  //pass.setInputCloud (stitched_cloud);
+  //pass.setFilterFieldName ("z");
+  //pass.setFilterLimits (0, depth_limit);
+  //pass.filter (*stitched_cloud);
 
   // Assign to the target FeatureCloud
   FeatureCloud target_cloud;
   target_cloud.setInputCloud (stitched_cloud);
-
 
 
   // Set the TemplateAlignment inputs
@@ -381,20 +395,34 @@ int main(int argc, char** argv)
   // Print the rotation matrix and translation vector
   Eigen::Matrix3f rotation = best_alignment.final_transformation.block<3,3>(0, 0);
   Eigen::Vector3f translation = best_alignment.final_transformation.block<3,1>(0, 3);
-  pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
-  pcl::transformPointCloud (*best_template.getPointCloud (), transformed_cloud, best_alignment.final_transformation);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::transformPointCloud (*best_template.getPointCloud (), *transformed_cloud, best_alignment.final_transformation);
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr goal_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
+
+  pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
+  icp.setInputSource(transformed_cloud);
+  icp.setInputTarget(stitched_cloud);
+
+  //ICP parameters (examples), we still need to adjust them
+  //icp.setEuclideanFitnessEpsilon(1);
+  //icp.setTransformationEpsilon(1e-20);
+  icp.setMaximumIterations(20);
+
+  //align new cloud to stitched cloud and add to the total stitched cloud.
+  icp.align(*transformed_cloud);
 
   //pcl::visualization::PCLVisualizer::Ptr viewer4;
   //viewer4 = simpleViscomb(stitched_cloud,skeleton_cloud);
 
   sensor_msgs::PointCloud2 output;
-  pcl::toROSMsg(transformed_cloud, output);
-  output.header.frame_id = "point_link";
+  pcl::toROSMsg(*transformed_cloud, output);
+  output.header.frame_id = "rgb_camera_link";
   publisher.publish (output);
 
   sensor_msgs::PointCloud2 output_stitch;
   pcl::toROSMsg(*stitched_cloud, output_stitch);
-  output_stitch.header.frame_id = "point_link";
+  output_stitch.header.frame_id = "rgb_camera_link";
   publisher_stitch.publish (output_stitch);
 //pcl::io::savePCDFile( "/home/niklas/Documents/RNM/skeleton_cloud.pcd", *skeleton_cloud, true ); // Binary format
 

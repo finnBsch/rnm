@@ -117,7 +117,7 @@ class PCStitch
 
       //ICP parameters (examples), we still need to adjust them
       //icp.setEuclideanFitnessEpsilon(1);
-      icp.setTransformationEpsilon(icp_epsilon);
+      //icp.setTransformationEpsilon(icp_epsilon);
       icp.setMaximumIterations(icp_max);
 
       //align new cloud to stitched cloud and add to the total stitched cloud.
@@ -132,6 +132,10 @@ class PCStitch
     pub_.publish (output);
   }
 
+  void safeCloud(){
+    pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+  }
+
  public:
   void addCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
     receiveCloud(PCJS);
@@ -141,6 +145,7 @@ class PCStitch
     crop();
     ICP();
     publishCloud();
+    safeCloud();
   }
 };
 
