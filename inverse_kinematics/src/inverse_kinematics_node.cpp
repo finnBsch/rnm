@@ -201,16 +201,15 @@ public:
         // FOR TESTING, STARTING VECTOR
         if(initializing) {
             if (size_ == 12) {
-            final_transformationmatrix_vector_
-                    //<< 0.12073 ,-0.058858 ,0.99094 ,0.325769 ,0.98973, 0.084132 ,-0.115588 ,0.378392, -0.076568 ,0.994716, 0.06841, 0.547474;
+              Matrix4d final_transformationmatrix;
+              final_transformationmatrix << 0.377556, -0.029182, 0.925526, 0.249209, 0.92475, 0.063488, -0.375232, 0.403714, -0.047806, 0.997552, 0.05096 ,0.617182, 0, 0, 0, 1;
+            final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(final_transformationmatrix);
+
 
                 /*  0.244948, 0.96417, 0.101854,
                        0.076194, -0.123872, 0.989368,
                        0.966538, -0.234584, -0.103804,
-                  0.5,0.5,0.5;
-                  */
-                     //  0.250202, 0.444379, 0.632892;      // ONLY FOR TESTING
-                    << 0.2760,-0.8509,   0.4470, -0.4470, -0.5253, -0.7240, 0.8509, 0, -0.5253, 0.3670, 0.8315,0;
+                       0.250202, 0.444379, 0.632892;  */    // ONLY FOR TESTING
 
             } else{
                 final_transformationmatrix_vector_ << 0.5,0.5,0.5;
