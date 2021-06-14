@@ -61,7 +61,7 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
     // collision
-    initialize_world();
+    //initialize_world();
     // informed rrt
     L.setZero();
     if(params.goal_joint) {
