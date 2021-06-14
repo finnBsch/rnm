@@ -20,14 +20,15 @@ private:
     unsigned int num_joints_;
     std::string command_topic_;
     long counter = 0;
-    std::array<double, 7> init_position{};
+    std::vector<double> init_position{};
     ros::Publisher command_pub;
     std::vector<double> finalJointAngles;
+  std::vector<double> delta_angle;
 
 public:
 
     // Initialize
-    RobotArm(ros::NodeHandle nh, std::string command_topic): nh_(nh), num_joints_(7), command_topic_(command_topic_)
+    RobotArm(ros::NodeHandle nh, std::string command_topic): nh_(nh), num_joints_(7), command_topic_(command_topic_),init_position(7),delta_angle(7)
     {
         ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
         inverse_kinematics::unserService srv;
@@ -81,28 +82,31 @@ public:
 
     void sendStepCommand()
     {
+        std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        std::vector<double> goal_position;
-        std::vector<double> delta_angle= finalJointAngles;
-        double incrementalCounter =counter/1000.;
-            //transform(delta_angle.begin(), delta_angle.end(), delta_angle.begin(),
-              //        [incrementalCounter](double &c) { return c * incrementalCounter; });
+        for(int i=0;i<7;i++){
+          delta_angle[i]=finalJointAngles[i]-init_position[i];
+        }
+        double incrementalCounter =counter/100000.;
+       for(int i=0;i<7;i++){
+            delta_angle[i]=delta_angle[i]*incrementalCounter;
 
+       }
+       ROS_INFO("DELTA 0 %f", delta_angle[0]+init_position[0]);
             for (int i = 0; i < 7; ++i) {
                 if (i == 4) {
-                    goal_position.push_back(delta_angle[i]);
+                    goal_position.push_back(init_position[i]+delta_angle[i]);
                 } else {
-                    goal_position.push_back(delta_angle[i]);
+                    goal_position.push_back(init_position[i]+delta_angle[i]);
                 }
-
+             // ROS_INFO("Delta_angle %f",delta_angle[i]+init_position[i]);
             }
+      ROS_INFO("-------------------");
 
-        if(incrementalCounter>1) {
-            ros::shutdown();
-        }
 
-            counter++;
+
+        counter++;
 
 
         // create message and publish it
@@ -111,7 +115,12 @@ public:
         msg.data.insert(msg.data.end(), goal_position.begin(), goal_position.end());
         command_pub.publish(msg);
 
-
+        if(incrementalCounter>1) {
+          for (int i = 0; i < 7; i++) {
+            ROS_INFO("finalJointAngle %f", finalJointAngles[i]);
+          }
+          ros::shutdown();
+        }
 
     }
 };

@@ -202,11 +202,15 @@ public:
         if(initializing) {
             if (size_ == 12) {
             final_transformationmatrix_vector_
-                    << 0.244948, 0.96417, 0.101854,
+                    //<< 0.12073 ,-0.058858 ,0.99094 ,0.325769 ,0.98973, 0.084132 ,-0.115588 ,0.378392, -0.076568 ,0.994716, 0.06841, 0.547474;
+
+                /*  0.244948, 0.96417, 0.101854,
                        0.076194, -0.123872, 0.989368,
                        0.966538, -0.234584, -0.103804,
-                       0.250202, 0.444379, 0.632892;      // ONLY FOR TESTING
-                    //<< 0.2760,-0.8509,   0.4470, -0.4470, -0.5253, -0.7240, 0.8509, 0, -0.5253, 0.3670, 0.8315,0;
+                  0.5,0.5,0.5;
+                  */
+                     //  0.250202, 0.444379, 0.632892;      // ONLY FOR TESTING
+                    << 0.2760,-0.8509,   0.4470, -0.4470, -0.5253, -0.7240, 0.8509, 0, -0.5253, 0.3670, 0.8315,0;
 
             } else{
                 final_transformationmatrix_vector_ << 0.5,0.5,0.5;
@@ -270,9 +274,10 @@ public:
         desired_joint_angles_ = incrementalStep();
 
         VectorXd finalA2 = get_transformation_Vector();
-        for(int i=0; i<finalA2.rows();i++){
-            ROS_INFO("A_Matrix %f",finalA2(i));
+        for(int i=0; i<7;i++){
+            ROS_INFO("desired jointAngles %f",desired_joint_angles_[i]);
         }
+
 
         res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
                               desired_joint_angles_[2], desired_joint_angles_[3],
