@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         forward_kin
         )
 find_package( PkgConfig REQUIRED)
-
+find_package( Bullet REQUIRED)
 pkg_check_modules( flann REQUIRED flann )
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -124,6 +124,7 @@ include_directories(
         # include
         ${EIGEN3_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
+        ${BULLET_INCLUDE_DIR}
 )
 
 ## Declare a C++ library
@@ -157,6 +158,7 @@ add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/r
         target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES} lz4
         ${EIGEN3_LIBRARIES}
+        ${BULLET_LIBRARIES}
         )
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############

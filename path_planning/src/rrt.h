@@ -20,10 +20,11 @@ class rrt {
 private:
     // collision stuff
     btCollisionWorld* mColWorld;
-    btDefaultCollisionConfiguration*        mPhysicsConfig;
-    btCollisionDispatcher*                  mPhysicsDispatcher;
-    btBroadphaseInterface*                  mPhysicsCache;
-    btAlignedObjectArray<btCollisionShape*> mPhysicsShapes;
+    btDefaultCollisionConfiguration*        mConfig;
+    btCollisionDispatcher*                  mDispatcher;
+    btBroadphaseInterface*                  mBroadphase;
+    btAlignedObjectArray<btCollisionObject*> mObjects;
+    void initialize_world();
     // informed rrt
     float c_opt;
     Matrix<float, 6, 1> center;

@@ -60,6 +60,8 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 }
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
+    // collision
+    initialize_world();
     // informed rrt
     L.setZero();
     if(params.goal_joint) {
@@ -71,8 +73,6 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):k
     d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
     alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     goal_p = get_end_effector(goal_point);
-
-
 
     // apply constraints and rrt params
     this->goal_point = goal_point;
@@ -447,4 +447,29 @@ joint_angles rrt::sample_intelligent(){
     else{
         return random_point(params.joint_ranges);
     }
+}
+
+void rrt::initialize_world() {
+    mConfig = new btDefaultCollisionConfiguration();
+    mDispatcher = new btCollisionDispatcher(mConfig);
+    mBroadphase = new btDbvtBroadphase();
+    mColWorld = new btCollisionWorld(mDispatcher, mBroadphase, mConfig);
+    btSphereShape* sphereShape = new btSphereShape(0.2);
+    btCylinderShape* cylShape1 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
+    mColWorld->addCollisionObject((btCollisionObject*)cylShape1);
+    btCylinderShape* cylShape2 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
+    mColWorld->addCollisionObject((btCollisionObject*)cylShape2);
+    btCylinderShape* cylShape3 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
+    mColWorld->addCollisionObject((btCollisionObject*)cylShape3);
+    btCylinderShape* cylShape4 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
+    mColWorld->addCollisionObject((btCollisionObject*)cylShape4);
+    btCylinderShape* cylShape5 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
+    mColWorld->addCollisionObject((btCollisionObject*)cylShape5);
+    mColWorld->addCollisionObject((btCollisionObject*)sphereShape);
+    mObjects.push_back((btCollisionObject*)cylShape1);
+    mObjects.push_back((btCollisionObject*)cylShape2);
+    mObjects.push_back((btCollisionObject*)cylShape3);
+    mObjects.push_back((btCollisionObject*)cylShape4);
+    mObjects.push_back((btCollisionObject*)cylShape5);
+    mObjects.push_back((btCollisionObject*)sphereShape);
 }
