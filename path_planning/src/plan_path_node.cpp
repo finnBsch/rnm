@@ -105,37 +105,29 @@ int main(int argc, char **argv)
 
     line_list[0].id = 2;
 
-    line_list[0].type = visualization_msgs::Marker::LINE_LIST;
+    line_list[0].type = visualization_msgs::Marker::SPHERE;
 
 
     // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
-    line_list[0].scale.x = 0.001;
 
     // Line list is red
     line_list[0].color.r = 1.0;
     line_list[0].color.a = 1.0;
+    line_list[0].pose.position.x = 0.5;
+    line_list[0].pose.position.y = 0;
+    line_list[0].pose.position.z = 0.7;
+    line_list[0].scale.x = 0.2;
+    line_list[0].scale.y = 0.2;
+    line_list[0].scale.z = 0.2;
     auto start_time = std::chrono::high_resolution_clock::now();
     auto start_time_total = start_time;
     auto finish = start_time;
     marker_pub.publish(line_list[1]);
-
+    marker_pub.publish(line_list[0]);
     while (not_found && ros::ok())
     {
         auto return_expand = tree->expand();
         not_found = !(get<0>(return_expand));
-
-        /*geometry_msgs::Point p;
-        auto new_line = get<1>(return_expand);
-        p.x = new_line.at(0).at(0);
-        p.y = new_line.at(0).at(1);
-        p.z = new_line.at(0).at(2);
-        line_list[0].points.push_back(p);
-        p.x = new_line.at(1).at(0);
-        p.y = new_line.at(1).at(1);
-        p.z = new_line.at(1).at(2);
-        line_list[0].points.push_back(p);
-        //ros::spinOnce();
-        // r.sleep();*/
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
             if(tree->goal_node!= nullptr){
@@ -154,7 +146,6 @@ int main(int argc, char **argv)
     std::chrono::duration<double> duration = (finish - start_time_total);
 
     ROS_INFO_STREAM("Found Path in : " << duration.count());
-    //marker_pub.publish(line_list[0]);
     auto goal_path = tree->return_goal_path();
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
     line_list[1].header.stamp = ros::Time::now();

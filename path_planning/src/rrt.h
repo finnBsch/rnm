@@ -19,12 +19,16 @@ using namespace Eigen;
 class rrt {
 private:
     // collision stuff
+    int ob_count = 0;
     btCollisionWorld* mColWorld;
     btDefaultCollisionConfiguration*        mConfig;
     btCollisionDispatcher*                  mDispatcher;
     btBroadphaseInterface*                  mBroadphase;
     btAlignedObjectArray<btCollisionObject*> mObjects;
     void initialize_world();
+    btCollisionObject* add_cylinder(btVector3 vect,  int orient=1);
+    btCollisionObject* add_sphere(float radius);
+    bool check_collision(joint_angles angles);
     // informed rrt
     float c_opt;
     Matrix<float, 6, 1> center;
@@ -66,5 +70,29 @@ public:
     vector<tuple<Point, joint_angles>> return_goal_path();
 
 };
+struct SimulationContactResultCallback : public btCollisionWorld::ContactResultCallback
+{
 
+    bool bCollision;
+
+    SimulationContactResultCallback() : bCollision(false)
+            {}
+
+    btScalar addSingleResult(btManifoldPoint& cp,
+                             const btCollisionObjectWrapper* colObj0Wrap,
+                             int partId0,
+                             int index0,
+                             const btCollisionObjectWrapper* colObj1Wrap,
+                             int partId1,
+                             int index1)
+    {
+        //If cp distance less than threshold
+
+        if(cp.getDistance()<0.01){
+            bCollision = true;
+            return 0;
+        }
+        return 0;
+    }
+};
 #endif  // SRC_RRT_H

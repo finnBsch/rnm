@@ -14,6 +14,14 @@
  * do not insert near nodes to list but check in the loop for smalled node -> 10% of the whole time is used to insert
                                                                                                         nodes to vector*/
 
+
+void eig_to_bt(Matrix<float, 4, 4> eig, btMatrix3x3& bt){
+    for(int i = 0; i<3; i++){
+        for(int j = 0; j<3; j++){
+            bt[i][j] = eig(i, j);
+        }
+    }
+}
 // return Transformation matrices from dvh
 Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
 
@@ -27,6 +35,28 @@ Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, c
             st * sa, ct*sa, ca, d * ca,
             0, 0, 0, 1;
     return ret_mat;
+}
+void get_transformationmatrix2(const float theta, const float a, const float d, const float alpha, Matrix<float, 4, 4>& in){
+    float st = sin(theta);
+    float ca = cos(alpha);
+    float sa = sin(alpha);
+    float ct = cos(theta);
+    in(0,0) = ct;
+    in(0,1) = -st;
+    in(0,2) = 0;
+    in(0,3) = a;
+    in(1, 0) = st*ca;
+    in(1, 1) = ct*ca;
+    in(1,2 ) = -sa;
+    in(1,3) = -d*sa;
+    in(2,0) = st*sa;
+    in(2,1) = ct*sa;
+    in(2, 2) = ca;
+    in(2,3) = d*ca;
+    in(3,0) = 0;
+    in(3,1) = 0;
+    in(3,2) = 0;
+    in(3,3) = 1;
 }
 
 // end effector pos from joint angles
@@ -61,7 +91,7 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
     // collision
-    //initialize_world();
+    initialize_world();
     // informed rrt
     L.setZero();
     if(params.goal_joint) {
@@ -153,6 +183,11 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             else{
                 n_feasible = true;
                 break;
+            }
+        }
+        if(!n_feasible){
+            if(check_collision(stepped_point)){
+                n_feasible=true;
             }
         }
     }
@@ -250,6 +285,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
         }
 
         if(num_nodes>=(long long) params.num_nodes_extra + nodesmark_goal_found){
+            new_node = new rrt_node(goal_point, get_end_effector(goal_point), params, goal_node);
+            goal_node = new_node;
             ROS_INFO("Goal pos: x %f y %f z %f", goal_p[0], goal_p[1], goal_p[2]);
             ROS_INFO("Goal pos planned: x %f y %f z %f", goal_node->get_position()[0], goal_node->get_position()[1], goal_node->get_position()[2]);
             return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
@@ -257,6 +294,8 @@ tuple<bool, array<Point, 2>> rrt::expand() {
         return make_tuple(false, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
     }
     if(goal_node && num_nodes>=(long long) params.num_nodes_extra + nodesmark_goal_found){
+        new_node = new rrt_node(goal_point, get_end_effector(goal_point), params, goal_node);
+        goal_node = new_node;
         ROS_INFO("Goal pos: x %f y %f z %f", goal_p[0], goal_p[1], goal_p[2]);
         ROS_INFO("Goal pos planned: x %f y %f z %f", goal_node->get_position()[0], goal_node->get_position()[1], goal_node->get_position()[2]);
         return make_tuple(true, (array<Point, 2>){new_node->get_parent()->get_position(), new_node->get_position()});
@@ -454,22 +493,133 @@ void rrt::initialize_world() {
     mDispatcher = new btCollisionDispatcher(mConfig);
     mBroadphase = new btDbvtBroadphase();
     mColWorld = new btCollisionWorld(mDispatcher, mBroadphase, mConfig);
-    btSphereShape* sphereShape = new btSphereShape(0.2);
-    btCylinderShape* cylShape1 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
-    mColWorld->addCollisionObject((btCollisionObject*)cylShape1);
-    btCylinderShape* cylShape2 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
-    mColWorld->addCollisionObject((btCollisionObject*)cylShape2);
-    btCylinderShape* cylShape3 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
-    mColWorld->addCollisionObject((btCollisionObject*)cylShape3);
-    btCylinderShape* cylShape4 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
-    mColWorld->addCollisionObject((btCollisionObject*)cylShape4);
-    btCylinderShape* cylShape5 = new btCylinderShape(btVector3(0.1, 0.1, 0.5));
-    mColWorld->addCollisionObject((btCollisionObject*)cylShape5);
-    mColWorld->addCollisionObject((btCollisionObject*)sphereShape);
-    mObjects.push_back((btCollisionObject*)cylShape1);
-    mObjects.push_back((btCollisionObject*)cylShape2);
-    mObjects.push_back((btCollisionObject*)cylShape3);
-    mObjects.push_back((btCollisionObject*)cylShape4);
-    mObjects.push_back((btCollisionObject*)cylShape5);
-    mObjects.push_back((btCollisionObject*)sphereShape);
+    auto cyl0 = add_cylinder(btVector3(0.05, 0.3/2, 0.05), 2);
+    auto cyl1 = add_cylinder(btVector3(0.06, 0.316/2, 0.06), 1);
+    auto cyl2 = add_cylinder(btVector3(0.05, 0.2/2, 0.05), 2);
+    auto cyl3 = add_cylinder(btVector3(0.07, 0.385/2, 0.07),2);
+    auto cyl4 = add_cylinder(btVector3(0.05, 0.107, 0.05), 2);
+    auto sphere = add_sphere(0.1);
+    btTransform tr;
+    tr.setOrigin(btVector3(0.5, 0, 0.7));
+    sphere->setWorldTransform(tr);
+    mObjects.push_back(cyl0);
+    mObjects.push_back(cyl1);
+    mObjects.push_back(cyl2);
+    mObjects.push_back(cyl3);
+    mObjects.push_back(cyl4);
+    mObjects.push_back(sphere);
 }
+
+btCollisionObject* rrt::add_cylinder(btVector3 vect, int orient) {
+    btCylinderShape* cylShape;
+    if(orient == 0){
+        cylShape = new btCylinderShapeX(vect);
+    }
+    else if(orient == 1){
+        cylShape = new btCylinderShape(vect);
+    }
+    else{
+        cylShape = new btCylinderShapeZ(vect);
+    }
+    ROS_INFO("1 rad: %f", cylShape->getRadius());
+    btCollisionShape* colShape = (btCollisionShape*)cylShape;
+    btCollisionObject* colObj = new btCollisionObject;
+    void* userPointer = 0;
+    int userIndex = ob_count;
+    ob_count++;
+    //colObj->setUserIndex(userIndex);
+    //colObj->setUserPointer(userPointer);
+    colObj->setCollisionShape(colShape);
+    mColWorld->addCollisionObject(colObj);
+    return colObj;
+}
+btCollisionObject* rrt::add_sphere(btScalar radius) {
+    btSphereShape* sphereShape = new btSphereShape(radius);
+    btCollisionShape* colShape = (btCollisionShape*)sphereShape;
+    btCollisionObject* colObj = new btCollisionObject;
+    void* userPointer = 0;
+    int userIndex = ob_count;
+    ob_count++;
+    //colObj->setUserIndex(userIndex);
+    //colObj->setUserPointer(userPointer);
+    colObj->setCollisionShape(colShape);
+    mColWorld->addCollisionObject(colObj);
+    return colObj;
+}
+
+bool rrt::check_collision(joint_angles angles) {
+    // neglect first link
+    btTransform tr;
+    Matrix<float, 4, 4> joint0;
+    Matrix<float, 4, 4> joint1;
+    Matrix<float, 4, 4> joint2;
+    Matrix<float, 4, 4> joint3;
+    Matrix<float, 4, 4> joint4;
+    Matrix<float, 4, 4> joint5;
+    Matrix<float, 4, 4> joint6;
+    Matrix<float, 4, 4> joint7; // end effector
+    get_transformationmatrix2(angles[0], a(0), d(0), alpha(0), joint0);
+    get_transformationmatrix2(angles[1], a(1), d(1), alpha(1), joint1);
+    joint1 = joint0*joint1;
+    Matrix<float, 4, 1> col_center_0 = joint1(seq(0, last), 3);
+    btMatrix3x3 rot0;
+    eig_to_bt(joint1, rot0);
+    tr.setOrigin(btVector3(col_center_0[0], col_center_0[1], col_center_0[2]));
+    tr.setBasis(rot0);
+    mObjects.at(0)->setWorldTransform(tr);
+    Matrix<float, 4, 1> in_1;
+    in_1 << 0, -0.158, 0, 1;
+    Matrix<float, 4, 1> col_center_1 = joint1*in_1;
+    tr.setOrigin(btVector3(col_center_1[0], col_center_1[1], col_center_1[2]));
+    tr.setBasis(rot0);
+    mObjects.at(1)->setWorldTransform(tr);
+
+
+    get_transformationmatrix2(angles[2], a(2), d(2), alpha(2), joint2);
+    joint2 = joint1*joint2;
+    get_transformationmatrix2(angles[3], a(3), d(3), alpha(3), joint3);
+    joint3 = joint2*joint3;
+    Matrix<float, 4, 1> col_center_2 = joint3(seq(0, last), 3);
+    btMatrix3x3 rot2;
+    eig_to_bt(joint3, rot2);
+    tr.setOrigin(btVector3(col_center_2[0], col_center_2[1], col_center_2[2]));
+    tr.setBasis(rot2);
+    mObjects.at(2)->setWorldTransform(tr);
+
+    get_transformationmatrix2(angles[4], a(4), d(4), alpha(4), joint4);
+    joint4 = joint3*joint4;
+    Matrix<float, 4, 1> in_3;
+    in_1 << 0, 0, -0.192, 1;
+    Matrix<float, 4, 1> col_center_3 = joint4*in_3;
+    tr.setOrigin(btVector3(col_center_3[0], col_center_3[1], col_center_3[2]));
+    tr.setBasis(rot2);
+    mObjects.at(3)->setWorldTransform(tr);
+
+    get_transformationmatrix2(angles[5], a(5), d(5), alpha(5), joint5);
+    joint5 = joint4*joint5;
+    get_transformationmatrix2(0, a(6), d(6), alpha(6), joint6);
+    joint6 = joint5*joint6;
+    Matrix<float, 4, 1> col_center_4 = joint6(seq(0, last), 3);
+    btMatrix3x3 rot4;
+    eig_to_bt(joint6, rot4);
+    tr.setOrigin(btVector3(col_center_4[0], col_center_4[1], col_center_4[2]));
+    tr.setBasis(rot4);
+    mObjects.at(4)->setWorldTransform(tr);
+
+
+    get_transformationmatrix2(0, a(7), d(7), alpha(7), joint7);
+    joint7 = joint6*joint7;
+
+    SimulationContactResultCallback cb;
+    for(int i = 0; i<5; i++){
+        mColWorld->contactPairTest(mObjects.at(i), mObjects.at(5), cb);
+        if(cb.bCollision){
+            return true;
+        }
+
+
+
+    }
+    return false;
+}
+
