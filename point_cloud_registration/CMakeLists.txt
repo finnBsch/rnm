@@ -157,8 +157,8 @@ add_executable(PCMatrixTransform src/PCMatrixTransform.cpp)
 add_executable(STLconversion_node src/STLconversion_node.cpp)
 add_executable(Synchronizer src/ApproximateTimeSynchronizer.cpp)
 add_executable(PCStitch src/PCStitch.cpp)
-
 add_executable(skeleton_splitter src/skeleton_splitter.cpp)
+add_executable(Scanner src/Scanner.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -179,6 +179,7 @@ target_link_libraries(STLconversion_node ${catkin_LIBRARIES})
 target_link_libraries(Synchronizer ${catkin_LIBRARIES})
 target_link_libraries(PCStitch ${catkin_LIBRARIES})
 target_link_libraries(skeleton_splitter ${catkin_LIBRARIES})
+target_link_libraries(Scanner ${catkin_LIBRARIES})
 
 add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
