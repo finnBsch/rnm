@@ -23,29 +23,10 @@ string path = "/home/nico/catkin_ws/src";
 int pose_rgb = 1;
 int pose_ir = 1;
 int pose_depth = 1;
+int js_count = 1;
 
 // calibration data
 vector<geometry_msgs::TransformStamped> allRobotPoses;
-
-// function for showing the images from sensor_imgs; default: not used
-void imageCallback(const sensor_msgs::ImageConstPtr& msg){
-//    const ros::Time time_stamp = msg->header.stamp;
-
-// converting from ros to cv (mat) format, pointer to image from cv_bridge::CvImage
-  try{
-    cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
-    cv::imshow("frame", img);
-    cv::waitKey(0);
-  }
-  catch (cv_bridge::Exception& e){
-    ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
-  }
-  //ROS_INFO("frame_id: %s ; time: %s", frame_id, time);
-  //ROS_INFO("height: %i , width: %i", height, width);
-  ROS_INFO("seq: %i", msg->header.seq); // starting with 732
-  ROS_INFO("time stamp: %d", msg->header.stamp); // starting with 1616052219
-  ROS_INFO("frame_id: %s\n", msg->header.frame_id.c_str()); // ?
-}
 
 // conversion of depth image
 void depthToCV8UC1(const cv::Mat& float_img, cv::Mat& mono8_img) {
@@ -151,25 +132,58 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
-/*
+
 // rgb image writing
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
-    ofstream myfile;
-    myfile.open ("joint_states.txt");
-    ROS_INFO("position: %d", msg->position[0]);
-    //myfile << msg->position;
+    //ofstream myfile;
+    //myfile.open ("joint_states.txt");
+    string comma = ",";
+    //ROS_INFO("position: %f", msg.position[1]);
+    if(js_count == 1) {
+      remove("/home/nico/CLionProjects/rnm_ws/src/calibration/src/joint_states.txt");
+    }
+    else {}
+
+  ofstream foutput;
+  ifstream finput;
+  finput.open ("/home/nico/CLionProjects/rnm_ws/src/calibration/src/joint_states.txt");
+  foutput.open ("/home/nico/CLionProjects/rnm_ws/src/calibration/src/joint_states.txt",ios::app);
+
+  vector<double, allocator<void>::rebind<double>::other> position = msg.position;
+
+  if(finput.is_open()) {
+    foutput << position[0] << comma << position[1] << comma << position[2] << comma
+            << position[3] << comma << position[4] << comma << position[5] << comma
+            << position[6] << comma << endl;
+    cout << "joint_states written" << endl;
+  }
+  finput.close();
+  foutput.close();
+  js_count++;
+
+
+
+/*
+  for (int i=0; i<7; i++)
+    myfile << msg.position[0] << comma
+             << msg.position[1] << comma
+             << msg.position[2] << comma
+             << msg.position[3] << comma
+             << msg.position[4] << comma
+             << msg.position[5] << comma
+             << msg.position[6] << comma << endl;
     myfile.close();
-}*/
+    */
+}
 
 int main(int argc, char** argv) {
   ros::init(argc, argv,"write_images");
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
-
   // callbacks. each image type has its own saving callback
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
-  //image_transport::Subscriber joint_states_sub = it.subscribe("/joint_states", 1, jointStatesWrite);
+  ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWrite);
 
   std::cout << "ready" << endl;
 

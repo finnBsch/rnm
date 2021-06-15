@@ -4,7 +4,9 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/JointState.h>
 #include <iostream>
+
 #include <fstream>
+
 #include <opencv2/imgcodecs.hpp>
 #include "OCVcalib3d.hpp"  // header file that includes the calibrateHandEye method
 #include "cv_bridge/cv_bridge.h"
@@ -12,6 +14,8 @@
 #include "geometry_msgs/Pose.h"
 #include "image_transport/image_transport.h"
 #include "sensor_msgs/Image.h"
+#include <sstream>
+#include <string>
 
 using namespace std;
 using namespace cv;
@@ -104,23 +108,25 @@ vector<vector<Point2f>> allCharucoCorners;
 vector<vector<int>> allCharucoIds;
 
 // read in text files into joint_states matrix
-void readCalibrationData(){
-    std::ifstream file;
-    std::string line;
-    int rows = 0;
-    file.open("joint_states.txt");
-    while (std::getline(file, line)) {
-        std::istringstream stream(line);
-        char sep; //comma!
-        double x;
-        // read *both* a number and a comma:
-        while (stream >> x && stream >> sep) {
-            joint_states.push_back(x);
-        }
-        rows ++;
+void readCalibrationData() {
+  ifstream file("/home/nico/CLionProjects/rnm_ws/src/calibration/src/joint_states.txt");
+  //string file_line;
+  int rows = 0;
+  //file.open("joint_states.txt");
+  //while (getline(file, line)) {
+  string line;
+  for( line; getline(file, line); ) {
+    std::istringstream stream(line);
+    char sep;  // comma!
+    double x;
+    // read *both* a number and a comma:
+    while (stream >> x && stream >> sep) {
+      joint_states.push_back(x);
     }
-    joint_states = joint_states.reshape(1, rows);
-    ROS_INFO("Done reading calibration data.");
+    rows++;
+  }
+  joint_states = joint_states.reshape(1, rows);
+  ROS_INFO("Done reading calibration data.");
 }
 
 // quaternion to angles conversion, used in transform2rv()
@@ -193,10 +199,10 @@ int calculatePose() {
     srv.request.joint_angles = arr;
     auto a = client.call(srv);
     if (a) {
-      ROS_INFO("Endpos: %f", srv.response.end_effector_pos[0]);
+      //ROS_INFO("Endpos: %f", srv.response.end_effector_pos[0]);
 
       //// need to push back the pose (transformation) to allRobotPoses
-      // allRobotPoses.push_back({(float)srv.response.end_effector_pos[0],(float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
+      //allRobotPoses.push_back({(float)srv.response.end_effector_pos[0],(float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
     } else {
       ROS_ERROR("Failed to call service forward_kin");
       return 1;
