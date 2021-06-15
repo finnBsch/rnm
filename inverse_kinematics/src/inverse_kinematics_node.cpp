@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Geometry>
 #include <stdlib.h>
 //#include "forward_kin/get_endeffector.h"
 #include "jacobian.h"
@@ -148,6 +149,27 @@ public:
     //END OF FORWARD
 
 
+    /*
+* This function can be used to calculate the 4x4 Transformation Matrix vor a given 6x1 endeffector. The function uses Euler Angles with the X,Y,Z convention
+*
+* @param: VectorXd endeffector
+* returns: Matrix4d Transformationmatrix
+*/
+Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
+        Matrix3d rotation;
+        Matrix4d matrix;
+
+        rotation = AngleAxisd(endeffector(3), Vector3d::UnitX())
+                    * AngleAxisd(endeffector(4), Vector3d::UnitY())
+                    * AngleAxisd (endeffector(5), Vector3d::UnitZ());
+
+        matrix << rotation(0,0), rotation(0,1), rotation(0,2), endeffector(0),
+                  rotation(1,0), rotation(1,1), rotation(1,2), endeffector(1),
+                  rotation(2,0), rotation(2,1), rotation(2,2), endeffector(2),
+                                       0,                      0,                     0,                    1;
+
+        return matrix;
+    }
 
 
 /*
@@ -180,7 +202,6 @@ public:
 
         // GET CURRENT TRANSFORMATION MATRIX
         if(size_ ==12) {
-            //current_transformationmatrix_vector_.setZero();
             current_transformationmatrix_vector_ << get_transformation_Vector();
 
             // ------------- FOR SERVICE CONNECTION ------------------------------
@@ -219,15 +240,12 @@ public:
 
 
         // DIFFERENCE CALCULATION OF DELTA_A
-        //delta_A.setZero();
         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
 
 
         //output of Iteration step
         ROS_INFO("counter: %i", counter_);
 
-
-        //abs_delta_A.setZero();
         // Calculate the absolute of the delta_A Vector
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
@@ -237,9 +255,7 @@ public:
 
         // check if largest entry of absolute is smaller than error
         if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
-            /*for(int i=0; i<current_transformationmatrix_vector_.rows();i++){
-                ROS_INFO("A_Matrix %f",current_transformationmatrix_vector_(i));
-            }*/
+
             if(counter_ == limit_) {
                ROS_ERROR("Limit ueberstritten: %i", counter_);
             } else {
