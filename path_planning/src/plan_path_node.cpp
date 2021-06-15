@@ -93,10 +93,28 @@ int main(int argc, char **argv)
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
-    visualization_msgs::Marker lines, goal_lines;
+    visualization_msgs::Marker lines, goal_lines, lines_;
     vector<visualization_msgs::Marker> line_list;
     line_list.push_back(lines);
     line_list.push_back(goal_lines);
+    line_list.push_back(lines_);
+    line_list[2].header.frame_id = "/world"; // TODO Find correct frame
+    line_list[2].header.stamp = ros::Time::now();
+    line_list[2].ns = "plan_path_node";
+    line_list[2].action = visualization_msgs::Marker::ADD;
+    line_list[2].pose.orientation.w = 1.0;
+
+    line_list[2].id = 3;
+
+    line_list[2].type = visualization_msgs::Marker::LINE_LIST;
+
+
+    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
+    line_list[2].scale.x = 0.001;
+
+    // Line list is red
+    line_list[2].color.r = 1.0;
+    line_list[2].color.a = 1.0;
     line_list[0].header.frame_id = "/world"; // TODO Find correct frame
     line_list[0].header.stamp = ros::Time::now();
     line_list[0].ns = "plan_path_node";
@@ -113,12 +131,12 @@ int main(int argc, char **argv)
     // Line list is red
     line_list[0].color.r = 1.0;
     line_list[0].color.a = 1.0;
-    line_list[0].pose.position.x = 0.5;
+    line_list[0].pose.position.x = 0.45;
     line_list[0].pose.position.y = 0;
     line_list[0].pose.position.z = 0.7;
-    line_list[0].scale.x = 0.2;
-    line_list[0].scale.y = 0.2;
-    line_list[0].scale.z = 0.2;
+    line_list[0].scale.x = 0.15;
+    line_list[0].scale.y = 0.15;
+    line_list[0].scale.z = 0.15;
     auto start_time = std::chrono::high_resolution_clock::now();
     auto start_time_total = start_time;
     auto finish = start_time;
@@ -128,8 +146,21 @@ int main(int argc, char **argv)
     {
         auto return_expand = tree->expand();
         not_found = !(get<0>(return_expand));
+
+        /*geometry_msgs::Point p;
+        auto new_line = get<1>(return_expand);
+        p.x = new_line.at(0).at(0);
+        p.y = new_line.at(0).at(1);
+        p.z = new_line.at(0).at(2);
+        line_list[2].points.push_back(p);
+        p.x = new_line.at(1).at(0);
+        p.y = new_line.at(1).at(1);
+        p.z = new_line.at(1).at(2);
+        line_list[2].points.push_back(p);*/
         finish = std::chrono::high_resolution_clock::now();
         if((finish-start_time)/std::chrono::milliseconds(1)>1000/10){
+            //marker_pub.publish(line_list[2]);
+
             if(tree->goal_node!= nullptr){
                 ROS_INFO("Number of nodes: %i and min dist %f and cost %f, %f", tree->num_nodes, tree->min_dist, tree->goal_node->cost, tree->min_dist_orient);
                 ROS_INFO("Optimizing path for %i more nodes with cost %f", tree->num_nodes-(params_.num_nodes_extra + tree->nodesmark_goal_found), tree->goal_node->cost);

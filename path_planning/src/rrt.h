@@ -88,10 +88,7 @@ struct SimulationContactResultCallback : public btCollisionWorld::ContactResultC
     {
         //If cp distance less than threshold
 
-        if(cp.getDistance()<0.01){
-            bCollision = true;
-            return 0;
-        }
+        bCollision=true;
         return 0;
     }
 };

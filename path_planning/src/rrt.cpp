@@ -479,8 +479,9 @@ void rrt::calculateC(joint_angles gp) {
 
 // with given probability sample goal point (improve convergence of the algorithm)
 joint_angles rrt::sample_intelligent(){
+    // TODO Change sampling when goal is found to optimize path
     float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    if(p<0.01){
+    if(p<0.001){
         return goal_point;
     }
     else{
@@ -500,7 +501,7 @@ void rrt::initialize_world() {
     auto cyl4 = add_cylinder(btVector3(0.05, 0.107, 0.05), 2);
     auto sphere = add_sphere(0.1);
     btTransform tr;
-    tr.setOrigin(btVector3(0.5, 0, 0.7));
+    tr.setOrigin(btVector3(0.45, 0, 0.7));
     sphere->setWorldTransform(tr);
     mObjects.push_back(cyl0);
     mObjects.push_back(cyl1);
@@ -527,8 +528,8 @@ btCollisionObject* rrt::add_cylinder(btVector3 vect, int orient) {
     void* userPointer = 0;
     int userIndex = ob_count;
     ob_count++;
-    //colObj->setUserIndex(userIndex);
-    //colObj->setUserPointer(userPointer);
+    colObj->setUserIndex(userIndex);
+    colObj->setUserPointer(userPointer);
     colObj->setCollisionShape(colShape);
     mColWorld->addCollisionObject(colObj);
     return colObj;
@@ -540,8 +541,8 @@ btCollisionObject* rrt::add_sphere(btScalar radius) {
     void* userPointer = 0;
     int userIndex = ob_count;
     ob_count++;
-    //colObj->setUserIndex(userIndex);
-    //colObj->setUserPointer(userPointer);
+    colObj->setUserIndex(userIndex);
+    colObj->setUserPointer(userPointer);
     colObj->setCollisionShape(colShape);
     mColWorld->addCollisionObject(colObj);
     return colObj;
@@ -589,7 +590,7 @@ bool rrt::check_collision(joint_angles angles) {
     get_transformationmatrix2(angles[4], a(4), d(4), alpha(4), joint4);
     joint4 = joint3*joint4;
     Matrix<float, 4, 1> in_3;
-    in_1 << 0, 0, -0.192, 1;
+    in_3 << 0, 0, -0.192, 1;
     Matrix<float, 4, 1> col_center_3 = joint4*in_3;
     tr.setOrigin(btVector3(col_center_3[0], col_center_3[1], col_center_3[2]));
     tr.setBasis(rot2);
@@ -617,8 +618,9 @@ bool rrt::check_collision(joint_angles angles) {
             return true;
         }
 
-
-
+        /*ROS_INFO("Cyl %i has pos x: %f, y: %f, z: %f", i, mObjects.at(i)->getWorldTransform().getOrigin().getX(),
+                 mObjects.at(i)->getWorldTransform().getOrigin().getY(),
+                 mObjects.at(i)->getWorldTransform().getOrigin().getZ());*/
     }
     return false;
 }
