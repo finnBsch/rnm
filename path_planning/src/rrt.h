@@ -58,6 +58,7 @@ private:
     joint_angles sample_ellipsoid();
     joint_angles sample_intelligent();
     void calculateC(joint_angles gp);
+
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long long num_nodes = 0;

@@ -21,13 +21,7 @@ rrt_node::rrt_node(const joint_angles angles, const Point position,rrt_params pa
     this->angles = angles;
     this->parent_node = parent_node;
     this->parent_node->add_child(this);
-    if(this->parent_node->has_parent){
-        auto temp_ = cost_two_joints(this->parent_node, this);
-        this->cost_to_parent = std::get<0>(temp_) + std::get<1>(temp_)*params.steercost;
-    }
-    else{
-        this->cost_to_parent = euclidean_dist_joint(this->parent_node->get_angles(), angles);
-    }
+    this->cost_to_parent = euclidean_dist_joint(this->parent_node->get_angles(), angles);
     this->cost = cost_to_parent + this->parent_node->cost;
     angles_ = {angles[0],angles[1],angles[2],angles[3],angles[4],angles[5]};
 }

@@ -199,12 +199,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     for(rrt_node* no:near){
         if(no!=new_node) {
             float temp2;
-            if (no == start_node) {
-                temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-            } else {
-                auto temp_ = no->cost_two_joints(no, new_node);
-                temp2 = std::get<0>(temp_) + std::get<1>(temp_) * params.steercost;
-            }
+            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
             float temp = no->cost + temp2;
             if (new_node->cost > temp) {
                 new_node->set_parent(no, temp, temp2);
@@ -216,12 +211,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     for(rrt_node* no:near){
         if(no!=new_node) {
             float temp2;
-            if (new_node == start_node) {
-                temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-            } else {
-                auto temp_ = no->cost_two_joints(new_node, no);
-                temp2 = std::get<0>(temp_) + std::get<1>(temp_) * params.steercost;
-            }
+            temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
             float temp = new_node->cost + temp2;
             if (no->cost > temp) {
                 no->set_parent(new_node, temp, temp2);
@@ -434,11 +424,71 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         splines.push_back(s);
     }
     float t_max = x_set[x_set.size()-1];
-    for(int i = 0; i<joints.size(); i++){
-        for(long long j = 0; j<joints[i].size()*100; j++){
-            joints_smooth[i].push_back(splines[i]((float)j/(float)(joints[i].size()*100) * t_max));
+    float t_elapsed = 0;
+    array<double, 6> last_vels = {0, 0, 0, 0, 0, 0};
+    array<double, 6> last_pts = {0, 0, 0, 0, 0, 0};
+    double fac = 1;
+    double velocity = 0;
+    double accel = 0;
+    for(int i = 0; i<last_vels.size(); i++) {
+        joints_smooth[i].push_back(splines[i](0));
+        last_pts[i] = splines[i](0);
+    }
+    while(t_elapsed<t_max){
+        bool too_fast = true;
+        double step_size = t_max/2;
+        /*if(splines[0].deriv(1, t_elapsed) == 0 && splines[0].deriv(2, t_elapsed) != 0){
+            step_size = max(pow(params.max_accs.at(0)/splines[0].deriv(2, t_elapsed),2)*0.001*1.1,0.0001);
         }
-
+        else if(splines[0].deriv(2, t_elapsed) == 0){
+            step_size = t_max;
+        }
+        else {
+            step_size = max((params.max_vels.at(0) / splines[0].deriv(1, t_elapsed)) * 0.001*1.1,
+                            0.0001);
+        }
+        for(int i = 0; i<last_vels.size(); i++) {
+            if(splines[i].deriv(1, t_elapsed) == 0 && splines[i].deriv(2, t_elapsed) != 0){
+                step_size = max(min(step_size, pow(params.max_accs.at(i)/splines[i].deriv(2, t_elapsed),2)*0.001*1.1),0.0001);
+            }
+            else if(splines[i].deriv(2, t_elapsed) == 0){
+                step_size = max(min(step_size, (double)t_max/100), 0.0001);
+            }
+            else {
+                step_size = max(min(step_size, (params.max_vels.at(i) / splines[i].deriv(1, t_elapsed)) * 0.001*1.1),
+                                0.0001);
+            }
+        }*/
+        while (too_fast){
+            if(t_elapsed+step_size>t_max){
+                step_size = t_max-t_elapsed;
+            }
+            for(int i = 0; i<last_vels.size(); i++){
+                velocity = abs((last_pts[i]-splines[i](t_elapsed+step_size))/0.001);
+                accel = abs((last_vels[i]-velocity)/0.001);
+                if(velocity > params.max_vels[i]){
+                    fac = params.max_vels[i]/velocity * 0.99;
+                    too_fast = true;
+                    step_size*=fac;
+                    break;
+                }
+                else if(accel>params.max_accs[i]){
+                    fac = params.max_accs[i]/accel * 0.99;
+                    too_fast = true;
+                    step_size*=fac;
+                    break;
+                }
+                else{
+                    too_fast = false;
+                }
+            }
+        }
+        for(int i = 0; i<last_vels.size(); i++) {
+            joints_smooth[i].push_back(splines[i](t_elapsed+step_size));
+            last_vels[i] = abs((last_pts[i]- splines[i](t_elapsed+step_size))/0.001);
+            last_pts[i] = splines[i](t_elapsed+step_size);
+        }
+        t_elapsed+=step_size;
     }
 
 

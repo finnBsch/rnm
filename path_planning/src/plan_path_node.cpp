@@ -53,15 +53,15 @@ int main(int argc, char **argv)
     joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
 
-    float a_ = 0;
-    float b_ = M_PI/4;
-    float c_ = M_PI/4;
-    float d_ = -M_PI/4;
+    float a_ = M_PI/2;
+    float b_ = 0.45;
+    float c_ = 0;
+    float d_ = -0.7;
     float e_ = 0;
-    float f_ = M_PI/4;
+    float f_ = 0;
     float step_size = 3*M_PI/180;
     bool goal_joint = true;
-    int num_nodes_extra = 200000;
+    int num_nodes_extra = 5000;
     ros::param::get("~ss", step_size);
     ros::param::get("~gj", goal_joint);
     ros::param::get("~nn", num_nodes_extra);
@@ -88,8 +88,9 @@ int main(int argc, char **argv)
     range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
 
-
-    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, 0.0};
+    std::vector<float> max_vels = {2.175, 2.175, 2.175, 2.175, 2.61, 2.61, 2.61};
+    std::vector<float> max_accs = {15, 7.5, 10, 12.5, 15, 20, 20};
+    rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;

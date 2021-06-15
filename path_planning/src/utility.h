@@ -27,7 +27,9 @@ struct rrt_params{
     array<array<float, 2>, 6> joint_ranges;
     bool goal_joint;
     int num_nodes_extra;
-    float steercost;
+    std::vector<float> max_vels;
+    std::vector<float> max_accs;
+
 };
 void point_to_flann(joint_angles p, float* data);
 joint_angles flann_to_point(float* data);
