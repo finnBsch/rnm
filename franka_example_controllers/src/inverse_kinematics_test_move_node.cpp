@@ -85,26 +85,42 @@ public:
         std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        for(int i=0;i<7;i++){
-          delta_angle[i]=finalJointAngles[i]-init_position[i];
-        }
         double incrementalCounter =counter/100000.;
-       for(int i=0;i<7;i++){
-            delta_angle[i]=delta_angle[i]*incrementalCounter;
 
-       }
-       ROS_INFO("DELTA 0 %f", delta_angle[0]+init_position[0]);
+        bool simYes = true;
+        if(simYes){
+
             for (int i = 0; i < 7; ++i) {
                 if (i == 4) {
-                    goal_position.push_back(init_position[i]+delta_angle[i]);
+                    goal_position.push_back(finalJointAngles[i]);
                 } else {
-                    goal_position.push_back(init_position[i]+delta_angle[i]);
+                    goal_position.push_back(finalJointAngles[i]);
                 }
-             // ROS_INFO("Delta_angle %f",delta_angle[i]+init_position[i]);
+
             }
-      ROS_INFO("-------------------");
+        } else{
 
 
+            for (int i = 0; i < 7; i++) {
+                delta_angle[i] = finalJointAngles[i] - init_position[i];
+            }
+            for (int i = 0; i < 7; i++) {
+                delta_angle[i] = delta_angle[i] * incrementalCounter;
+
+            }
+            ROS_INFO("DELTA 0 %f", delta_angle[0] + init_position[0]);
+            for (int i = 0; i < 7; ++i) {
+                if (i == 4) {
+                    goal_position.push_back(init_position[i] + delta_angle[i]);
+                } else {
+                    goal_position.push_back(init_position[i] + delta_angle[i]);
+                }
+                // ROS_INFO("Delta_angle %f",delta_angle[i]+init_position[i]);
+                ROS_INFO("-------------------");
+            }
+
+
+        }
 
         counter++;
 

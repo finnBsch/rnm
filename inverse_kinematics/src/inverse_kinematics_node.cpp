@@ -222,10 +222,21 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         // FOR TESTING, STARTING VECTOR
         if(initializing) {
             if (size_ == 12) {
+                VectorXd endeffectorPos(6);
+                ROS_INFO("Ich war zuerst hier");
+                endeffectorPos << 0.259209, 0.403714, 0.617182, 1.121, 0.982, 0.31457;
               Matrix4d final_transformationmatrix;
-              final_transformationmatrix << 0.377556, -0.029182, 0.925526, 0.249209, 0.92475, 0.063488, -0.375232, 0.403714, -0.047806, 0.997552, 0.05096 ,0.617182, 0, 0, 0, 1;
-            final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(final_transformationmatrix);
+                ROS_INFO("Ich war dann hier");
+              final_transformationmatrix << convertEndeffectorToTransformation(endeffectorPos);
+                ROS_INFO("Ich war zum Schluss hier");
+              //0.377556, -0.029182, 0.925526, 0.249209, 0.92475, 0.063488, -0.375232, 0.403714, -0.047806, 0.997552, 0.05096 ,0.617182, 0, 0, 0, 1;
 
+
+
+            final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(final_transformationmatrix);
+                for (int i=0; i<final_transformationmatrix_vector_.rows();i++){
+                    ROS_INFO("Final Matrix %f", final_transformationmatrix_vector_(i));
+                }
 
                 /*  0.244948, 0.96417, 0.101854,
                        0.076194, -0.123872, 0.989368,
