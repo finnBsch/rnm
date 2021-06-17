@@ -87,18 +87,20 @@ int main(int argc, char **argv)
     joint_ranges[4] = range;
     range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
-
-    std::vector<float> max_vels = {2.175, 2.175, 2.175, 2.175, 2.61, 2.61, 2.61};
-    std::vector<float> max_accs = {15, 7.5, 10, 12.5, 15, 20, 20};
+    float fac = 0.08;
+    float fac2 = 0.08;
+    std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
+    std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
     float f = 0.0;
-    visualization_msgs::Marker lines, goal_lines, lines_;
+    visualization_msgs::Marker lines, goal_lines, lines_, points_viz;
     vector<visualization_msgs::Marker> line_list;
     line_list.push_back(lines);
     line_list.push_back(goal_lines);
     line_list.push_back(lines_);
+    line_list.push_back(points_viz);
     line_list[2].header.frame_id = "/world"; // TODO Find correct frame
     line_list[2].header.stamp = ros::Time::now();
     line_list[2].ns = "plan_path_node";
@@ -116,6 +118,29 @@ int main(int argc, char **argv)
     // Line list is red
     line_list[2].color.r = 1.0;
     line_list[2].color.a = 1.0;
+
+
+    line_list[3].header.frame_id = "/world"; // TODO Find correct frame
+    line_list[3].header.stamp = ros::Time::now();
+    line_list[3].ns = "plan_path_node";
+    line_list[3].action = visualization_msgs::Marker::ADD;
+    line_list[3].pose.orientation.w = 1.0;
+
+    line_list[3].id = 4;
+
+    line_list[3].type = visualization_msgs::Marker::SPHERE_LIST;
+
+
+    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
+
+    // Line list is red
+    line_list[3].color.g = 1.0;
+    line_list[3].color.a = 0.4;
+    line_list[3].scale.x = 0.001;
+    line_list[3].scale.y = 0.001;
+    line_list[3].scale.z = 0.001;
+
+
     line_list[0].header.frame_id = "/world"; // TODO Find correct frame
     line_list[0].header.stamp = ros::Time::now();
     line_list[0].ns = "plan_path_node";
@@ -191,7 +216,7 @@ int main(int argc, char **argv)
 
 
     // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
-    line_list[1].scale.x = 0.009;
+    line_list[1].scale.x = 0.002;
 
     // Line list is red
     line_list[1].color.b = 1.0;
@@ -209,12 +234,14 @@ int main(int argc, char **argv)
         traj_msg.points.push_back(pt);
         i++;
         line_list[1].points.push_back(p);
+        line_list[3].points.push_back(p);
     }
     std::reverse(traj_msg.points.begin(),traj_msg.points.end());
     traj_pub.publish(traj_msg);
     ros::Rate r(1);
     while(ros::ok()){
         marker_pub.publish(line_list[1]);
+        //marker_pub.publish(line_list[3]);
         marker_pub.publish(line_list[0]);
         r.sleep();
     }

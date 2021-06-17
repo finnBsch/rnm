@@ -420,64 +420,91 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         current_node = current_node->get_parent();
     }
     ROS_INFO("Goal path has %i nodes", counter);
-    for(int j = 0; j < x_set.size(); j++) {
+    for(int j = 0; j < x_set.size()-1; j++) {
         T_set[j] = 0;
         tb_set[j] = 0;
         for(int i = 0; i<joints.size(); i++) {
             if(j == 0){
                 T_set[j] = max(T_set[j], abs(joints[i].at(j+1) - joints[i].at(j)) / params.max_vels[i]);
-                if(counter!= x_set.size()){
-                    vels[i].at(j) = joints[i].at(j+1)-joints[j].at(j)/T_set[j];
-                }
-                else{
-                    vels[i].at(j) = joints[j].at(j)/T_set[j];
-                }
+                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
                 tb_set[j] = max(tb_set[j],
                                 abs(vels[i].at(j)) / params.max_accs[i]);
             }
             else if (j == x_set.size()-1){
                 T_set[j] = 0;
+                vels[i].at(j) = -joints[i].at(j)/T_set[j];
                 tb_set[j] = max(tb_set[j],
                                 abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
             }
             else {
                 T_set[j] = max(T_set[j],
                                abs(joints[i].at(j + 1) - joints[i].at(j)) / params.max_vels[i]);
-                if(counter!= x_set.size()){
-                    vels[i].at(j) = joints[i].at(j+1)-joints[j].at(j)/T_set[j];
-                }
-                else{
-                    vels[i].at(j) = joints[i].at(j)/T_set[j];
-                }
+                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
+            }
+        }
+        for(int i = 0; i<joints.size(); i++) {
+            if(j == 0){
+                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j)) / params.max_accs[i]);
+            }
+            else if (j == x_set.size()-1){
+                vels[i].at(j) = -joints[i].at(j)/T_set[j];
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
+            }
+            else {
+                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
                 tb_set[j] = max(tb_set[j],
                                 abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
             }
         }
     }
-    for(int i = 0; i < x_set.size(); i++){
+    for(int i = 0; i < x_set.size()-1; i++){
         if(i == 0 && tb_set[i] > T_set[i]/2){
             double fi = sqrt(T_set[i]/tb_set[i]);
             for(int k = 0; k<joints.size(); k++){
-                vels[i + 1].at(k) = vels[i + 1].at(k) * fi;
+                vels[k].at(i) = vels[k].at(i) * fi;
             }
+            T_set[i] = T_set[i] / fi;
+            tb_set[i] = T_set[i];
+        }
+        else if(i == x_set.size()-1 && tb_set[i] > T_set[i-1]/2){
+            double fi = sqrt(T_set[i-1]/tb_set[i]);
+            for(int k = 0; k<joints.size(); k++){
+                vels[k].at(i) = vels[k].at(i) * fi;
+            }
+            T_set[i] = T_set[i] / fi;
+            T_set[i - 1] = T_set[i - 1] / fi;
             tb_set[i] = min(T_set[i], T_set[i-1]);
-            T_set[i] = T_set[i] * fi;
         }
         else if(tb_set[i] > T_set[i-1]/2 || tb_set[i] > T_set[i]/2){
             double fi = sqrt(min(T_set[i], T_set[i-1])/tb_set[i]);
             for(int k = 0; k<joints.size(); k++){
-                if(i+1<x_set.size()) {
-                    vels[k].at(i + 1) = vels[k].at(i + 1) * fi;
-                }
+                vels[k].at(i - 1) = vels[k].at(i - 1) * fi;
                 vels[k].at(i) = vels[k].at(i) * fi;
             }
-            T_set[i] = T_set[i] * fi;
-            T_set[i - 1] = T_set[i - 1] * fi;
+            T_set[i] = T_set[i] / fi;
+            T_set[i - 1] = T_set[i - 1] / fi;
             tb_set[i] = min(T_set[i], T_set[i-1]);
         }
     }
-    Tf_set[0] = tb_set[0]/2 ;
-    for(int i = 0; i < x_set.size(); i++){
+    for(int j = 0; j < x_set.size() -  1; j++){
+        for(int i = 0; i<joints.size(); i++) {
+            if(j == 0){
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j)) / params.max_accs[i]);
+            }
+            else {
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
+            }
+        }
+    }
+    Tf_set[0] = tb_set[0]/2;
+    for(int i = 1; i < x_set.size(); i++){
         Tf_set[i] = Tf_set[i-1] + T_set[i-1];
     }
 
@@ -492,28 +519,32 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         if(t_elapsed>t_max){
             t_elapsed = t_max;
         }
-        double temp = 1000;
-        double temp2 = 10000;
+        double temp = 10000;
+        double temp2 = 1000;
         if(i<T_set.size()-1){
-            temp = T_set[i+1];
+            temp = Tf_set[i+1];
             temp2 = tb_set[i+1];
         }
-        if(t_elapsed >= T_set[i]-tb_set[i]/2 && t_elapsed <= T_set[i] + tb_set[i]/2){
-            t_elapsed+=0.001;
+        ROS_INFO("Intervals [%f, %f], [%f, %f], time %f", Tf_set[i]-tb_set[i]/2,
+                  Tf_set[i] + tb_set[i]/2,  Tf_set[i] + tb_set[i]/2, temp - temp2/2, t_elapsed);
+
+        if(t_elapsed >= Tf_set[i]-tb_set[i]/2 && t_elapsed <= Tf_set[i] + tb_set[i]/2){
+
             for(int k = 0; k<joints_smooth.size(); k++) {
                 if(i == 0){
-                    joints_smooth[k].push_back(joints[k].at(i) + 0 * (t_elapsed - T_set[i]) +
-                                               0.5 * pow((t_elapsed - T_set[i] + tb_set[i] / 2), 2));
+                    joints_smooth[k].push_back(joints[k].at(i) +
+                                               0.5 *(vels[k].at(i))/tb_set[i] * pow((t_elapsed - Tf_set[i] + tb_set[i] / 2), 2));
                 }
                 else {
-                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1) * (t_elapsed - T_set[i]) +
-                                               0.5 * pow((t_elapsed - T_set[i] + tb_set[i] / 2), 2));
+                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1) * (t_elapsed - Tf_set[i]) +
+                                               0.5 * (vels[k].at(i)- vels[k].at(i-1))/tb_set[i] * pow((t_elapsed - Tf_set[i] + tb_set[i] / 2), 2));
                 }
             }
+            t_elapsed+=0.001;
         }
-        else if(t_elapsed >= T_set[i] + tb_set[i]/2 && t_elapsed <= temp - temp2/2){
+        else if(t_elapsed >= Tf_set[i] + tb_set[i]/2 && t_elapsed <= temp - temp2/2){
             for(int k = 0; k<joints_smooth.size(); k++) {
-                joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1)*(t_elapsed-T_set[i]));
+                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i) * (t_elapsed - Tf_set[i]));
             }
             t_elapsed+=0.001;
         }
@@ -522,11 +553,6 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         }
 
     }
-    array<double, 6> last_vels = {0, 0, 0, 0, 0, 0};
-    array<double, 6> last_pts = {0, 0, 0, 0, 0, 0};
-    double fac = 1;
-    double velocity = 0;
-    double accel = 0;
     Point start  = get_end_effector((joint_angles){joints_smooth[0].at(joints_smooth[0].size()-1), joints_smooth[1].at(joints_smooth[0].size()-1),
                                                    joints_smooth[2].at(joints_smooth[0].size()-1), joints_smooth[3].at(joints_smooth[0].size()-1),
                                                    joints_smooth[4].at(joints_smooth[0].size()-1), joints_smooth[5].at(joints_smooth[0].size()-1)});
