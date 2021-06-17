@@ -25,6 +25,7 @@
 #include <pcl/features/fpfh.h>
 #include <pcl/registration/ia_ransac.h>
 #include <pcl/registration/icp.h>
+//#include <pcl/registration/ndt.h>
 
 //using namespace std::chrono_literals;
 
@@ -286,7 +287,7 @@ int main(int argc, char** argv)
   ros::Publisher publisher_stitch;
   publisher_stitch = nodeHandle.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1);
 
-  const std::string STL_file_name =  "/home/konrad/Documents/RNM/Scanning/Skeleton.stl";
+  const std::string STL_file_name =  "/home/niklas/Documents/RNM/Scanning/Skeleton.stl";
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr skeleton_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PolygonMesh mesh;
@@ -353,7 +354,7 @@ int main(int argc, char** argv)
 
   // load stitched point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile( "/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
 
   vg.setInputCloud (stitched_cloud);
   vg.setLeafSize (0.005, 0.005, 0.005);
@@ -377,6 +378,7 @@ int main(int argc, char** argv)
   target_cloud.setInputCloud (stitched_cloud);
 
 
+
   // Set the TemplateAlignment inputs
   TemplateAlignment template_align;
   for (std::size_t i = 0; i < object_templates.size (); ++i)
@@ -398,7 +400,27 @@ int main(int argc, char** argv)
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::transformPointCloud (*best_template.getPointCloud (), *transformed_cloud, best_alignment.final_transformation);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr goal_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
+
+
+/*
+  pcl::NormalDistributionsTransform<pcl::PointXYZRGB, pcl::PointXYZRGB> ndt;
+  //Set the NDT parameter dependent on the scale
+  //Set the minimum conversion difference for the termination condition
+  ndt.setTransformationEpsilon(0.000000000000001);//0.01
+  //Set the maximum step size for More-Thuente line search
+  ndt.setStepSize(0.1); //0.1
+  //Set the resolution of the NDT grid structure (VoxelGridCovariance)
+  ndt.setResolution(0.1); //1.0
+  //Set the maximum number of matching iterations
+  ndt.setMaximumIterations(100);
+  // Set the point cloud to be registered
+  ndt.setInputCloud(skeleton_cloud);
+  //Set point cloud registration target
+  ndt.setInputTarget(stitched_cloud);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  ndt.align (*transformed_cloud);
+  pcl::transformPointCloud (*skeleton_cloud, *transformed_cloud, ndt.getFinalTransformation());
+*/
 
   pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
   icp.setInputSource(transformed_cloud);
@@ -411,6 +433,8 @@ int main(int argc, char** argv)
 
   //align new cloud to stitched cloud and add to the total stitched cloud.
   icp.align(*transformed_cloud);
+
+
 
   //pcl::visualization::PCLVisualizer::Ptr viewer4;
   //viewer4 = simpleViscomb(stitched_cloud,skeleton_cloud);
