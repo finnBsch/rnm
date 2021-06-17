@@ -133,7 +133,7 @@ class PCStitch
   }
 
   void safeCloud(){
-    pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+    pcl::io::savePCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
   }
 
  public:
