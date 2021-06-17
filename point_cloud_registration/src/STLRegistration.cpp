@@ -27,6 +27,9 @@
 #include <pcl/registration/icp.h>
 //#include <pcl/registration/ndt.h>
 #include <std_msgs/Float64MultiArray.h>
+#include "point_cloud_registration/alignment_service.h"
+#include <eigen_conversions/eigen_msg.h>
+
 
 class FeatureCloud
 {
@@ -278,45 +281,73 @@ class TemplateAlignment {
 
 
 // ------------------------------------------------------------------------------------------------------
+class AlignService
+{
+ public:
+  AlignService(ros::NodeHandle& nodeHandle){
+    nh_ = nodeHandle;
+    pub_ = nodeHandle.advertise<sensor_msgs::PointCloud2>("/skeleton_cloud_tf", 1);
+
+  }
+  ros::NodeHandle nh_;
+  ros::Publisher pub_;
+
+  bool alignmentService(point_cloud_registration::alignment_service::Request& req,
+                        point_cloud_registration::alignment_service::Response& res) {
+
+    //ros::Publisher publisher;
+    //publisher = nh_.advertise<sensor_msgs::PointCloud2>("skeleton_cloud_tf", 1);
+    //ros::Publisher publisher_stitch;
+    //publisher_stitch = nh_.advertise<sensor_msgs::PointCloud2>("stitched_cloud", 1);
+
+    const std::string STL_file_name = "/home/niklas/Documents/RNM/Scanning/Skeleton.stl";
+
+    FeatureCloud template_cloud;
+    template_cloud.loadfromSTL(STL_file_name);
+
+    // load stitched point cloud
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+    // pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+    pcl::PCLPointCloud2 stitched_cloud_PC2;
+    pcl_conversions::toPCL(req.stitched_cloud, stitched_cloud_PC2);
+    pcl::fromPCLPointCloud2(stitched_cloud_PC2, *stitched_cloud);
+
+    // Assign to the target FeatureCloud
+    FeatureCloud target_cloud;
+    target_cloud.setInputCloud(stitched_cloud);
+
+    TemplateAlignment template_align;
+    TemplateAlignment::Result alignment_results;
+    template_align.setTargetCloud(target_cloud);
+    template_align.align(template_cloud, alignment_results);
+    Eigen::Matrix4f final_transformation;
+    final_transformation =
+        alignment_results.final_transformation_ICP * alignment_results.final_transformation_coarse;
+    tf::matrixEigenToMsg(final_transformation, res.alignment_transformation);
+    std::cout << res.alignment_transformation;
+
+    // Print the alignment fitness score (values less than 0.00002 are good)
+    printf("Fitness score coarse alignment: %f\n", alignment_results.fitness_score_coarse);
+    printf("Fitness score ICP alignment: %f\n", alignment_results.fitness_score_icp);
+
+    sensor_msgs::PointCloud2 output;
+    pcl::toROSMsg(alignment_results.skeleton_cloud_tf, output);
+    output.header.frame_id = "rgb_camera_link";
+    pub_.publish(output);
+    // sensor_msgs::PointCloud2 output_stitch;
+    // pcl::toROSMsg(*stitched_cloud, output_stitch);
+    // output_stitch.header.frame_id = "rgb_camera_link";
+    // publisher_stitch.publish (output_stitch);
+    return true;
+  }
+};
+
 int main(int argc, char** argv) {
   ros::init(argc, argv, "STLRegistration");
-  ros::NodeHandle nodeHandle;
-  ros::Publisher publisher;
-  publisher = nodeHandle.advertise<sensor_msgs::PointCloud2>("skeleton_cloud_tf", 1);
-  ros::Publisher publisher_stitch;
-  publisher_stitch = nodeHandle.advertise<sensor_msgs::PointCloud2>("stitched_cloud", 1);
+  ros::NodeHandle nodeHandle("~");
 
-  const std::string STL_file_name = "/home/niklas/Documents/RNM/Scanning/Skeleton.stl";
-
-  FeatureCloud template_cloud;
-  template_cloud.loadfromSTL(STL_file_name);
-
-  // load stitched point cloud
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
-
-  // Assign to the target FeatureCloud
-  FeatureCloud target_cloud;
-  target_cloud.setInputCloud(stitched_cloud);
-
-  TemplateAlignment template_align;
-  TemplateAlignment::Result alignment_results;
-  template_align.setTargetCloud (target_cloud);
-  template_align.align(template_cloud,alignment_results);
-
-
-  // Print the alignment fitness score (values less than 0.00002 are good)
-  printf ("Fitness score coarse alignment: %f\n", alignment_results.fitness_score_coarse);
-  printf ("Fitness score ICP alignment: %f\n", alignment_results.fitness_score_icp);
-
-
-  sensor_msgs::PointCloud2 output;
-  pcl::toROSMsg(alignment_results.skeleton_cloud_tf, output);
-  output.header.frame_id = "rgb_camera_link";
-  publisher.publish (output);
-  sensor_msgs::PointCloud2 output_stitch;
-  pcl::toROSMsg(*stitched_cloud, output_stitch);
-  output_stitch.header.frame_id = "rgb_camera_link";
-  publisher_stitch.publish (output_stitch);
-
+  AlignService Alignment(nodeHandle);
+  // Register a callback function (a function that is called every time a new message arrives)
+  ros::ServiceServer service = nodeHandle.advertiseService("alignment_service", &AlignService::alignmentService,&Alignment);
+  ros::spin();
 }

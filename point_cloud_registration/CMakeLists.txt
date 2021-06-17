@@ -64,12 +64,11 @@ add_message_files(
   PCJScombined.msg
 )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+# Generate services in the 'srv' folder
+ add_service_files(
+   FILES
+   alignment_service.srv
+ )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -82,6 +81,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   sensor_msgs
+    std_msgs
 )
 
 ################################################
@@ -160,6 +160,7 @@ add_executable(PCStitch src/PCStitch.cpp)
 add_executable(skeleton_splitter src/skeleton_splitter.cpp)
 add_executable(Scanner src/Scanner.cpp)
 add_executable(STLRegistration src/STLRegistration.cpp)
+add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -182,10 +183,14 @@ target_link_libraries(PCStitch ${catkin_LIBRARIES})
 target_link_libraries(skeleton_splitter ${catkin_LIBRARIES})
 target_link_libraries(Scanner ${catkin_LIBRARIES})
 target_link_libraries(STLRegistration ${catkin_LIBRARIES})
+target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
 
 add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
 add_dependencies(Synchronizer point_cloud_registration_generate_messages_cpp)
+add_dependencies(STLRegistration point_cloud_registration_generate_messages_cpp)
+add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
+
 
 #############
 ## Install ##
