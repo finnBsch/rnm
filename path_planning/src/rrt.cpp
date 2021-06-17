@@ -388,15 +388,24 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     joints[4] = temp_;
     joints[5] = temp_;
     vector<double> x_set(counter);
-    vector<double> dx_set(counter);
+    array<vector<double>, 6> vels;
+    vector<double> test_vect(counter);
+    vels[0] = test_vect;
+    vels[1] = test_vect;
+    vels[2] = test_vect;
+    vels[3] = test_vect;
+    vels[4] = test_vect;
+    vels[5] = test_vect;
+    vector<double> T_set(counter);
+    vector<double> Tf_set(counter);
+    vector<double> tb_set(counter);
     counter = 0;
     current_node = goal_node;
     // again iterate
+    // normalized to step size 1
     while(current_node!= nullptr) {
-        if(counter==0) {
-            x_set[counter] = 0;
-        }
-        dx_set[counter] = 0;
+        T_set[counter] = 0;
+        tb_set[counter] = 0;
         temp = current_node->get_angles();
         points.push_back(current_node->get_position());
         if(current_node == start_node){
@@ -405,112 +414,119 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
 
         // generate relative time steps for each node by determining the distance (maybe use better metric)
         for(int i = 0; i<joints.size(); i++){
-            if(counter!=0){
-                dx_set[counter] = max(dx_set[counter], abs(temp[i]-joints[i].at(counter-1))*5);
-            }
             joints[i].at(counter) = temp[i];
         }
-        x_set[counter] = x_set[counter-1] + dx_set[counter];
         counter++;
         current_node = current_node->get_parent();
     }
     ROS_INFO("Goal path has %i nodes", counter);
-
-    // smoothing
-    vector<tk::spline> splines;
-
-    for(int i = 0; i<joints.size(); i++){
-        tk::spline s(x_set, joints[i], tk::spline::cspline,false,tk::spline::first_deriv, 0.0,
-                     tk::spline::first_deriv, 0.0);
-        splines.push_back(s);
+    for(int j = 0; j < x_set.size(); j++) {
+        T_set[j] = 0;
+        tb_set[j] = 0;
+        for(int i = 0; i<joints.size(); i++) {
+            if(j == 0){
+                T_set[j] = max(T_set[j], abs(joints[i].at(j+1) - joints[i].at(j)) / params.max_vels[i]);
+                if(counter!= x_set.size()){
+                    vels[i].at(j) = joints[i].at(j+1)-joints[j].at(j)/T_set[j];
+                }
+                else{
+                    vels[i].at(j) = joints[j].at(j)/T_set[j];
+                }
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j)) / params.max_accs[i]);
+            }
+            else if (j == x_set.size()-1){
+                T_set[j] = 0;
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
+            }
+            else {
+                T_set[j] = max(T_set[j],
+                               abs(joints[i].at(j + 1) - joints[i].at(j)) / params.max_vels[i]);
+                if(counter!= x_set.size()){
+                    vels[i].at(j) = joints[i].at(j+1)-joints[j].at(j)/T_set[j];
+                }
+                else{
+                    vels[i].at(j) = joints[i].at(j)/T_set[j];
+                }
+                tb_set[j] = max(tb_set[j],
+                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
+            }
+        }
     }
-    float t_max = x_set[x_set.size()-1];
+    for(int i = 0; i < x_set.size(); i++){
+        if(i == 0 && tb_set[i] > T_set[i]/2){
+            double fi = sqrt(T_set[i]/tb_set[i]);
+            for(int k = 0; k<joints.size(); k++){
+                vels[i + 1].at(k) = vels[i + 1].at(k) * fi;
+            }
+            tb_set[i] = min(T_set[i], T_set[i-1]);
+            T_set[i] = T_set[i] * fi;
+        }
+        else if(tb_set[i] > T_set[i-1]/2 || tb_set[i] > T_set[i]/2){
+            double fi = sqrt(min(T_set[i], T_set[i-1])/tb_set[i]);
+            for(int k = 0; k<joints.size(); k++){
+                if(i+1<x_set.size()) {
+                    vels[k].at(i + 1) = vels[k].at(i + 1) * fi;
+                }
+                vels[k].at(i) = vels[k].at(i) * fi;
+            }
+            T_set[i] = T_set[i] * fi;
+            T_set[i - 1] = T_set[i - 1] * fi;
+            tb_set[i] = min(T_set[i], T_set[i-1]);
+        }
+    }
+    Tf_set[0] = tb_set[0]/2 ;
+    for(int i = 0; i < x_set.size(); i++){
+        Tf_set[i] = Tf_set[i-1] + T_set[i-1];
+    }
+
+    double t_max = tb_set[0]/2 + tb_set[T_set.size()-1]/2;;
+    for(int i = 0; i<T_set.size()-1; i++){
+        t_max+=T_set[i];
+    }
     float t_elapsed = 0;
+    counter = 0;
+    int i = 0;
+    while(t_elapsed<=t_max+0.0009){
+        if(t_elapsed>t_max){
+            t_elapsed = t_max;
+        }
+        double temp = 1000;
+        double temp2 = 10000;
+        if(i<T_set.size()-1){
+            temp = T_set[i+1];
+            temp2 = tb_set[i+1];
+        }
+        if(t_elapsed >= T_set[i]-tb_set[i]/2 && t_elapsed <= T_set[i] + tb_set[i]/2){
+            t_elapsed+=0.001;
+            for(int k = 0; k<joints_smooth.size(); k++) {
+                if(i == 0){
+                    joints_smooth[k].push_back(joints[k].at(i) + 0 * (t_elapsed - T_set[i]) +
+                                               0.5 * pow((t_elapsed - T_set[i] + tb_set[i] / 2), 2));
+                }
+                else {
+                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1) * (t_elapsed - T_set[i]) +
+                                               0.5 * pow((t_elapsed - T_set[i] + tb_set[i] / 2), 2));
+                }
+            }
+        }
+        else if(t_elapsed >= T_set[i] + tb_set[i]/2 && t_elapsed <= temp - temp2/2){
+            for(int k = 0; k<joints_smooth.size(); k++) {
+                joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1)*(t_elapsed-T_set[i]));
+            }
+            t_elapsed+=0.001;
+        }
+        else{
+            i++;
+        }
+
+    }
     array<double, 6> last_vels = {0, 0, 0, 0, 0, 0};
     array<double, 6> last_pts = {0, 0, 0, 0, 0, 0};
     double fac = 1;
     double velocity = 0;
     double accel = 0;
-    for(int i = 0; i<last_vels.size(); i++) {
-        joints_smooth[i].push_back(splines[i](0));
-        last_pts[i] = splines[i](0);
-    }
-    /*while(t_elapsed<t_max){
-        bool too_fast = true;
-        double step_size = t_max/2;
-        /*if(splines[0].deriv(1, t_elapsed) == 0 && splines[0].deriv(2, t_elapsed) != 0){
-            step_size = max(pow(params.max_accs.at(0)/splines[0].deriv(2, t_elapsed),2)*0.001*1.1,0.0001);
-        }
-        else if(splines[0].deriv(2, t_elapsed) == 0){
-            step_size = t_max;
-        }
-        else {
-            step_size = max((params.max_vels.at(0) / splines[0].deriv(1, t_elapsed)) * 0.001*1.1,
-                            0.0001);
-        }
-        for(int i = 0; i<last_vels.size(); i++) {
-            if(splines[i].deriv(1, t_elapsed) == 0 && splines[i].deriv(2, t_elapsed) != 0){
-                step_size = max(min(step_size, pow(params.max_accs.at(i)/splines[i].deriv(2, t_elapsed),2)*0.001*1.1),0.0001);
-            }
-            else if(splines[i].deriv(2, t_elapsed) == 0){
-                step_size = max(min(step_size, (double)t_max/100), 0.0001);
-            }
-            else {
-                step_size = max(min(step_size, (params.max_vels.at(i) / splines[i].deriv(1, t_elapsed)) * 0.001*1.1),
-                                0.0001);
-            }
-        }*/
-        /*
-        while (too_fast){
-            if(t_elapsed+step_size>t_max){
-                step_size = t_max-t_elapsed;
-            }
-            for(int i = 0; i<last_vels.size(); i++){
-                velocity = abs(splines[i].deriv(1, t_elapsed+step_size/2))*step_size/0.001;
-                accel = abs(splines[i].deriv(2, t_elapsed+step_size/2))*pow(step_size/0.001,2);
-                if(velocity > params.max_vels[i]*0.5){
-                    fac = params.max_vels[i]*0.5/velocity * 0.99;
-                    too_fast = true;
-                    step_size*=fac;
-                    break;
-                }
-                else if(accel>params.max_accs[i]*0.5){
-                    fac = pow(params.max_accs[i]*0.5/accel,2) * 0.99;
-                    too_fast = true;
-                    step_size*=fac;
-                    break;
-                }
-                else{
-                    too_fast = false;
-                }
-            }
-        }
-        for(int i = 0; i<last_vels.size(); i++) {
-            joints_smooth[i].push_back(splines[i](t_elapsed+step_size));
-            last_vels[i] = abs((last_pts[i]- splines[i](t_elapsed+step_size))/0.001);
-            last_pts[i] = splines[i](t_elapsed+step_size);
-        }
-        t_elapsed+=step_size;
-    }*/
-    double maxVFac = 0;
-    double maxAFac = 0;
-    for(int i = 0; i<10000; i++){
-        for(int j = 0; j<6; j++){
-            maxVFac = max(maxVFac, splines[j].deriv(1, (double)i/(double)10000*t_max)/(params.max_vels[j]*0.1));
-            maxAFac = max(maxAFac, splines[j].deriv(2, (double)i/(double)10000*t_max)/(params.max_accs[j]*0.1));
-        }
-    }
-    double maxFac = max(maxVFac, sqrt(maxAFac));
-    double step_size = 0.001/maxFac;
-    while(t_elapsed < t_max){
-        if(t_elapsed + step_size > t_max){
-            step_size = t_max - t_elapsed;
-        }
-        for(int i = 0; i<last_vels.size(); i++) {
-            joints_smooth[i].push_back(splines[i](t_elapsed+step_size));
-        }
-        t_elapsed+=step_size;
-    }
     Point start  = get_end_effector((joint_angles){joints_smooth[0].at(joints_smooth[0].size()-1), joints_smooth[1].at(joints_smooth[0].size()-1),
                                                    joints_smooth[2].at(joints_smooth[0].size()-1), joints_smooth[3].at(joints_smooth[0].size()-1),
                                                    joints_smooth[4].at(joints_smooth[0].size()-1), joints_smooth[5].at(joints_smooth[0].size()-1)});
