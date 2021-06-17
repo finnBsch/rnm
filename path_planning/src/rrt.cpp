@@ -426,22 +426,13 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         for(int i = 0; i<joints.size(); i++) {
             if(j == 0){
                 T_set[j] = max(T_set[j], abs(joints[i].at(j+1) - joints[i].at(j)) / params.max_vels[i]);
-                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j)) / params.max_accs[i]);
             }
             else if (j == x_set.size()-1){
                 T_set[j] = 0;
-                vels[i].at(j) = -joints[i].at(j)/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
             }
             else {
                 T_set[j] = max(T_set[j],
                                abs(joints[i].at(j + 1) - joints[i].at(j)) / params.max_vels[i]);
-                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
             }
         }
         for(int i = 0; i<joints.size(); i++) {
@@ -480,7 +471,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
             T_set[i - 1] = T_set[i - 1] / fi;
             tb_set[i] = min(T_set[i], T_set[i-1]);
         }
-        else if(tb_set[i] > T_set[i-1]/2 || tb_set[i] > T_set[i]/2){
+        else if(i != 0 && (tb_set[i] > T_set[i-1]/2 || tb_set[i] > T_set[i]/2)){
             double fi = sqrt(min(T_set[i], T_set[i-1])/tb_set[i]);
             for(int k = 0; k<joints.size(); k++){
                 vels[k].at(i - 1) = vels[k].at(i - 1) * fi;
@@ -525,8 +516,8 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
             temp = Tf_set[i+1];
             temp2 = tb_set[i+1];
         }
-        ROS_INFO("Intervals [%f, %f], [%f, %f], time %f", Tf_set[i]-tb_set[i]/2,
-                  Tf_set[i] + tb_set[i]/2,  Tf_set[i] + tb_set[i]/2, temp - temp2/2, t_elapsed);
+        /*ROS_INFO("Intervals [%f, %f], [%f, %f], time %f", Tf_set[i]-tb_set[i]/2,
+                  Tf_set[i] + tb_set[i]/2,  Tf_set[i] + tb_set[i]/2, temp - temp2/2, t_elapsed);*/
 
         if(t_elapsed >= Tf_set[i]-tb_set[i]/2 && t_elapsed <= Tf_set[i] + tb_set[i]/2){
 

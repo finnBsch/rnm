@@ -53,13 +53,13 @@ int main(int argc, char **argv)
     joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
 
-    float a_ = 2.5;
-    float b_ = 0.45;
+    float a_ = 2.7;
+    float b_ = 1.2;
     float c_ = 0;
     float d_ = -0.7;
     float e_ = 0;
     float f_ = 0;
-    float step_size = 3*M_PI/180;
+    float step_size = 0.03;
     bool goal_joint = true;
     int num_nodes_extra = 5000;
     ros::param::get("~ss", step_size);
