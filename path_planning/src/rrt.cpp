@@ -354,7 +354,7 @@ vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
     std::vector< std::vector<float> > dists;
     std::vector<float> d(query.rows);
 
-    int n = kdtree.radiusSearch(query, indices, dists, 0.05, flann::SearchParams());
+    int n = kdtree.radiusSearch(query, indices, dists, 0.09, flann::SearchParams());
 
     //Point point;
     //point = flann_to_point(kdtree.getPoint(indices[0][0]));
@@ -414,6 +414,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         counter++;
         current_node = current_node->get_parent();
     }
+    ROS_INFO("Goal path has %i nodes", counter);
 
     // smoothing
     vector<tk::spline> splines;
@@ -434,7 +435,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         joints_smooth[i].push_back(splines[i](0));
         last_pts[i] = splines[i](0);
     }
-    while(t_elapsed<t_max){
+    /*while(t_elapsed<t_max){
         bool too_fast = true;
         double step_size = t_max/2;
         /*if(splines[0].deriv(1, t_elapsed) == 0 && splines[0].deriv(2, t_elapsed) != 0){
@@ -459,21 +460,22 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
                                 0.0001);
             }
         }*/
+        /*
         while (too_fast){
             if(t_elapsed+step_size>t_max){
                 step_size = t_max-t_elapsed;
             }
             for(int i = 0; i<last_vels.size(); i++){
-                velocity = abs((last_pts[i]-splines[i](t_elapsed+step_size))/0.001);
-                accel = abs((last_vels[i]-velocity)/0.001);
-                if(velocity > params.max_vels[i]){
-                    fac = params.max_vels[i]/velocity * 0.99;
+                velocity = abs(splines[i].deriv(1, t_elapsed+step_size/2))*step_size/0.001;
+                accel = abs(splines[i].deriv(2, t_elapsed+step_size/2))*pow(step_size/0.001,2);
+                if(velocity > params.max_vels[i]*0.5){
+                    fac = params.max_vels[i]*0.5/velocity * 0.99;
                     too_fast = true;
                     step_size*=fac;
                     break;
                 }
-                else if(accel>params.max_accs[i]){
-                    fac = params.max_accs[i]/accel * 0.99;
+                else if(accel>params.max_accs[i]*0.5){
+                    fac = pow(params.max_accs[i]*0.5/accel,2) * 0.99;
                     too_fast = true;
                     step_size*=fac;
                     break;
@@ -489,9 +491,26 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
             last_pts[i] = splines[i](t_elapsed+step_size);
         }
         t_elapsed+=step_size;
+    }*/
+    double maxVFac = 0;
+    double maxAFac = 0;
+    for(int i = 0; i<10000; i++){
+        for(int j = 0; j<6; j++){
+            maxVFac = max(maxVFac, splines[j].deriv(1, (double)i/(double)10000*t_max)/(params.max_vels[j]*0.1));
+            maxAFac = max(maxAFac, splines[j].deriv(2, (double)i/(double)10000*t_max)/(params.max_accs[j]*0.1));
+        }
     }
-
-
+    double maxFac = max(maxVFac, sqrt(maxAFac));
+    double step_size = 0.001/maxFac;
+    while(t_elapsed < t_max){
+        if(t_elapsed + step_size > t_max){
+            step_size = t_max - t_elapsed;
+        }
+        for(int i = 0; i<last_vels.size(); i++) {
+            joints_smooth[i].push_back(splines[i](t_elapsed+step_size));
+        }
+        t_elapsed+=step_size;
+    }
     Point start  = get_end_effector((joint_angles){joints_smooth[0].at(joints_smooth[0].size()-1), joints_smooth[1].at(joints_smooth[0].size()-1),
                                                    joints_smooth[2].at(joints_smooth[0].size()-1), joints_smooth[3].at(joints_smooth[0].size()-1),
                                                    joints_smooth[4].at(joints_smooth[0].size()-1), joints_smooth[5].at(joints_smooth[0].size()-1)});
@@ -531,7 +550,7 @@ void rrt::calculateC(joint_angles gp) {
 joint_angles rrt::sample_intelligent(){
     // TODO Change sampling when goal is found to optimize path
     float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    if(p<0.001){
+    if(p<0.1){
         return goal_point;
     }
     else{
@@ -548,7 +567,7 @@ void rrt::initialize_world() {
     auto cyl1 = add_cylinder(btVector3(0.06, 0.316/2, 0.06), 1);
     auto cyl2 = add_cylinder(btVector3(0.05, 0.2/2, 0.05), 2);
     auto cyl3 = add_cylinder(btVector3(0.07, 0.385/2, 0.07),2);
-    auto cyl4 = add_cylinder(btVector3(0.05, 0.107, 0.05), 2);
+    auto cyl4 = add_cylinder(btVector3(0.05, 0.2, 0.05), 2);
     auto sphere = add_sphere(0.1);
     btTransform tr;
     tr.setOrigin(btVector3(0.45, 0, 0.7));
