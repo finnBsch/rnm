@@ -55,6 +55,7 @@ private:
     VectorXd delta_A;
     VectorXd deltaQ;
     VectorXd abs_delta_A;
+    VectorXd endeffector;
 
 public:
     std::string text = "vorher";
@@ -67,7 +68,7 @@ public:
     }*/
 
     // CONTRUCTOR FOR INVERSE KINEMATICS WITHOUT FORWARD KIN SERVICE CONNECTION
-    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1){
+    explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1), endeffector(6){
         incrementalStepSize = 0.01;
         limit_ = 10000;
         counter_ = 0;
@@ -222,9 +223,10 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         // FOR TESTING, STARTING VECTOR
         if(initializing) {
             if (size_ == 12) {
+
                 VectorXd endeffectorPos(6);
                 ROS_INFO("Ich war zuerst hier");
-                endeffectorPos << 0.259209, 0.403714, 0.617182, 1.121, 0.982, 0.31457;
+                endeffectorPos << 0.559209, 0.503714, 0.517182, 0.0, 0.0, 0.0;
               Matrix4d final_transformationmatrix;
                 ROS_INFO("Ich war dann hier");
               final_transformationmatrix << convertEndeffectorToTransformation(endeffectorPos);
@@ -290,10 +292,16 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
     bool ik_jointAngles(inverse_kinematics::unserService::Request &req,
                         inverse_kinematics::unserService::Response &res) {
 
+
         // request joint angles
         for(int i=0;i<7;i++) {
             joint_angles_(i) = req.initial_joint_angles[i];
         }
+
+        for(int i=0;i<6;i++){
+            endeffector(i) = req.endeffector[i];
+        }
+        final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(convertEndeffectorToTransformation())
 
         //TODO goal pos in service
         //PERFORM INVERSE KINEMATICS
