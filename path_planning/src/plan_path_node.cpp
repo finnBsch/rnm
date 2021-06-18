@@ -229,10 +229,9 @@ int main(int argc, char **argv)
         p.x = (std::get<0>(point_path_pair))[0];
         p.y = (std::get<0>(point_path_pair))[1];
         p.z = (std::get<0>(point_path_pair))[2];
+        pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
         traj_msg.points.push_back(pt);
-        if(i%5==0) {
-
-            pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
+        if(i%100==0) {
             line_list[1].points.push_back(p);
             line_list[3].points.push_back(p);
         }
@@ -241,11 +240,5 @@ int main(int argc, char **argv)
     marker_pub.publish(line_list[1]);
     std::reverse(traj_msg.points.begin(),traj_msg.points.end());
     traj_pub.publish(traj_msg);
-    ros::Rate r(1);
-    while(ros::ok()){
-        //marker_pub.publish(line_list[1]);
-        //marker_pub.publish(line_list[3]);
-        //marker_pub.publish(line_list[0]);
-        r.sleep();
-    }
+    ros::spin();
 }
