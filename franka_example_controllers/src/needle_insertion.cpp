@@ -108,6 +108,7 @@ public:
                                             init_position[4],
                                             init_position[5],
                                             init_position[6]};
+
         for(int i = 0; i<scaling;i++) {
             if(i>=1) {
                 srv.request.initial_joint_angles = {received_joint_angles[i - 1][0],
