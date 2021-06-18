@@ -503,6 +503,8 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     for(int i = 0; i<T_set.size()-1; i++){
         t_max+=T_set[i];
     }
+    ROS_INFO("Executing trajectory in %f s", t_max);
+
     float t_elapsed = 0;
     counter = 0;
     int i = 0;

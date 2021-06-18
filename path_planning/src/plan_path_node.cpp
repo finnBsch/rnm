@@ -87,8 +87,8 @@ int main(int argc, char **argv)
     joint_ranges[4] = range;
     range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
-    float fac = 0.08;
-    float fac2 = 0.08;
+    float fac = 0.05;
+    float fac2 = 0.01;
     std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
@@ -225,24 +225,27 @@ int main(int argc, char **argv)
     trajectory_msgs::JointTrajectory traj_msg;
     trajectory_msgs::JointTrajectoryPoint pt;
     int i = 0;
-
     for(auto point_path_pair:goal_path){
         p.x = (std::get<0>(point_path_pair))[0];
         p.y = (std::get<0>(point_path_pair))[1];
         p.z = (std::get<0>(point_path_pair))[2];
-        pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
         traj_msg.points.push_back(pt);
+        if(i%5==0) {
+
+            pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
+            line_list[1].points.push_back(p);
+            line_list[3].points.push_back(p);
+        }
         i++;
-        line_list[1].points.push_back(p);
-        line_list[3].points.push_back(p);
     }
+    marker_pub.publish(line_list[1]);
     std::reverse(traj_msg.points.begin(),traj_msg.points.end());
     traj_pub.publish(traj_msg);
     ros::Rate r(1);
     while(ros::ok()){
-        marker_pub.publish(line_list[1]);
+        //marker_pub.publish(line_list[1]);
         //marker_pub.publish(line_list[3]);
-        marker_pub.publish(line_list[0]);
+        //marker_pub.publish(line_list[0]);
         r.sleep();
     }
 }
