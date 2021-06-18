@@ -174,14 +174,14 @@ void quat2angaxis(double x, double y, double z, double w, Mat& angaxis){
 // calculating transformation from pose
 // credits to https://github.com/xiaohuits/camera_hand_eye_calibration
 //void transform2rv(TransformStamped transform, Mat& rvec, Mat& tvec){
-void transform2rv(boost::array<double, 3> pose, Mat& rvec, Mat& tvec){
+void transform2rv(boost::array<double, 3> pose, Mat& rvec, Mat& tvec){ // 3 to 8
   tvec = Mat::zeros(3,1,CV_64F);
   rvec = Mat::zeros(3,1,CV_64F);
   //auto rot = transform.transform.rotation;
   //auto tran = transform.transform.translation;
   //quat2angaxis(rot.x, rot.y, rot.z, rot.w, rvec);
 //////////////////////////////////////////////////////////////////// fix dis
-  //quat2angaxis(pose[4], pose[5], pose[6], pose[7], rvec);
+  //quat2angaxis( pose[4], pose[5], pose[6], pose[7], rvec); // was 4,5,6,7 initially
   tvec.at<double>(0,0) = pose[0];
   tvec.at<double>(1,0) = pose[1];
   tvec.at<double>(2,0) = pose[2];
@@ -194,7 +194,7 @@ void transform2rv(boost::array<double, 3> pose, Mat& rvec, Mat& tvec){
 // calculate poses from joint_states using forward_kin/get_endeffector
 // then get the transformations to these poses
 int calculatePose() {
-  vector<boost::array<double, 3>> poses;//(joint_states.rows);
+  vector<boost::array<double, 3>> poses;//(joint_states.rows); // 3 to 7
   //(void) argc;
   //(void) argv;
   // ros::init(argc, argv, "hand_eye_calibration");
@@ -221,7 +221,7 @@ int calculatePose() {
     auto a = client.call(srv);
     if (a) {
       //// need to push back the pose (transformation) to allRobotPoses
-      boost::array<double, 3> pose = srv.response.end_effector_pos;
+      boost::array<double, 3> pose = srv.response.end_effector_pos; //changed 3 to 8
       poses.push_back(pose);
       // allRobotPoses.transform.rotation.x[i];
       // allRobotPoses.transform.translation.push_back(pose);
