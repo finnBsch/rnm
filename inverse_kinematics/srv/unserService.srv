@@ -1,3 +1,4 @@
 float64[7] initial_joint_angles
+float64[6] desired_endeffector
 ---
 float64[7] ik_jointAngles
