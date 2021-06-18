@@ -270,7 +270,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                 min_dist = dist;
                 goal_node = new_node;
                 rrt_node* current_node = goal_node;
-                all_nodes.clear();
+                goal_nodes.clear();
                 while(current_node!= nullptr) {
                     goal_nodes.push_back(current_node);
                     current_node = current_node->get_parent();
