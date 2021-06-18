@@ -48,7 +48,7 @@ public:
     void remove_child(rrt_node* child){
         this->children.remove(child);
     }
-    joint_angles get_angles(){
+    joint_angles& get_angles(){ // maybe bug? gets changed bc of reference
         return angles;
     };
     Point& get_position(){
