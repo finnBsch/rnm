@@ -313,3 +313,31 @@ int main(int argc, char** argv)  {
     ros::spin();
 }
 
+
+/*
+    MatrixXd M;
+    M= getLinePoints(1.0,1.0,1.0,9.0,9.0,9.0);
+    for(int i=0;i<M.cols();i++){
+        for(int j=0;j<M.rows();j++){
+            std::cout << M(i,j);
+        }
+    }
+*/
+
+MatrixXd getLinePoints(VectorXd o1, VectorXd o2,double scalingFactor){
+  VectorXd p1(3),p2(3),line(3),scaledLine(3);
+  p1 << o1(0),o1(1),o1(2);  //Endpunkt (x,y,z) aus Pathplanning
+  p2 << o2(0),o2(1),o2(2);  //Zielpunkt (x,y,z)
+  line=p2-p1;      //Strecke zwischen p1 und p2
+  scaledLine=line/scalingFactor; //Skallierte Länge der Strecke
+  MatrixXd LinePoints;
+  for(int i=0;i<scalingFactor;i++){
+    //Speichert alle Punkte (x,y,z) in Matrix Linepoints (3xi) ab
+    LinePoints(0,i)=    p1(0)+scaledLine(0)*i;
+    LinePoints(1,i)=    p1(1)+scaledLine(1)*i;
+    LinePoints(2,i)=    p1(2)+scaledLine(2)*i;
+  }
+  return LinePoints;
+}
+
+
