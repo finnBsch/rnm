@@ -57,7 +57,9 @@ public:
                                             init_position[4],
                                             init_position[5],
                                             init_position[6]};
-        //{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+        srv.request.desired_endeffector = {0.559209, 0.503714, 0.517182, 0.5, 0.6, 0.4};
+
         auto a = client.call(srv);
         if (a)
         {

@@ -1,8 +1,8 @@
 /*
- * This is the example of Tutorial 5 to test and understand incremental inverse kinematics
+ * These are the incremental inverse kinematics
  * author: Tolga Kartal, Sean Maroofi
  * added: 29.5.21
- * last edited: 11.6.21
+ * last edited: 18.6.21
  */
 
 
@@ -56,6 +56,9 @@ private:
     VectorXd deltaQ;
     VectorXd abs_delta_A;
     VectorXd endeffector;
+    VectorXd pre_joint_angles;
+    std::array<double, 7> upper_joint_limits;
+    std::array<double, 7> lower_joint_limits;
 
 public:
     std::string text = "vorher";
@@ -76,8 +79,30 @@ public:
         a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
         d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
         alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
+        upper_joint_limits = {2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973};
+        lower_joint_limits = {-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973};
     }
 
+
+    VectorXd checkBoundaries(VectorXd pre_joint_angles){
+        for (int i=0; i<pre_joint_angles.rows();i++){
+
+            if(lower_joint_limits[i] > pre_joint_angles(i)){
+                pre_joint_angles(i) = lower_joint_limits[i] + 0.0873;
+                //output of Iteration step
+                //ROS_INFO("counter: %i", counter_);
+                //ROS_INFO("i = %i", i);
+
+            }
+            if(upper_joint_limits[i] < pre_joint_angles(i)){
+                pre_joint_angles(i) = upper_joint_limits[i] - 0.0873;
+            }
+
+
+        }
+
+        return pre_joint_angles;
+    }
 
 
 
@@ -160,10 +185,24 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         Matrix3d rotation;
         Matrix4d matrix;
 
+        AngleAxisd rollAngle(endeffector(3), Vector3d::UnitZ());
+        AngleAxisd yawAngle(endeffector(4), Vector3d::UnitY());
+        AngleAxisd pitchAngle(endeffector(5), Vector3d::UnitX());
+
+        Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+        ROS_INFO("quaternionen x: %f", q.x());
+        ROS_INFO("quaternionen y: %f", q.y());
+        ROS_INFO("quaternionen z: %f", q.z());
+        ROS_INFO("quaternionen w: %f", q.w());
+
+
+
+        rotation = q.matrix();
+        /*
         rotation = AngleAxisd(endeffector(3), Vector3d::UnitX())
                     * AngleAxisd(endeffector(4), Vector3d::UnitY())
                     * AngleAxisd (endeffector(5), Vector3d::UnitZ());
-
+*/
         matrix << rotation(0,0), rotation(0,1), rotation(0,2), endeffector(0),
                   rotation(1,0), rotation(1,1), rotation(1,2), endeffector(1),
                   rotation(2,0), rotation(2,1), rotation(2,2), endeffector(2),
@@ -218,46 +257,12 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
               //                                      srv.response.end_effector_pos[2];
         }
 
+
+
         //---------------- DO INCREMENTAL CALCULATION ----------------
-
-        // FOR TESTING, STARTING VECTOR
-        if(initializing) {
-            if (size_ == 12) {
-
-                VectorXd endeffectorPos(6);
-                ROS_INFO("Ich war zuerst hier");
-                endeffectorPos << 0.559209, 0.503714, 0.517182, 0.0, 0.0, 0.0;
-              Matrix4d final_transformationmatrix;
-                ROS_INFO("Ich war dann hier");
-              final_transformationmatrix << convertEndeffectorToTransformation(endeffectorPos);
-                ROS_INFO("Ich war zum Schluss hier");
-              //0.377556, -0.029182, 0.925526, 0.249209, 0.92475, 0.063488, -0.375232, 0.403714, -0.047806, 0.997552, 0.05096 ,0.617182, 0, 0, 0, 1;
-
-
-
-            final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(final_transformationmatrix);
-                for (int i=0; i<final_transformationmatrix_vector_.rows();i++){
-                    ROS_INFO("Final Matrix %f", final_transformationmatrix_vector_(i));
-                }
-
-                /*  0.244948, 0.96417, 0.101854,
-                       0.076194, -0.123872, 0.989368,
-                       0.966538, -0.234584, -0.103804,
-                       0.250202, 0.444379, 0.632892;  */    // ONLY FOR TESTING
-
-            } else{
-                final_transformationmatrix_vector_ << 0.5,0.5,0.5;
-            }
-            initializing = false;
-        }
-
 
         // DIFFERENCE CALCULATION OF DELTA_A
         delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
-
-
-        //output of Iteration step
-        ROS_INFO("counter: %i", counter_);
 
         // Calculate the absolute of the delta_A Vector
         for (int i=0;i<size_;i++){
@@ -283,7 +288,11 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
 
             //correction of joint angles
             deltaQ = J.completeOrthogonalDecomposition().solve(delta_A);
+
             joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
+            //pre_joint_angles = joint_angles_ + deltaQ * incrementalStepSize;
+            //joint_angles_ = checkBoundaries(pre_joint_angles);
+
 
             return incrementalStep();
         }
@@ -298,10 +307,11 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
             joint_angles_(i) = req.initial_joint_angles[i];
         }
 
+        // request endeffector
         for(int i=0;i<6;i++){
-            endeffector(i) = req.endeffector[i];
+            endeffector(i) = req.desired_endeffector[i];
         }
-        final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(convertEndeffectorToTransformation())
+        final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(convertEndeffectorToTransformation(endeffector));
 
         //TODO goal pos in service
         //PERFORM INVERSE KINEMATICS
@@ -347,32 +357,3 @@ int main(int argc, char** argv)  {
 
     ros::spin();
 }
-
-
-/*
-    MatrixXd M;
-    M= getLinePoints(1.0,1.0,1.0,9.0,9.0,9.0);
-    for(int i=0;i<M.cols();i++){
-        for(int j=0;j<M.rows();j++){
-            std::cout << M(i,j);
-        }
-    }
-*/
-
-MatrixXd getLinePoints(VectorXd o1, VectorXd o2,double scalingFactor){
-  VectorXd p1(3),p2(3),line(3),scaledLine(3);
-  p1 << o1(0),o1(1),o1(2);  //Endpunkt (x,y,z) aus Pathplanning
-  p2 << o2(0),o2(1),o2(2);  //Zielpunkt (x,y,z)
-  line=p2-p1;      //Strecke zwischen p1 und p2
-  scaledLine=line/scalingFactor; //Skallierte Länge der Strecke
-  MatrixXd LinePoints;
-  for(int i=0;i<scalingFactor;i++){
-    //Speichert alle Punkte (x,y,z) in Matrix Linepoints (3xi) ab
-    LinePoints(0,i)=    p1(0)+scaledLine(0)*i;
-    LinePoints(1,i)=    p1(1)+scaledLine(1)*i;
-    LinePoints(2,i)=    p1(2)+scaledLine(2)*i;
-  }
-  return LinePoints;
-}
-
-

@@ -111,12 +111,12 @@ public:
         for(int i = 0; i<scaling;i++) {
             if(i>=1) {
                 srv.request.initial_joint_angles = {received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][0]);
+                                                    received_joint_angles[i - 1][1],
+                                                    received_joint_angles[i - 1][2],
+                                                    received_joint_angles[i - 1][3],
+                                                    received_joint_angles[i - 1][4],
+                                                    received_joint_angles[i - 1][5],
+                                                    received_joint_angles[i - 1][6]};
             }
             srv.request.desired_endeffector = {points(0, i), points(1, i), points(2, i), o1(3), o1(4), o1(5)};
 
