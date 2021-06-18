@@ -5,6 +5,7 @@
 #ifndef SRC_RRT_H
 #define SRC_RRT_H
 #include "rrt_node.h"
+#include <random>
 #include <tuple>
 #include "ros/ros.h"
 #include <flann/algorithms/dist.h>
@@ -44,6 +45,7 @@ private:
     joint_angles goal_point;
     joint_angles goal_point_found;
     bool goal_found = false;
+    vector<rrt_node*> goal_nodes;
     Point goal_p;
     joint_angles start_point;
     rrt_node* start_node;
@@ -58,6 +60,8 @@ private:
     joint_angles sample_ellipsoid();
     joint_angles sample_intelligent();
     void calculateC(joint_angles gp);
+    std::random_device rd;     // only used once to initialise (seed) engine
+    std::mt19937 rng; // random-number engine used (Mersenne-Twister in this case)
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

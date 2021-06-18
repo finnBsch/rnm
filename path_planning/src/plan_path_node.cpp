@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
                    static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
 
-    float a_ = 2.7;
+    float a_ = 0.1;
     float b_ = 1.2;
     float c_ = 0;
     float d_ = -0.7;
