@@ -16,6 +16,8 @@
 #include "sensor_msgs/Image.h"
 #include <sstream>
 #include <string>
+#include "ros/ros.h"
+#include <cstdlib>
 
 using namespace std;
 using namespace cv;
@@ -36,7 +38,7 @@ int cameraCalibration() {
   //(void)argv;
   ROS_INFO("Starting pseudo camera calibration.");
   std::vector<cv::String> fileNames;
-  cv::glob("/home/nico/catkin_ws/src/frame_reader/cal_imgs/rgb/pose_*.jpg", fileNames, false);
+  cv::glob("/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_*.jpg", fileNames, false);
   cv::Size patternSize(9 - 1, 6 - 1);
   std::vector<std::vector<cv::Point2f>> q(fileNames.size());
 
@@ -122,10 +124,12 @@ void readCalibrationData() {
     // read *both* a number and a comma:
     while (stream >> x && stream >> sep) {
       joint_states.push_back(x);
+      //cout << joint_states <<endl;
     }
     rows++;
   }
   joint_states = joint_states.reshape(1, rows);
+  //cout << joint_states <<endl;
   ROS_INFO("Done reading calibration data.");
 }
 
@@ -163,57 +167,75 @@ void quat2angaxis(double x, double y, double z, double w, Mat& angaxis){
   angaxis.at<double>(2,0) = rz;
 }
 
+
+// only 3 indeces need 7 for this conversion
+
+
 // calculating transformation from pose
 // credits to https://github.com/xiaohuits/camera_hand_eye_calibration
-void transform2rv(TransformStamped transform, Mat& rvec, Mat& tvec){
+//void transform2rv(TransformStamped transform, Mat& rvec, Mat& tvec){
+void transform2rv(boost::array<double, 3> pose, Mat& rvec, Mat& tvec){
   tvec = Mat::zeros(3,1,CV_64F);
   rvec = Mat::zeros(3,1,CV_64F);
-  auto rot = transform.transform.rotation;
-  auto tran = transform.transform.translation;
-  quat2angaxis(rot.x, rot.y, rot.z, rot.w, rvec);
-  tvec.at<double>(0,0) = tran.x;
-  tvec.at<double>(1,0) = tran.y;
-  tvec.at<double>(2,0) = tran.z;
+  //auto rot = transform.transform.rotation;
+  //auto tran = transform.transform.translation;
+  //quat2angaxis(rot.x, rot.y, rot.z, rot.w, rvec);
+//////////////////////////////////////////////////////////////////// fix dis
+  //quat2angaxis(pose[4], pose[5], pose[6], pose[7], rvec);
+  tvec.at<double>(0,0) = pose[0];
+  tvec.at<double>(1,0) = pose[1];
+  tvec.at<double>(2,0) = pose[2];
+  // tvec.at<double>(0,0) = tran.x;
+  //   tvec.at<double>(1,0) = tran.y;
+  //   tvec.at<double>(2,0) = tran.z;
   return;
 }
 
 // calculate poses from joint_states using forward_kin/get_endeffector
 // then get the transformations to these poses
 int calculatePose() {
+  vector<boost::array<double, 3>> poses;//(joint_states.rows);
   //(void) argc;
   //(void) argv;
   // ros::init(argc, argv, "hand_eye_calibration");
-  ros::NodeHandle n;
-  forward_kin::get_endeffector srv;
   // sensor_msgs::JointState joint_state_msg;
   // joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+
+  // create client object
+  ros::NodeHandle n;
   ros::ServiceClient client =
       n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
+  forward_kin::get_endeffector srv;
 
   // put joint angles into arr
   for (int i = 0; i < joint_states.rows; i++) {
     std::vector<double> row = joint_states.row(i);
+    /*for(size_t i = 7; i--;) { // just for debugging
+      cout << row[i] << endl;
+    }*/
     boost::array<double, 7> arr = {row.at(0), row.at(1), row.at(2), row.at(3),
                                    row.at(4), row.at(5), row.at(6)};
+
     // request service for conversion
     srv.request.joint_angles = arr;
     auto a = client.call(srv);
     if (a) {
-      //ROS_INFO("Endpos: %f", srv.response.end_effector_pos[0]);
-
       //// need to push back the pose (transformation) to allRobotPoses
-      //allRobotPoses.push_back({(float)srv.response.end_effector_pos[0],(float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
+      boost::array<double, 3> pose = srv.response.end_effector_pos;
+      poses.push_back(pose);
+      // allRobotPoses.transform.rotation.x[i];
+      // allRobotPoses.transform.translation.push_back(pose);
     } else {
       ROS_ERROR("Failed to call service forward_kin");
       return 1;
     }
+  }
     // now, use transform2rv to calculate transformations
-    for (int i = 0; i < allRobotPoses.size(); i++) {
-      Mat R, t;
-      transform2rv(allRobotPoses[i], R, t);
-      R_gripper2base.push_back(R);
-      t_gripper2base.push_back(t);
-    }
+  for (int i = 0; i < poses.size(); i++) {
+    Mat R, t;
+    transform2rv(poses[i], R, t);
+    R_gripper2base.push_back(R);
+    t_gripper2base.push_back(t);
   }
   ROS_INFO("Done calculating transforms.");
 }
@@ -230,7 +252,7 @@ void handEye(){
 
 int main(int argc, char** argv){
     ros::init(argc, argv, "hand_eye_calibration");
-    //cameraCalibration();
+    cameraCalibration();
     readCalibrationData();
     calculatePose();
     handEye();
