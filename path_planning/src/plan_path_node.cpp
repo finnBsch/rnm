@@ -49,17 +49,17 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to call service forward_kin");
         return 1;
     }
-    //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
-    joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
-                   static_cast<float>(joint_state_msg.position[3]), static_cast<float>(joint_state_msg.position[4]),static_cast<float>(joint_state_msg.position[5])};
+    //Point start = {(double)srv.response.end_effector_pos[0], (double)srv.response.end_effector_pos[1], (double)srv.response.end_effector_pos[2]};
+    joint_angles start = {static_cast<double>(joint_state_msg.position[0]), static_cast<double>(joint_state_msg.position[1]),static_cast<double>(joint_state_msg.position[2]),
+                   static_cast<double>(joint_state_msg.position[3]), static_cast<double>(joint_state_msg.position[4]),static_cast<double>(joint_state_msg.position[5])};
 
-    float a_ = 0.1;
-    float b_ = 1.2;
-    float c_ = 0;
-    float d_ = -0.7;
-    float e_ = 0;
-    float f_ = 0;
-    float step_size = 0.03;
+    double a_ = 0.1;
+    double b_ = 1.2;
+    double c_ = 0;
+    double d_ = -0.7;
+    double e_ = 0;
+    double f_ = 0;
+    double step_size = 0.03;
     bool goal_joint = true;
     int num_nodes_extra = 5000;
     ros::param::get("~ss", step_size);
@@ -74,8 +74,8 @@ int main(int argc, char **argv)
     joint_angles goal = {a_,b_,c_,d_,e_,f_};
     ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f", a_, b_, c_, d_, e_, f_);
 
-    array<array<float, 2>, 6> joint_ranges;
-    array<float, 2> range = {-2.8973, 2.8973};
+    array<array<double, 2>, 6> joint_ranges;
+    array<double, 2> range = {-2.8973, 2.8973};
     joint_ranges[0] = range;
     range = {-1.7628, 1.7628};
     joint_ranges[1] = range;
@@ -87,14 +87,14 @@ int main(int argc, char **argv)
     joint_ranges[4] = range;
     range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
-    float fac = 0.08;
-    float fac2 = 0.08;
-    std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
-    std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
+    double fac = 0.12;
+    double fac2 = 0.02;
+    std::vector<double> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
+    std::vector<double> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
     rrt* tree = new rrt(start, goal, params_);
     bool not_found = true;
-    float f = 0.0;
+    double f = 0.0;
     visualization_msgs::Marker lines, goal_lines, lines_, points_viz;
     vector<visualization_msgs::Marker> line_list;
     line_list.push_back(lines);

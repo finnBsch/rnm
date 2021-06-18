@@ -15,7 +15,7 @@
                                                                                                         nodes to vector*/
 
 
-void eig_to_bt(Matrix<float, 4, 4> eig, btMatrix3x3& bt){
+void eig_to_bt(Matrix<double, 4, 4> eig, btMatrix3x3& bt){
     for(int i = 0; i<3; i++){
         for(int j = 0; j<3; j++){
             bt[i][j] = eig(i, j);
@@ -23,24 +23,24 @@ void eig_to_bt(Matrix<float, 4, 4> eig, btMatrix3x3& bt){
     }
 }
 // return Transformation matrices from dvh
-Matrix<float, 4, 4> get_transformationmatrix(const float theta, const float a, const float d, const float alpha){
+Matrix<double, 4, 4> get_transformationmatrix(const double theta, const double a, const double d, const double alpha){
 
-    Matrix<float, 4, 4> ret_mat;
-    float st = sin(theta);
-    float ca = cos(alpha);
-    float sa = sin(alpha);
-    float ct = cos(theta);
+    Matrix<double, 4, 4> ret_mat;
+    double st = sin(theta);
+    double ca = cos(alpha);
+    double sa = sin(alpha);
+    double ct = cos(theta);
     ret_mat << ct, -st, 0, a,
             st * ca, ct*ca, -sa, -d * sa,
             st * sa, ct*sa, ca, d * ca,
             0, 0, 0, 1;
     return ret_mat;
 }
-void get_transformationmatrix2(const float theta, const float a, const float d, const float alpha, Matrix<float, 4, 4>& in){
-    float st = sin(theta);
-    float ca = cos(alpha);
-    float sa = sin(alpha);
-    float ct = cos(theta);
+void get_transformationmatrix2(const double theta, const double a, const double d, const double alpha, Matrix<double, 4, 4>& in){
+    double st = sin(theta);
+    double ca = cos(alpha);
+    double sa = sin(alpha);
+    double ct = cos(theta);
     in(0,0) = ct;
     in(0,1) = -st;
     in(0,2) = 0;
@@ -61,30 +61,30 @@ void get_transformationmatrix2(const float theta, const float a, const float d, 
 
 // end effector pos from joint angles
 Point rrt::get_end_effector(joint_angles angles){
-    array<Matrix<float, 4, 4>, 8> a_;
+    array<Matrix<double, 4, 4>, 8> a_;
     for(int i  = 0; i<T; i++){
         a_.at(i) = get_transformationmatrix(angles[i], a(i), d(i), alpha(i));
     }
     a_.at(6) = get_transformationmatrix(0, a(6), d(6), alpha(6));
     a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
-    Matrix<float, 4, 1> in;
+    Matrix<double, 4, 1> in;
     in << 0, 0, 0, 1;
-    Matrix<float, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+    Matrix<double, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
     //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
     return (Point){out[0], out[1], out[2]};
 }
 
 // end-effector normal from joint angles
 Point rrt::get_end_effector_normal(joint_angles angles){
-    array<Matrix<float, 4, 4>, 8> a_;
+    array<Matrix<double, 4, 4>, 8> a_;
     for(int i  = 0; i<T; i++){
         a_.at(i) = get_transformationmatrix(angles[i], a(i), d(i), alpha(i));
     }
     a_.at(6) = get_transformationmatrix(0, a(6), d(6), alpha(6));
     a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
-    Matrix<float, 4, 1> in;
+    Matrix<double, 4, 1> in;
     in << 0, 0, 1, 0;
-    Matrix<float, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
+    Matrix<double, 4, 1> out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
     //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
     return (Point){out[0], out[1], out[2]};
 }
@@ -114,11 +114,11 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):k
     start_node = new rrt_node(this->start_point, get_end_effector(this->start_point), params);
 
     // init kd-tree for sorting
-    kdtree = flann::Index<flann::L2_Simple<float>>(
+    kdtree = flann::Index<flann::L2_Simple<double>>(
             flann::KDTreeIndexParams());
-    std::vector<float> data(6);
+    std::vector<double> data(6);
     kdtree.buildIndex(
-            flann::Matrix<float>(start_node->get_angles_flann()->data(), 1, 6));
+            flann::Matrix<double>(start_node->get_angles_flann()->data(), 1, 6));
 
     // start list of all nodes
     all_nodes.push_back(start_node);
@@ -147,7 +147,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                 }
             }
             for (int i = 0; i < sampled.size(); i++) {
-                sample_point[i] = (float) sampled[i];
+                sample_point[i] = (double) sampled[i];
             }
         }
         else if(goal_found){
@@ -165,13 +165,13 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                 }
             }
             for (int i = 0; i < sampled.size(); i++) {
-                sample_point[i] = (float) sampled[i];
+                sample_point[i] = (double) sampled[i];
             }
         }
         else {
             auto sampled = random_point(params.joint_ranges);
             for (int i = 0; i < sampled.size(); i++) {
-                sample_point[i] = (float) sampled[i];
+                sample_point[i] = (double) sampled[i];
             }
         }
         nearest_node = findNearestNode(sample_point);
@@ -199,9 +199,9 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     auto near = findNearNodes(stepped_point);
     for(rrt_node* no:near){
         if(no!=new_node) {
-            float temp2;
+            double temp2;
             temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-            float temp = no->cost + temp2;
+            double temp = no->cost + temp2;
             if (new_node->cost > temp) {
                 new_node->set_parent(no, temp, temp2);
             }
@@ -211,9 +211,9 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     // check if new node is better parent for other neighbor nodes
     for(rrt_node* no:near){
         if(no!=new_node) {
-            float temp2;
+            double temp2;
             temp2 = euclidean_dist_joint(no->get_angles(), new_node->get_angles());
-            float temp = new_node->cost + temp2;
+            double temp = new_node->cost + temp2;
             if (no->cost > temp) {
                 no->set_parent(new_node, temp, temp2);
             }
@@ -221,14 +221,14 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     }
 
     // condition kd-tree
-    kdtree.addPoints(flann::Matrix<float>(new_node->get_angles_flann()->data(), 1, 6));
+    kdtree.addPoints(flann::Matrix<double>(new_node->get_angles_flann()->data(), 1, 6));
     //nodemap.insert(std::pair<Point, rrt_node*>(new_node->get_pos(), new_node));
     all_nodes.push_back(new_node);
     num_nodes++;
 
     // eval new node
-    float dist;
-    float dist_orient = 0;
+    double dist;
+    double dist_orient = 0;
     if(params.goal_joint){
         dist = euclidean_dist_sqrd_joint(new_node->get_angles(), goal_point);
         if (dist < min_dist || min_dist == -1){
@@ -238,7 +238,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
     else{
         dist = euclidean_dist_sqrd(new_node->get_position(), goal_p);
         auto norm = get_end_effector_normal(new_node->get_angles());
-        float ang_cost = 0;
+        double ang_cost = 0;
         for(int i = 0; i<norm.size(); i++){
             ang_cost+=norm[i]*goal_normal[i];
         }
@@ -256,6 +256,14 @@ tuple<bool, array<Point, 2>> rrt::expand() {
             min_dist = dist;
         }
 
+    }
+    if(goal_found){
+        rrt_node* current_node = goal_node;
+        goal_nodes.clear();
+        while(current_node!= nullptr) {
+            goal_nodes.push_back(current_node);
+            current_node = current_node->get_parent();
+        }
     }
     if(dist<0.005 && dist_orient < 0.2){
         goal_found = true;
@@ -312,14 +320,14 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 // informed rrt (from ellipsoid)
 joint_angles rrt::sample_ellipsoid(){
     joint_angles ret;
-    float c_max;
+    double c_max;
     if(goal_node) {
         c_max = goal_node->cost;
     }
     else{
         c_max = 2*c_opt;
     }
-    float temp = sqrt(c_max*c_max - c_opt*c_opt)/2;
+    double temp = sqrt(c_max*c_max - c_opt*c_opt)/2;
 
     L(0,0) = c_max/2;
     for(int i = 1; i<6; i++){
@@ -336,15 +344,15 @@ joint_angles rrt::sample_ellipsoid(){
 
 // find closest node to given joint angles
 rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
-    flann::Matrix<float> query;
-    std::vector<float> data(6);
+    flann::Matrix<double> query;
+    std::vector<double> data(6);
     point_to_flann(relative_to, data.data());
-    query = flann::Matrix<float>(data.data(), 1,
+    query = flann::Matrix<double>(data.data(), 1,
                                  data.size());
     std::vector<int> i(query.rows);
     flann::Matrix<int> indices(new int[query.rows], query.rows, 1);
-    std::vector<float> d(query.rows);
-    flann::Matrix<float> dists(new float[query.rows], query.rows, 1);
+    std::vector<double> d(query.rows);
+    flann::Matrix<double> dists(new double[query.rows], query.rows, 1);
 
     int n = kdtree.knnSearch(query, indices, dists, 1, flann::SearchParams());
 
@@ -356,18 +364,18 @@ rrt_node *rrt::findNearestNode(joint_angles& relative_to) {
 
 // find close nodes to given joint angles within a radius
 vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
-    flann::Matrix<float> query;
-    std::vector<float> data(6);
+    flann::Matrix<double> query;
+    std::vector<double> data(6);
     std::vector<rrt_node*> near_nodes;
     point_to_flann(relative_to, data.data());
-    query = flann::Matrix<float>(data.data(), 1,
+    query = flann::Matrix<double>(data.data(), 1,
                                  data.size());
     std::vector<int> i(query.rows);
     std::vector< std::vector<int> > indices;
-    std::vector< std::vector<float> > dists;
-    std::vector<float> d(query.rows);
+    std::vector< std::vector<double> > dists;
+    std::vector<double> d(query.rows);
 
-    int n = kdtree.radiusSearch(query, indices, dists, 0.09, flann::SearchParams());
+    int n = kdtree.radiusSearch(query, indices, dists, 0.1, flann::SearchParams());
 
     //Point point;
     //point = flann_to_point(kdtree.getPoint(indices[0][0]));
@@ -383,7 +391,7 @@ vector<rrt_node*> rrt::findNearNodes(joint_angles& relative_to) {
 vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     rrt_node* current_node = goal_node;
     vector<tuple<Point, joint_angles>> goal_path;
-    array<vector<float>, 6> joints_smooth;
+    array<vector<double>, 6> joints_smooth;
     vector<Point> points;
     joint_angles temp;
     int counter = 0;
@@ -516,7 +524,7 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     for(int i = 0; i<T_set.size()-1; i++){
         t_max+=T_set[i];
     }
-    float t_elapsed = 0;
+    double t_elapsed = 0;
     counter = 0;
     int i = 0;
     while(t_elapsed<=t_max+0.0009){
@@ -574,16 +582,16 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
 }
 
 void rrt::calculateC(joint_angles gp) {
-    Matrix<float, 6, 1> a1;
-    Matrix<float, 1, 6> v1 = {1, 0, 0, 0, 0, 0};
+    Matrix<double, 6, 1> a1;
+    Matrix<double, 1, 6> v1 = {1, 0, 0, 0, 0, 0};
     for (int i = 0; i < start_point.size(); i++) {
         a1(i) = gp[i] - start_point[i];
     }
     a1 = a1 / a1.norm();
-    Matrix<float, 6, 6> M = a1 * v1;
-    JacobiSVD<Matrix<float, 6, 6>> svd(M, ComputeFullU | ComputeFullV);
-    Matrix<float, 6, 1> vec_temp = {1, 1, 1, 1, 1, svd.matrixU().determinant() * svd.matrixV().determinant()};
-    Matrix<float, 6, 6> temp_ = vec_temp.asDiagonal();
+    Matrix<double, 6, 6> M = a1 * v1;
+    JacobiSVD<Matrix<double, 6, 6>> svd(M, ComputeFullU | ComputeFullV);
+    Matrix<double, 6, 1> vec_temp = {1, 1, 1, 1, 1, svd.matrixU().determinant() * svd.matrixV().determinant()};
+    Matrix<double, 6, 6> temp_ = vec_temp.asDiagonal();
     C = svd.matrixU() * temp_ * svd.matrixV().transpose();
     c_opt = euclidean_dist_joint(start_point, gp);
     for(int i = 0; i<gp.size(); i++){
@@ -607,17 +615,17 @@ joint_angles rrt::sample_intelligent(){
         for(int i = 0; i<q2.size(); i++){
             tmp[i] = (q1[i]+q2[i])/2 - q[i];
         }
-        float norm_tmp = euclidean_norm(tmp);
-        float LO = 0.02;
-        float HI = 0.09;
-        float rand_rad = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+        double norm_tmp = euclidean_norm(tmp);
+        double LO = 0.02;
+        double HI = 0.1;
+        double rand_rad = LO + static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(HI-LO)));
         for(int i = 0; i<q2.size(); i++) {
             tmp[i] = q[i] + tmp[i]/norm_tmp * rand_rad;
         }
         return tmp;
     }
     else {
-        float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        double p = static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
         if (p < 0.1) {
             return goal_point;
         } else {
@@ -688,26 +696,26 @@ btCollisionObject* rrt::add_sphere(btScalar radius) {
 bool rrt::check_collision(joint_angles angles) {
     // neglect first link
     btTransform tr;
-    Matrix<float, 4, 4> joint0;
-    Matrix<float, 4, 4> joint1;
-    Matrix<float, 4, 4> joint2;
-    Matrix<float, 4, 4> joint3;
-    Matrix<float, 4, 4> joint4;
-    Matrix<float, 4, 4> joint5;
-    Matrix<float, 4, 4> joint6;
-    Matrix<float, 4, 4> joint7; // end effector
+    Matrix<double, 4, 4> joint0;
+    Matrix<double, 4, 4> joint1;
+    Matrix<double, 4, 4> joint2;
+    Matrix<double, 4, 4> joint3;
+    Matrix<double, 4, 4> joint4;
+    Matrix<double, 4, 4> joint5;
+    Matrix<double, 4, 4> joint6;
+    Matrix<double, 4, 4> joint7; // end effector
     get_transformationmatrix2(angles[0], a(0), d(0), alpha(0), joint0);
     get_transformationmatrix2(angles[1], a(1), d(1), alpha(1), joint1);
     joint1 = joint0*joint1;
-    Matrix<float, 4, 1> col_center_0 = joint1(seq(0, last), 3);
+    Matrix<double, 4, 1> col_center_0 = joint1(seq(0, last), 3);
     btMatrix3x3 rot0;
     eig_to_bt(joint1, rot0);
     tr.setOrigin(btVector3(col_center_0[0], col_center_0[1], col_center_0[2]));
     tr.setBasis(rot0);
     mObjects.at(0)->setWorldTransform(tr);
-    Matrix<float, 4, 1> in_1;
+    Matrix<double, 4, 1> in_1;
     in_1 << 0, -0.158, 0, 1;
-    Matrix<float, 4, 1> col_center_1 = joint1*in_1;
+    Matrix<double, 4, 1> col_center_1 = joint1*in_1;
     tr.setOrigin(btVector3(col_center_1[0], col_center_1[1], col_center_1[2]));
     tr.setBasis(rot0);
     mObjects.at(1)->setWorldTransform(tr);
@@ -717,7 +725,7 @@ bool rrt::check_collision(joint_angles angles) {
     joint2 = joint1*joint2;
     get_transformationmatrix2(angles[3], a(3), d(3), alpha(3), joint3);
     joint3 = joint2*joint3;
-    Matrix<float, 4, 1> col_center_2 = joint3(seq(0, last), 3);
+    Matrix<double, 4, 1> col_center_2 = joint3(seq(0, last), 3);
     btMatrix3x3 rot2;
     eig_to_bt(joint3, rot2);
     tr.setOrigin(btVector3(col_center_2[0], col_center_2[1], col_center_2[2]));
@@ -726,9 +734,9 @@ bool rrt::check_collision(joint_angles angles) {
 
     get_transformationmatrix2(angles[4], a(4), d(4), alpha(4), joint4);
     joint4 = joint3*joint4;
-    Matrix<float, 4, 1> in_3;
+    Matrix<double, 4, 1> in_3;
     in_3 << 0, 0, -0.192, 1;
-    Matrix<float, 4, 1> col_center_3 = joint4*in_3;
+    Matrix<double, 4, 1> col_center_3 = joint4*in_3;
     tr.setOrigin(btVector3(col_center_3[0], col_center_3[1], col_center_3[2]));
     tr.setBasis(rot2);
     mObjects.at(3)->setWorldTransform(tr);
@@ -737,7 +745,7 @@ bool rrt::check_collision(joint_angles angles) {
     joint5 = joint4*joint5;
     get_transformationmatrix2(0, a(6), d(6), alpha(6), joint6);
     joint6 = joint5*joint6;
-    Matrix<float, 4, 1> col_center_4 = joint6(seq(0, last), 3);
+    Matrix<double, 4, 1> col_center_4 = joint6(seq(0, last), 3);
     btMatrix3x3 rot4;
     eig_to_bt(joint6, rot4);
     tr.setOrigin(btVector3(col_center_4[0], col_center_4[1], col_center_4[2]));

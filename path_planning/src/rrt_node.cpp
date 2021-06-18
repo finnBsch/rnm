@@ -26,8 +26,8 @@ rrt_node::rrt_node(const joint_angles angles, const Point position,rrt_params pa
     angles_ = {angles[0],angles[1],angles[2],angles[3],angles[4],angles[5]};
 }
 
-tuple<float, float> rrt_node::cost_two_joints(rrt_node* init, rrt_node* stepped){
-    float ang_cost = 0;
+tuple<double, double> rrt_node::cost_two_joints(rrt_node* init, rrt_node* stepped){
+    double ang_cost = 0;
     joint_angles A;
     joint_angles B;
     joint_angles pre = init->get_parent()->get_angles();

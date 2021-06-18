@@ -19,21 +19,21 @@
 
 using namespace std;
 using namespace Eigen;
-typedef boost::array<float, 3> Point;
-typedef boost::array<float, 6> joint_angles;
-typedef boost::array<float, 7> joint_angles_full;
+typedef boost::array<double, 3> Point;
+typedef boost::array<double, 6> joint_angles;
+typedef boost::array<double, 7> joint_angles_full;
 struct rrt_params{
-    float step_size;
-    array<array<float, 2>, 6> joint_ranges;
+    double step_size;
+    array<array<double, 2>, 6> joint_ranges;
     bool goal_joint;
     int num_nodes_extra;
-    std::vector<float> max_vels;
-    std::vector<float> max_accs;
+    std::vector<double> max_vels;
+    std::vector<double> max_accs;
 
 };
-void point_to_flann(joint_angles p, float* data);
-joint_angles flann_to_point(float* data);
-Matrix<float, 6, 1> sample_unit_ball();
+void point_to_flann(joint_angles p, double* data);
+joint_angles flann_to_point(double* data);
+Matrix<double, 6, 1> sample_unit_ball();
 struct normal_random_variable
 {
     normal_random_variable(Eigen::MatrixXd const& covar)
@@ -58,13 +58,13 @@ struct normal_random_variable
         return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](auto x) { return dist(gen); });
     }
 };
-float euclidean_dist(Point A, Point B);
-float euclidean_dist_sqrd(Point A, Point B);
-float euclidean_dist_sqrd_joint(joint_angles A, joint_angles B);
-float euclidean_dist_joint(joint_angles A, joint_angles B);
-float euclidean_norm(joint_angles A);
-joint_angles random_point(array<array<float, 2>, 6> joint_ranges);
-joint_angles step_forward(joint_angles start, joint_angles goal, float dist);
+double euclidean_dist(Point A, Point B);
+double euclidean_dist_sqrd(Point A, Point B);
+double euclidean_dist_sqrd_joint(joint_angles A, joint_angles B);
+double euclidean_dist_joint(joint_angles A, joint_angles B);
+double euclidean_norm(joint_angles A);
+joint_angles random_point(array<array<double, 2>, 6> joint_ranges);
+joint_angles step_forward(joint_angles start, joint_angles goal, double dist);
 
 
 

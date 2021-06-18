@@ -28,19 +28,19 @@ private:
     btAlignedObjectArray<btCollisionObject*> mObjects;
     void initialize_world();
     btCollisionObject* add_cylinder(btVector3 vect,  int orient=1);
-    btCollisionObject* add_sphere(float radius);
+    btCollisionObject* add_sphere(btScalar radius);
     bool check_collision(joint_angles angles);
     // informed rrt
-    float c_opt;
-    Matrix<float, 6, 1> center;
-    Matrix<float, 6, 6> C;
-    Matrix<float, 6, 6> L;
+    double c_opt;
+    Matrix<double, 6, 1> center;
+    Matrix<double, 6, 6> C;
+    Matrix<double, 6, 6> L;
     // kinematics
-    Matrix<float, 8, 1> a;
-    Matrix<float, 8, 1> d;
-    Matrix<float, 8, 1> alpha;
+    Matrix<double, 8, 1> a;
+    Matrix<double, 8, 1> d;
+    Matrix<double, 8, 1> alpha;
     // Flann
-    flann::Index<flann::L2_Simple<float>> kdtree;
+    flann::Index<flann::L2_Simple<double>> kdtree;
     vector<rrt_node*> all_nodes;
     joint_angles goal_point;
     joint_angles goal_point_found;
@@ -67,8 +67,8 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     long long num_nodes = 0;
     long long nodesmark_goal_found = 0;
-    float min_dist = -1;
-    float min_dist_orient = -1;
+    double min_dist = -1;
+    double min_dist_orient = -1;
     rrt_node* goal_node = nullptr;
     rrt(joint_angles start_point, joint_angles goal_point,rrt_params params);
     tuple<bool, array<Point, 2>> expand();
