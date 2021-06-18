@@ -90,7 +90,6 @@ Point rrt::get_end_effector_normal(joint_angles angles){
 }
 
 rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params):kdtree(flann::KDTreeIndexParams()) {
-    rng = mt19937(rd());
     // collision
     initialize_world();
     // informed rrt
@@ -258,7 +257,7 @@ tuple<bool, array<Point, 2>> rrt::expand() {
 
     }
     if(dist<0.005 && dist_orient < 0.2){
-        goal_found = true;
+        //goal_found = true;
         if(nodesmark_goal_found == 0) {
             goal_point_found = new_node->get_angles();
             //calculateC(goal_point_found);
@@ -269,22 +268,10 @@ tuple<bool, array<Point, 2>> rrt::expand() {
                 min_dist_orient = dist_orient;
                 min_dist = dist;
                 goal_node = new_node;
-                rrt_node* current_node = goal_node;
-                all_nodes.clear();
-                while(current_node!= nullptr) {
-                    goal_nodes.push_back(current_node);
-                    current_node = current_node->get_parent();
-                }
             }
         }
         else{
-            ROS_INFO("GOAL FOUND!");
             goal_node = new_node;
-            rrt_node* current_node = goal_node;
-            while(current_node!= nullptr) {
-                goal_nodes.push_back(current_node);
-                current_node = current_node->get_parent();
-            }
         }
 
         if(num_nodes>=(long long) params.num_nodes_extra + nodesmark_goal_found){
@@ -595,34 +582,12 @@ void rrt::calculateC(joint_angles gp) {
 // with given probability sample goal point (improve convergence of the algorithm)
 joint_angles rrt::sample_intelligent(){
     // TODO Change sampling when goal is found to optimize path
-    if(goal_found && goal_nodes.size()>=3){
-        int min_ = 1;
-        int max_ = goal_nodes.size()-2;
-        std::uniform_int_distribution<int> uni(min_,max_); // guaranteed unbiased
-        int sample_id = uni(rng);
-        joint_angles q = goal_nodes.at(sample_id)->get_angles();
-        joint_angles q1 = goal_nodes.at(sample_id-1)->get_angles();
-        joint_angles q2 = goal_nodes.at(sample_id+1)->get_angles();
-        joint_angles tmp;
-        for(int i = 0; i<q2.size(); i++){
-            tmp[i] = (q1[i]+q2[i])/2 - q[i];
-        }
-        float norm_tmp = euclidean_norm(tmp);
-        float LO = 0.02;
-        float HI = 0.09;
-        float rand_rad = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
-        for(int i = 0; i<q2.size(); i++) {
-            tmp[i] = q[i] + tmp[i]/norm_tmp * rand_rad;
-        }
-        return tmp;
+    float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    if(p<0.1){
+        return goal_point;
     }
-    else {
-        float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        if (p < 0.1) {
-            return goal_point;
-        } else {
-            return random_point(params.joint_ranges);
-        }
+    else{
+        return random_point(params.joint_ranges);
     }
 }
 
