@@ -3,7 +3,8 @@
 //
 
 #include "rrt.h"
-
+#include "Trajectory.h"
+#include "Path.h"
 
 #define T 6
 /* Performance improvements:
@@ -420,130 +421,33 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
         current_node = current_node->get_parent();
     }
     ROS_INFO("Goal path has %i nodes", counter);
-    for(int j = 0; j < x_set.size()-1; j++) {
-        T_set[j] = 0;
-        tb_set[j] = 0;
-        for(int i = 0; i<joints.size(); i++) {
-            if(j == 0){
-                T_set[j] = max(T_set[j], abs(joints[i].at(j+1) - joints[i].at(j)) / params.max_vels[i]);
-            }
-            else if (j == x_set.size()-1){
-                T_set[j] = 0;
-            }
-            else {
-                T_set[j] = max(T_set[j],
-                               abs(joints[i].at(j + 1) - joints[i].at(j)) / params.max_vels[i]);
-            }
+    list<VectorXd> waypoints;
+    VectorXd waypoint(6);
+    VectorXd max_acc(6);
+    VectorXd max_vel(6);
+    for(int i = 0; i < joints[0].size(); i++){
+        for(int j = 0; j < joints.size(); j++){
+            waypoint[j] = joints[j][i];
         }
-        for(int i = 0; i<joints.size(); i++) {
-            if(j == 0){
-                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j)) / params.max_accs[i]);
-            }
-            else if (j == x_set.size()-1){
-                vels[i].at(j) = -joints[i].at(j)/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
-            }
-            else {
-                vels[i].at(j) = (joints[i].at(j+1)-joints[i].at(j))/T_set[j];
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
-            }
-        }
+        waypoints.push_back(waypoint);
     }
-    for(int i = 0; i < x_set.size()-1; i++){
-        if(i == 0 && tb_set[i] > T_set[i]/2){
-            double fi = sqrt(T_set[i]/tb_set[i]);
-            for(int k = 0; k<joints.size(); k++){
-                vels[k].at(i) = vels[k].at(i) * fi;
-            }
-            T_set[i] = T_set[i] / fi;
-            tb_set[i] = T_set[i];
-        }
-        else if(i == x_set.size()-1 && tb_set[i] > T_set[i-1]/2){
-            double fi = sqrt(T_set[i-1]/tb_set[i]);
-            for(int k = 0; k<joints.size(); k++){
-                vels[k].at(i) = vels[k].at(i) * fi;
-            }
-            T_set[i] = T_set[i] / fi;
-            T_set[i - 1] = T_set[i - 1] / fi;
-            tb_set[i] = min(T_set[i], T_set[i-1]);
-        }
-        else if(i != 0 && (tb_set[i] > T_set[i-1]/2 || tb_set[i] > T_set[i]/2)){
-            double fi = sqrt(min(T_set[i], T_set[i-1])/tb_set[i]);
-            for(int k = 0; k<joints.size(); k++){
-                vels[k].at(i - 1) = vels[k].at(i - 1) * fi;
-                vels[k].at(i) = vels[k].at(i) * fi;
-            }
-            T_set[i] = T_set[i] / fi;
-            T_set[i - 1] = T_set[i - 1] / fi;
-            tb_set[i] = min(T_set[i], T_set[i-1]);
-        }
+    for(int i = 0; i < 6; i++){
+        max_acc[i] = params.max_accs[i];
+        max_vel[i] = params.max_vels[i];
     }
-    for(int j = 0; j < x_set.size() -  1; j++){
-        for(int i = 0; i<joints.size(); i++) {
-            if(j == 0){
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j)) / params.max_accs[i]);
-            }
-            else {
-                tb_set[j] = max(tb_set[j],
-                                abs(vels[i].at(j) - vels[i].at(j - 1)) / params.max_accs[i]);
-            }
-        }
-    }
-    Tf_set[0] = tb_set[0]/2;
-    for(int i = 1; i < x_set.size(); i++){
-        Tf_set[i] = Tf_set[i-1] + T_set[i-1];
-    }
-
-    double t_max = tb_set[0]/2 + tb_set[T_set.size()-1]/2;;
-    for(int i = 0; i<T_set.size()-1; i++){
-        t_max+=T_set[i];
-    }
-    ROS_INFO("Executing trajectory in %f s", t_max);
-
-    float t_elapsed = 0;
-    counter = 0;
-    int i = 0;
-    while(t_elapsed<=t_max+0.0009){
-        if(t_elapsed>t_max){
-            t_elapsed = t_max;
-        }
-        double temp = 10000;
-        double temp2 = 1000;
-        if(i<T_set.size()-1){
-            temp = Tf_set[i+1];
-            temp2 = tb_set[i+1];
-        }
-        /*ROS_INFO("Intervals [%f, %f], [%f, %f], time %f", Tf_set[i]-tb_set[i]/2,
-                  Tf_set[i] + tb_set[i]/2,  Tf_set[i] + tb_set[i]/2, temp - temp2/2, t_elapsed);*/
-
-        if(t_elapsed >= Tf_set[i]-tb_set[i]/2 && t_elapsed <= Tf_set[i] + tb_set[i]/2){
-
+    Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
+    trajectory.outputPhasePlaneTrajectory();
+    if(trajectory.isValid()) {
+        double duration = trajectory.getDuration();
+        ROS_INFO("Trajectory duration: %f s", duration);
+        for(double t = 0.0; t < duration; t += 0.001) {
             for(int k = 0; k<joints_smooth.size(); k++) {
-                if(i == 0){
-                    joints_smooth[k].push_back(joints[k].at(i) +
-                                               0.5 *(vels[k].at(i))/tb_set[i] * pow((t_elapsed - Tf_set[i] + tb_set[i] / 2), 2));
-                }
-                else {
-                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i-1) * (t_elapsed - Tf_set[i]) +
-                                               0.5 * (vels[k].at(i)- vels[k].at(i-1))/tb_set[i] * pow((t_elapsed - Tf_set[i] + tb_set[i] / 2), 2));
-                }
+                joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
             }
-            t_elapsed+=0.001;
         }
-        else if(t_elapsed >= Tf_set[i] + tb_set[i]/2 && t_elapsed <= temp - temp2/2){
-            for(int k = 0; k<joints_smooth.size(); k++) {
-                    joints_smooth[k].push_back(joints[k].at(i) + vels[k].at(i) * (t_elapsed - Tf_set[i]));
-            }
-            t_elapsed+=0.001;
-        }
-        else{
-            i++;
-        }
+    }
+    else {
+        ROS_ERROR("Trajectory generation failed!");
 
     }
     Point start  = get_end_effector((joint_angles){joints_smooth[0].at(joints_smooth[0].size()-1), joints_smooth[1].at(joints_smooth[0].size()-1),
