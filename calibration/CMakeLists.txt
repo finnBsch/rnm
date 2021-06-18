@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
         #message_generation
         sensor_msgs
         forward_kin
+        tf2_ros
         )
 find_package( OpenCV REQUIRED )
 
@@ -145,6 +146,7 @@ add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
 add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibrate_from_folder_node src/calibrate_from_folder.cpp)
 add_executable(${PROJECT_NAME}_hand_eye_calibration_node src/hand_eye_calibration.cpp)
+add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

@@ -28,7 +28,8 @@ bool get_end_effector(forward_kin::get_endeffector::Request  &req,
   VectorXd in(4);
   in << 0, 0, 0, 1;
   VectorXd out = a_.at(0)*a_.at(1)*a_.at(2)*a_.at(3)*a_.at(4)*a_.at(5)*a_.at(6)*a_.at(7)*in;
-  res.end_effector_pos =  {out[0], out[1], out[2]};
+  res.end_effector_pos =  {out[0], out[1], out[2]}; // original line
+  //res.end_effector_pos =  {out[0], out[1], out[2], out[3], out[4], out[5], out[6]};
   //std::cout << "End_pos: " << "\n" << "x: " << out(0) << "\n" << "y: " << out(1) << "\n" << "z: " << out(2) << "\n";
   return true;
 }

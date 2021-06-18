@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
   ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWrite);
 
-  std::cout << "ready" << endl;
+  std::cout << "ready to receive frames" << endl;
 
   ros::spin();
   return 0;

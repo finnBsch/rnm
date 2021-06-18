@@ -9,18 +9,21 @@
 
 #include <opencv2/imgcodecs.hpp>
 #include "OCVcalib3d.hpp"  // header file that includes the calibrateHandEye method
+#include "OCVcalibration_handeye.cpp"
 #include "cv_bridge/cv_bridge.h"
+#include <cstdlib>
+//#include <opencv2/calib3d.hpp>
+//#include <opencv2/imgproc.hpp>
+#include <sstream>
+#include <string>
 #include "forward_kin/get_endeffector.h"
 #include "geometry_msgs/Pose.h"
 #include "image_transport/image_transport.h"
-#include "sensor_msgs/Image.h"
-#include <sstream>
-#include <string>
 #include "ros/ros.h"
-#include <cstdlib>
+#include "sensor_msgs/Image.h"
 
 using namespace std;
-using namespace cv;
+//using namespace cv;
 using geometry_msgs::TransformStamped;
 
 /*
@@ -102,11 +105,11 @@ int cameraCalibration() {
  */
 
 // containers for calibration data
-vector<TransformStamped> allRobotPoses;
-Mat joint_states;
-vector<Mat> R_gripper2base, t_gripper2base;
+//vector<TransformStamped> allRobotPoses;
+cv::Mat joint_states;
+vector<cv::Mat> R_gripper2base, t_gripper2base;
 
-vector<vector<Point2f>> allCharucoCorners;
+vector<vector<cv::Point2f>> allCharucoCorners;
 vector<vector<int>> allCharucoIds;
 
 // read in text files into joint_states matrix
@@ -135,7 +138,7 @@ void readCalibrationData() {
 
 // quaternion to angles conversion, used in transform2rv()
 // credits to https://github.com/xiaohuits/camera_hand_eye_calibration
-void quat2angaxis(double x, double y, double z, double w, Mat& angaxis){
+void quat2angaxis(double x, double y, double z, double w, cv::Mat& angaxis){
   // normarlise quaternion
   double norm = sqrt(x*x + y*y + z*z + w*w);
   x = x/norm;
@@ -174,14 +177,14 @@ void quat2angaxis(double x, double y, double z, double w, Mat& angaxis){
 // calculating transformation from pose
 // credits to https://github.com/xiaohuits/camera_hand_eye_calibration
 //void transform2rv(TransformStamped transform, Mat& rvec, Mat& tvec){
-void transform2rv(boost::array<double, 3> pose, Mat& rvec, Mat& tvec){ // 3 to 8
-  tvec = Mat::zeros(3,1,CV_64F);
-  rvec = Mat::zeros(3,1,CV_64F);
+void transform2rv(boost::array<double, 3> pose, cv::Mat& rvec, cv::Mat& tvec){ // 3 to 8
+  tvec = cv::Mat::zeros(3,1,CV_64F);
+  rvec = cv::Mat::zeros(3,1,CV_64F);
   //auto rot = transform.transform.rotation;
   //auto tran = transform.transform.translation;
   //quat2angaxis(rot.x, rot.y, rot.z, rot.w, rvec);
 //////////////////////////////////////////////////////////////////// fix dis
-  //quat2angaxis( pose[4], pose[5], pose[6], pose[7], rvec); // was 4,5,6,7 initially
+  //quat2angaxis(  pose[3],pose[4], pose[5], pose[6], rvec); // was 4,5,6,7 initially
   tvec.at<double>(0,0) = pose[0];
   tvec.at<double>(1,0) = pose[1];
   tvec.at<double>(2,0) = pose[2];
@@ -232,20 +235,19 @@ int calculatePose() {
   }
     // now, use transform2rv to calculate transformations
   for (int i = 0; i < poses.size(); i++) {
-    Mat R, t;
+    cv::Mat R, t;
     transform2rv(poses[i], R, t);
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
   }
   ROS_INFO("Done calculating transforms.");
 }
-//allRobotPoses.push_back({(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]});
 
 // perform hand-eye calibration with the calculated transforms
 void handEye(){
     ROS_INFO("Starting hand-eye calibration.");
-    Mat R_cam2gripper, t_cam2gripper;
-    calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper);
+    cv::Mat R_cam2gripper, t_cam2gripper;
+    calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper, cv::CALIB_HAND_EYE_TSAI);
     cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
     cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
 }
