@@ -86,6 +86,13 @@ public:
         MatrixXd points(3,scaling);
         points = getLinePoints(o1, o2, scaling);
 
+        for (int i = 0; i<points.rows();i++){
+            for(int j = 0; j<points.cols();j++){
+                ROS_INFO(" Endeffektor Position %f", points(i,j));
+            }
+            ROS_INFO("----------------------");
+        }
+
         command_pub = nh_.advertise<std_msgs::Float64MultiArray>(command_topic, 1);
 
         //give inverse kinematics the current joint angles of the robot
@@ -148,7 +155,7 @@ public:
         std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        double incrementalCounter =counter/100000.;
+        double incrementalCounter =counter/10.;
 
         bool simYes = true;
         if(simYes){
@@ -198,11 +205,13 @@ public:
             for (int i = 0; i < 7; i++) {
                 ROS_INFO("finalJointAngle %f", finalJointAngles[i]);
             }
-
+            amount_of_movements_++;
             if (amount_of_movements_ == scaling) {
                 ros::shutdown();
             } else {
-                amount_of_movements_++;
+                ROS_INFO("Amount of Movement %i", amount_of_movements_);
+
+
                 counter = 0;
                 finalJointAngles = received_joint_angles[amount_of_movements_];
             }
