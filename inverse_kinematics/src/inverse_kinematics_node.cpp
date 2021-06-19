@@ -6,26 +6,18 @@
  */
 
 
-
-
-
-
-
 #include <ros/ros.h>
 #include "sensor_msgs/JointState.h"
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
 #include <stdlib.h>
-//#include "forward_kin/get_endeffector.h"
 #include "jacobian.h"
 #include <eigen_conversions/eigen_msg.h>
 #include "inverse_kinematics/unserService.h"
 #include <opencv2/core/core.hpp>
 
-
 using namespace tf;
 using namespace Eigen;
-
 
 class IncrementalInverseKinematics {
 
@@ -59,16 +51,10 @@ private:
     VectorXd pre_joint_angles;
     std::array<double, 7> upper_joint_limits;
     std::array<double, 7> lower_joint_limits;
+    int zaehlen = 0;
 
 public:
     std::string text = "vorher";
-
-    // CONTRUCTOR FOR SERVICE CONNECTION WITH FORWARD KIN
-    /*IncrementalInverseKinematics(ros::ServiceClient* client, int size): size_(size), client_(client),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1){
-        incrementalStepSize = 100000.0;
-        limit_ = 10000;
-        counter_ = 0;
-    }*/
 
     // CONTRUCTOR FOR INVERSE KINEMATICS WITHOUT FORWARD KIN SERVICE CONNECTION
     explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1), endeffector(6){
@@ -223,41 +209,10 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         // FOR TESTING
         counter_ = counter_ + 1;
 
-        // ------------- FOR SERVICE CONNECTION ------------------------------
-        //forward_kin::get_endeffector srv; $$$$$$$$$$$
-        //srv.request.joint_angles = transformVectorToArray(joint_angles_);
-
-        // CONNECTION CHECK
-        /*auto a = client_->call(srv);
-        if (a) {
-            //ROS_INFO("A-Matrix: %f", srv.response.layout.data[0]);
-            //ROS_INFO("THETA1: %f",joint_angles_(0));
-        } else {
-          //  ROS_INFO("THETA1: %f",joint_angles_(0));
-            ROS_ERROR("Failed to call service forward_kin");
-            exit; //TODO find better solution
-        }*/
-        // -------------------------------------------------------------------
-
-
         // GET CURRENT TRANSFORMATION MATRIX
         if(size_ ==12) {
             current_transformationmatrix_vector_ << get_transformation_Vector();
-
-            // ------------- FOR SERVICE CONNECTION ------------------------------
-            /*
-                    << srv.response.layout.data[0], srv.response.layout.data[4], srv.response.layout.data[8],
-                    srv.response.layout.data[1], srv.response.layout.data[5], srv.response.layout.data[9],
-                    srv.response.layout.data[2], srv.response.layout.data[6], srv.response.layout.data[10],
-                    srv.response.layout.data[3], srv.response.layout.data[7], srv.response.layout.data[11];
-            */
-            // -------------------------------------------------------------------
-        } else{
-            //current_transformationmatrix_vector_ << srv.response.end_effector_pos[0], srv.response.end_effector_pos[1],
-              //                                      srv.response.end_effector_pos[2];
         }
-
-
 
         //---------------- DO INCREMENTAL CALCULATION ----------------
 
@@ -269,7 +224,7 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
             abs_delta_A(i) = abs(delta_A(i));
         }
 
-        ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
+        //ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
 
         // check if largest entry of absolute is smaller than error
         if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
@@ -301,6 +256,7 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
     bool ik_jointAngles(inverse_kinematics::unserService::Request &req,
                         inverse_kinematics::unserService::Response &res) {
 
+        zaehlen++;
 
         // request joint angles
         for(int i=0;i<7;i++) {
@@ -318,14 +274,11 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         desired_joint_angles_ = incrementalStep();
 
         VectorXd finalA2 = get_transformation_Vector();
-        for(int i=0; i<7;i++){
-            ROS_INFO("desired jointAngles %f",desired_joint_angles_[i]);
-        }
-
 
         res.ik_jointAngles = {desired_joint_angles_[0], desired_joint_angles_[1],
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
+        ROS_INFO("Zähler %i", zaehlen);
         return true;
     }
 };
@@ -342,12 +295,6 @@ int main(int argc, char** argv)  {
     int queue_size;
     node_handle.getParam("topic_name", topic_name);
     node_handle.getParam("queue_size", queue_size);
-
-    // ------------- FOR SERVICE CONNECTION ------------------------------
-    //auto client = node_handle.serviceClient<forward_kin::get_endeffector>(
-    //"/forward_kin_node/get_endeffector"); $$$$$$$$$$$$$$$
-    //IncrementalInverseKinematics inverse_kinematics(&client, size);
-    // -------------------------------------------------------------------
 
     // SIZE OF JACOBIAN, RIGHT NOW ONLY 12 WORKS
     int size = 12;

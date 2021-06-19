@@ -26,6 +26,8 @@ private:
     unsigned int num_joints_;
     std::string command_topic_;
     long counter = 0;
+    int amount_of_movements_ = 0;
+    int scaling = 10;
     std::vector<double> init_position{};
     ros::Publisher command_pub;
     std::array<double,7> finalJointAngles;
@@ -35,7 +37,6 @@ private:
 public:
 
     MatrixXd getLinePoints(VectorXd o1, VectorXd o2,int scalingFactor){
-        ROS_INFO("ich war hier");
         VectorXd p1(3);
         VectorXd p2(3);
         VectorXd line(3);
@@ -80,27 +81,14 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o1 << 0.559209, 0.503714, 0.517182, 0.5, 0.5, 0.5;
-        o2 << 0.759209, 0.703714, 0.717182, 0.5, 0.5, 0.5;
-        int scaling = 10;
+        o1 << 0.359209, 0.303714, 0.317182, 0.5, 0.5, 0.5;
+        o2 << 0.547385, 0.423563, 0.597289, 0.5, 0.5, 0.5;
         MatrixXd points(3,scaling);
-        ROS_INFO("ich bin außerhalb");
         points = getLinePoints(o1, o2, scaling);
-
-        auto a = client.call(srv);
-        if (a)
-        {
-            ROS_INFO("Connection Successful");
-        }
-        else
-        {
-            ROS_ERROR("Failed to call service inverse_kinematics");
-            exit; //TODO find better solution
-        }
 
         command_pub = nh_.advertise<std_msgs::Float64MultiArray>(command_topic, 1);
 
-
+        //give inverse kinematics the current joint angles of the robot
         srv.request.initial_joint_angles = {init_position[0],
                                             init_position[1],
                                             init_position[2],
@@ -110,7 +98,10 @@ public:
                                             init_position[6]};
 
         for(int i = 0; i<scaling;i++) {
+
+
             if(i>=1) {
+
                 srv.request.initial_joint_angles = {received_joint_angles[i - 1][0],
                                                     received_joint_angles[i - 1][1],
                                                     received_joint_angles[i - 1][2],
@@ -121,28 +112,34 @@ public:
             }
             srv.request.desired_endeffector = {points(0, i), points(1, i), points(2, i), o1(3), o1(4), o1(5)};
 
+            auto a = client.call(srv);
+            if (a)
+            {
+                ROS_INFO("Connection Successful");
+            }
+            else
+            {
+                ROS_ERROR("Failed to call service inverse_kinematics");
+                exit; //TODO find better solution
+            }
 
-            received_joint_angles[i] = {srv.response.ik_jointAngles[0], srv.response.ik_jointAngles[1],
+            received_joint_angles[i] = {srv.response.ik_jointAngles[0],
+                                        srv.response.ik_jointAngles[1],
                                         srv.response.ik_jointAngles[2],
-                                        srv.response.ik_jointAngles[3], srv.response.ik_jointAngles[4],
+                                        srv.response.ik_jointAngles[3],
+                                        srv.response.ik_jointAngles[4],
                                         srv.response.ik_jointAngles[5],
                                         srv.response.ik_jointAngles[6]};
         }
 
-        for(int i=0; i<10;i++){
-            for(int j=0; j<7;j++){
-                ROS_INFO("Joints %f", received_joint_angles[i][j]);
+        for (int i=0; i<scaling;i++){
+            for (int j =0;j<7; j++){
+                ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
             }
-            ROS_INFO("----------------");
+            ROS_INFO("--------------------------");
         }
 
         finalJointAngles = received_joint_angles[0];
-
-
-        for( int i=0; i< 7; i++){
-            ROS_INFO("Angles %f", srv.response.ik_jointAngles[i]);
-        }
-
 
     }
 
@@ -201,7 +198,15 @@ public:
             for (int i = 0; i < 7; i++) {
                 ROS_INFO("finalJointAngle %f", finalJointAngles[i]);
             }
-            ros::shutdown();
+
+            if (amount_of_movements_ == scaling) {
+                ros::shutdown();
+            } else {
+                amount_of_movements_++;
+                counter = 0;
+                finalJointAngles = received_joint_angles[amount_of_movements_];
+            }
+
         }
 
     }
