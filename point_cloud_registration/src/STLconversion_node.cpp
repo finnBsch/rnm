@@ -354,7 +354,7 @@ int main(int argc, char** argv)
 
   // load stitched point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud_backup.pcd", *stitched_cloud);
 
   vg.setInputCloud (stitched_cloud);
   vg.setLeafSize (0.005, 0.005, 0.005);
@@ -429,7 +429,7 @@ int main(int argc, char** argv)
   //ICP parameters (examples), we still need to adjust them
   //icp.setEuclideanFitnessEpsilon(1);
   //icp.setTransformationEpsilon(1e-20);
-  icp.setMaximumIterations(20);
+  icp.setMaximumIterations(200);
 
   //align new cloud to stitched cloud and add to the total stitched cloud.
   icp.align(*transformed_cloud);
