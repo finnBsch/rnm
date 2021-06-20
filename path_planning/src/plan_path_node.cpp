@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     range = {-0.0175, 3.7525};
     joint_ranges[5] = range;
     float fac = 0.05;
-    float fac2 = 0.01;
+    float fac2 = 0.02;
     std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
