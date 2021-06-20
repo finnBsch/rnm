@@ -34,6 +34,8 @@ int main(int argc, char **argv)
     forward_kin::get_endeffector srv;
     sensor_msgs::JointState joint_state_msg;
     joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+
+    // create client to get connected to a service
     ros::ServiceClient client = n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
     boost::array<double, 7> arr = {joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2],
                                    joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5],
