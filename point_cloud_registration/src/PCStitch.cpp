@@ -14,6 +14,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include "forward_kin/get_endeffector.h"
 #include "point_cloud_registration/PCJScombined.h"
+#include "point_cloud_registration/alignment_service.h"
 
 class PCStitch
 {
@@ -21,7 +22,8 @@ class PCStitch
   PCStitch(ros::NodeHandle& nh, Eigen::Matrix4f handeye):
         nh_ (nh),
         handeye_ (handeye),
-        pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1))
+        pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1)),
+        message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
     cloud_xyz_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -34,8 +36,11 @@ class PCStitch
   ros::NodeHandle nh_;
   ros::Publisher pub_;
   sensor_msgs::JointState joint_states_;
-
+  Eigen::Matrix4f transformation_matrix;
   Eigen::Matrix4f handeye_;
+  int message_counter_;
+
+  const int message_limit = 15;
   const float leaf_size = 0.005;
   const Eigen::Vector4f xyz_min = {0.15, -0.5, 0.02, 1.0};
   const Eigen::Vector4f xyz_max = {0.7, 0.5, 0.3, 1.0};
@@ -49,6 +54,7 @@ class PCStitch
     received_cloud_ = new pcl::PCLPointCloud2;
     pcl_conversions::toPCL(PCJS->PC, *received_cloud_);
     joint_states_ = PCJS->JS;
+    message_counter_++;
   }
 
   void subsample(){
@@ -133,7 +139,21 @@ class PCStitch
   }
 
   void safeCloud(){
-    pcl::io::savePCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+    pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+  }
+
+  void calculateSkeletonPosition(){
+    point_cloud_registration::alignment_service srv;
+
+    ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>("STLRegistration/alignment_service");
+    pcl::toROSMsg(*stitched_cloud_,srv.request.stitched_cloud);
+    client.call(srv);
+
+    transformation_matrix << srv.response.alignment_transformation.data[0],srv.response.alignment_transformation.data[1],srv.response.alignment_transformation.data[2],srv.response.alignment_transformation.data[3],
+        srv.response.alignment_transformation.data[4],srv.response.alignment_transformation.data[5],srv.response.alignment_transformation.data[6],srv.response.alignment_transformation.data[7],
+        srv.response.alignment_transformation.data[8],srv.response.alignment_transformation.data[9],srv.response.alignment_transformation.data[10],srv.response.alignment_transformation.data[11],
+        srv.response.alignment_transformation.data[12],srv.response.alignment_transformation.data[13],srv.response.alignment_transformation.data[14],srv.response.alignment_transformation.data[15];
+    std::cerr << transformation_matrix << std::endl;
   }
 
  public:
@@ -145,13 +165,11 @@ class PCStitch
     crop();
     ICP();
     publishCloud();
-    safeCloud();
+    if (message_counter_ == message_limit){
+      calculateSkeletonPosition();
+    }
   }
 };
-
-void cloud_cb (const point_cloud_registration::PCJScombined::ConstPtr& PCJS, PCStitch& pcs){
-  pcs.addCloud(PCJS);
-}
 
 int
 main (int argc, char** argv)
@@ -170,7 +188,7 @@ main (int argc, char** argv)
   PCStitch pcs(nh, handeye);
 
 
-  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/PCJScombined", queue_size, boost::bind(&cloud_cb, _1, pcs));
+  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
   ros::spin ();
 }
 
