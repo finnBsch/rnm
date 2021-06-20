@@ -12,13 +12,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgcodecs.hpp>
-#include "OCVcalib3d.hpp"  // header file that includes the calibrateHandEye method
-//#include "OCVcalibration_handeye.cpp"
+#include "OCVcalib3d.hpp"  //  calibrateHandEye method
+#include "OCVcalibration_handeye.cpp"
 #include <geometry_msgs/TransformStamped.h>
+#include <tf/transform_listener.h>
+
+#include <opencv2/core/mat.hpp>
 
 #include <tf2_ros/transform_listener.h>
 
-//using namespace cv;
+using namespace cv;
 using namespace std;
 
 // define number of frames  to be extracted and used for calibration... later on this will be number of good frame pairs
@@ -41,7 +44,8 @@ vector<geometry_msgs::TransformStamped> allRobotPoses;
 // tf listener to get robot pose
 tf2_ros::Buffer tfBuffer;
 //tf2_ros::TransformListener tfListener;
-cv::String robot_base, gripper;
+cv::String robot_base = "panda_link0";
+cv::String gripper = "panda_link8";
 
 // saving jointState msg
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
@@ -100,68 +104,213 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
 
 // pseudo rgb calibration to create rvecs + tvecs
 int cameraCalibration() {
-  //int argc, char **argv
-  //(void)argc;
-  //(void)argv;
-  ROS_INFO("Starting pseudo camera calibration.");
-  std::vector<cv::String> fileNames;
-  cv::glob("/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_*.jpg", fileNames, false);
-  cv::Size patternSize(9 - 1, 6 - 1);
-  std::vector<std::vector<cv::Point2f>> q(fileNames.size());
+  /* TODO: make sure joint states are synced with images*/
+  cv::Size rgbFrameSize(2048, 1536);
+  cv::Size irFrameSize(640, 576);
 
-  std::vector<std::vector<cv::Point3f>> Q;
-  // 1. Generate checkerboard (world) coordinates Q. The board has 9x6 squares
-  // fields with a size of 44mm
-  int checkerBoard[2] = {9,6};
-  int fieldSize = 44;
-  // Defining the world coordinates for 3D points
-  std::vector<cv::Point3f> objp;
-  for(int i = 1; i<checkerBoard[1]; i++){
-    for(int j = 1; j<checkerBoard[0]; j++){
-      objp.push_back(cv::Point3f(j*fieldSize,i*fieldSize,0));
+  std::vector<cv::String> rgbFileNames(n_frames);
+  for(int i = 0; i<n_frames; i++){
+    rgbFileNames[i] = "/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
+  }
+  //std::vector<cv::String> irFileNames;
+  // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
+  //std::string rgbFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/*.jpg");
+  //cv::glob(rgbFolder, rgbFileNames, true);  // load rgb images into opencv
+  //std::string irFolder("/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/ir/*.jpg");
+  // std::string irFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/ir/*.jpg");
+  //cv::glob(irFolder, irFileNames, true);
+
+  //std::vector<std::vector<cv::Point3f>> irObjP;   // Checkerboard world coordinates
+  std::vector<std::vector<cv::Point3f>> rgbObjP;  // Checkerboard world coordinates
+
+  // Define checkerboard Parameters for both frames
+  int fieldSize = 40;
+  int checkerBoard[2] = {9, 6};        // Checkerboard pattern
+  cv::Size patternSize(9 - 1, 6 - 1);  // Number of inner corners per a chessboard row and column
+
+  std::vector<std::vector<cv::Point2f>> rgbcorners(rgbFileNames.size());  // corners in rgb frames
+  //std::vector<std::vector<cv::Point2f>> ircorners(irFileNames.size());    // corners in ir frames
+  std::vector<cv::Point2f> rgbimgp;  // Define the rgb img point
+  //std::vector<cv::Point2f> irimgp;   // Define the ir img point
+
+  // Define the world coordinates for 3D points
+
+  std::vector<cv::Point3f> rgbobjp;  // define the object point in 3D
+  for (int i = 1; i < checkerBoard[1]; i++) {
+    for (int j = 1; j < checkerBoard[0]; j++) {
+      rgbobjp.push_back(cv::Point3f(j * fieldSize, i * fieldSize, 0));
     }
   }
-  std::vector<cv::Point2f> imgPoint;
-  // Detect feature points on checkerboard
-  std::size_t i = 0;
-  for (auto const &f : fileNames) {
-    std::cout << std::string(f) << std::endl;
-    // 2. Read images
-    cv::Mat img = cv::imread(fileNames[i]);
-    cv::Mat gray;
-    cv::cvtColor(img, gray, cv::COLOR_RGB2GRAY);
-    // if all points found: grayscale + pattern size + cv stuff --> camera coordinates q
-    bool patternFound = cv::findChessboardCorners(gray, patternSize, q[i], cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE + cv::CALIB_CB_FAST_CHECK);
-    // 2. Use cv::cornerSubPix() to refine the found corner detections
-    // if found: push to Q
-    if(patternFound){
-      cv::cornerSubPix(gray, q[i],cv::Size(11,11), cv::Size(-1,-1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.1));
-      Q.push_back(objp);
+
+  // Define the world coordinates for 3D points of the ir frame
+  std::vector<cv::Point3f> irobjp;  // define the object point in 3D
+  for (int i = 1; i < checkerBoard[1]; i++) {
+    for (int j = 1; j < checkerBoard[0]; j++) {
+      irobjp.push_back(cv::Point3f(j * fieldSize, i * fieldSize, 0));
     }
+  }
+
+  // Detect corners of the checkerboard in the RGB Frames
+  cv::Mat rgbimg;
+  std::size_t i2 = 0;
+  std::size_t i = 0;
+  std::size_t i_deleted = 0;
+  for (auto const& f : rgbFileNames) {
+    std::cout << std::string(f) << std::endl;
+    rgbimg = cv::imread(f);  // Load the images
+    cv::Mat rgbgray;         // grayscale the image
+    cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
+    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i2],
+
+                                                     cv::CALIB_CB_ADAPTIVE_THRESH
+                                                     //+ cv::CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv::CALIB_CB_FILTER_QUADS);
+    // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
+    if (rgbPatternFound) {
+      cv::cornerSubPix(
+          rgbgray, rgbcorners[i2], cv::Size(11, 11), cv::Size(-1, -1),// winsize 11,11 gute
+          cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
+      rgbObjP.push_back(rgbobjp);
+      i2++;
+    } else {
+      rgbcorners.erase(next(rgbcorners.begin(), i - i_deleted));
+      cout << endl << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
+      allRobotPoses.erase(next(allRobotPoses.begin(), i - i_deleted));
+      cout << endl << "!!!!!!!!Joint state " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
+      i_deleted++;
+    }
+
     i++;
   }
-  // outputs from calibrateCamera
-  cv::Matx33f K(cv::Matx33f::eye());  // intrinsic camera matrix
-  cv::Vec<float, 5> k(0, 0, 0, 0, 0); // distortion coefficients
-  //cv::Vec<float, 8> k(0, 0, 0, 0, 0,0,0,0); // distortion coefficients
+  cout << "All RGB Corners detected and safed in rgbcorners\n";
 
-  // rotation + translation vector
-  //std::vector<cv::Mat> rvecs, tvecs;
+  // for(int i =0; i <  rgbFileNames.size() ; i++){
+  //   // Display the detected pattern on the chessboard
+  //   rgbimg = ;
+  //   cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
+  //   cv::imshow("RGB chessboard corner detection", rgbimg);
+  //   cv::waitKey(0);
+  // }
+
+  /*
+  // Detect corners of the checkerboard in the IR Frames
+  cv::Mat irimg;
+  std::size_t m = 0;
+  std::size_t m2 = 0;
+  std::size_t m_deleted = 0;
+  for (auto const& f : irFileNames) {
+    std::cout << std::string(f) << std::endl;
+    irimg = cv::imread(f);  // Load the images
+    cv::Mat irgray;         // grayscale the image
+    cv::cvtColor(irimg, irgray, cv::COLOR_RGB2GRAY);
+    bool irpatternFound =
+        cv::findChessboardCorners(irgray, patternSize, ircorners[m2],
+                                  cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE);
+
+    // Display the detected chessboard pattern on the ir frames
+    // cv::drawChessboardCorners(irimg, patternSize, ircorners[m], irpatternFound);
+    // cv::imshow("IR chessboard corner detection", irimg);
+    // cv::waitKey(1);
+    if (irpatternFound) {
+      cv::cornerSubPix(
+          irgray, ircorners[m2], cv::Size(20, 20), cv::Size(-1, -1),
+          cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
+      irObjP.push_back(irobjp);
+      m2++;
+    } else {
+      ircorners.erase(next(ircorners.begin(), m - m_deleted));
+      cout << endl << "!!!!!!!!File " << irFileNames[m] << "not used!!!!!!!!" << endl << endl;
+      m_deleted++;
+    }
+    m++;
+  }
+
+  cout << "All IR Corners detected and safed in ircorners\n";
+   */
+
+  // Calibrate the rgb frame intrinsics
+  cv::Mat rgbK;  // calibration Matrix K
+  Mat rgbk = (Mat1d(1, 8));
+  std::vector<cv::Mat> rvecs, tvecs;
   std::vector<double> stdIntrinsics, stdExtrinsics, perViewErrors;
-  // opencv stuff
-  int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_FIX_K3 +
-              cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT;
-  cv::Size frameSize(2048, 1536);//
-  std::cout << "Calibrating..." << std::endl;
+  int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
+              cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
+
+  std::cout << "Calibrating rgb intrinsics...\n" << endl;
+
+  float rgberror =
+      cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);
+  std::cout << "Reprojection error of rgb frames = " << rgberror << "\nK =\n"
+            << rgbK << "\nk=\n"
+            << rgbk << std::endl;
+
+  cv::Mat rvec;
+  cv::Mat tvec;
+  std::cout << "aAAA " << rgbObjP.size() << " bbb" << rgbcorners.size() << "cccc " << rgbFileNames.size() << std::endl;
+  for (int i = 0; i < rgbFileNames.size(); i++) {
+    cv::InputArray rgb1ObjP = rgbObjP[i];
+    cv::InputArray rgb1corners = rgbcorners[i];
+    cv::solvePnPRansac(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec);
+    cameraPosesR.push_back(rvec);
+    cv::Mat temp;
+    cv::Rodrigues(rvec, temp);
+    cameraPosesR_Mat.push_back(temp);
+    cameraPosesT.push_back(tvec);
+  }
+
+/*
+
+
+  // Calibrate the ir frame intrinsics
+  cv::Mat irK;  // calibration Matrix K
+  cv::Mat irk = (Mat1d(1, 8));
+  std::vector<cv::Mat> irrvecs, irtvecs;
+  std::vector<double> irIntrinsics, irExtrinsics, irperViewErrors;
+  int irflags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
+                cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
+  std::cout << "Calibrating ir intrinsics...\n" << std::endl;
+  // 4. Call "float error = cv::calibrateCamera()" with the input coordinates
+  // and output parameters as declared above...
+  float irerror =
+      cv::calibrateCamera(irObjP, ircorners, irFrameSize, irK, irk, irrvecs, irtvecs, irflags);
+  std::cout << "Reprojection error of the ir frames = " << irerror << "\nK =\n"
+            << irK << "\nk=\n"
+            << irk << std::endl;
+
+  cv::Mat rgbmapX, rgbmapY;
+  cv::initUndistortRectifyMap(rgbK, rgbk, cv::Matx33f::eye(), rgbK, rgbFrameSize, CV_32FC1, rgbmapX,
+                              rgbmapY);
+  cv::Mat irmapX, irmapY;
+  cv::initUndistortRectifyMap(irK, irk, cv::Matx33f::eye(), irK, irFrameSize, CV_32FC1, irmapX,
+                              irmapY);
+
+  // Show lens corrected rgb images
+  for (auto const& f : rgbFileNames) {
+    std::cout << std::string(f) << std::endl;
+
+    cv::Mat rgbimg = cv::imread(f, cv::IMREAD_COLOR);
+    cv::Mat rgbimgUndistorted;
+    // 5. Remap the image using the precomputed interpolation maps.
+    cv::remap(rgbimg, rgbimgUndistorted, rgbmapX, rgbmapY, cv::INTER_LINEAR);
+  }
+
+  cv::Mat K1, K2, R, F, E;
+  cv::Vec3d T;
+  cv::Mat D1, D2;
+  K1 = rgbK;
+  K2 = irK;
+  D1 = rgbk;
+  D2 = irk;
+  */
+
+  /*
   float error = cv::calibrateCamera(Q, q, frameSize, K, k, rvecs, tvecs, flags);
-  std::cout << "Reprojection error = " << error << "\nK =\n"
-            << K << "\nk=\n"
-            << k << std::endl;
+  std::cout << "Reprojection error = " << error << "\nK =\n" << K << "\nk=\n" << k << std::endl;
   // Precompute lens correction interpolation
   cv::Mat mapX, mapY;
-  cv::initUndistortRectifyMap(K, k, cv::Matx33f::eye(), K, frameSize, CV_32FC1,
-                              mapX, mapY);
+  cv::initUndistortRectifyMap(K, k, cv::Matx33f::eye(), K, frameSize, CV_32FC1, mapX, mapY);
   return 0;
+   */
 }
 
 // two transformation functions that are going to be used in handEye()
@@ -228,7 +377,7 @@ void transform2rv(geometry_msgs::TransformStamped transform, cv::Mat& rvec, cv::
 void handEye(){
 
   vector<cv::Mat> R_gripper2base, t_gripper2base;
-  for(int i=0; i<allRobotPoses.size()-1; i++)
+  for(int i=0; i<allRobotPoses.size(); i++)
   {
     cv::Mat R, t;
     transform2rv(allRobotPoses[i], R, t);
@@ -277,10 +426,11 @@ int main(int argc, char** argv) {
   ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWrite);
 
   std::cout << "\nready to receive frames" << endl;
-  while(js_count < 10+1) {
+  while(js_count < n_frames
+      ) {
     ros::spinOnce();
   }
-  cout << "\n collected " << n_frames << " frames" << endl;
+  cout << "\ncollected " << js_count << " frames" << endl;
   cout << "starting camera calibration" << endl;
   cameraCalibration();
   handEye();
