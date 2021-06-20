@@ -60,6 +60,7 @@ class Scanner {
   //Subscribe to the pointcloud and jointstates topic and match them by time stamp
   //boolean "published_message", to check (in the callback function) if there was already an message published for this goal pose
   void getPointCloud(){
+
     std:cerr << "entered getPC" << std::endl;
     published_message = false;
     filtered_cloud.subscribe(nh_, "/points2", pc_queue_size);
@@ -72,13 +73,17 @@ class Scanner {
 
     //when we work with static poses, there is no need for time stamp matching, so we could just take the next incoming pointcloud and jointstates and publish them as a combined message
     //this would also make the callback function (publishMessage) unnecessary
-    /*    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("points2");
+/*    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("points2");
     sensor_msgs::JointStateConstPtr JS = ros::topic::waitForMessage<sensor_msgs::JointState>("joint_states");
-    point_cloud_registration::PCJScombined PCJS;
-    PCJS.PC = *PC;
-    PCJS.JS = *JS;
-    pub_.publish(PCJS);
-    sendGoalPose();*/
+
+     //make sure messages have been received (apparently not necessary, but maybe we should still keep it)
+     if(JS != NULL && PC != NULL){
+       point_cloud_registration::PCJScombined PCJS;
+       PCJS.PC = *PC;
+       PCJS.JS = *JS;
+       pub_.publish(PCJS);
+       sendGoalPose();
+     }*/
   }
 
   //callback function to publish the matched pc and js
