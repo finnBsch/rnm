@@ -77,7 +77,15 @@ float euclidean_norm(joint_angles A){
     }
     return sqrt(total_distance);
 }
-
+double wrapMinMax(double x, double min, double max)
+{
+  return min + wrapMax(x - min, max - min);
+}
+double wrapMax(double x, double max)
+{
+  /* integer math: `(max + x % max) % max` */
+  return fmod(max + fmod(x, max), max);
+}
 joint_angles random_point(array<array<float, 2>, 6> joint_ranges){
     joint_angles sampled;
     float LO;

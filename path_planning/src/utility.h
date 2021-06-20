@@ -58,6 +58,8 @@ struct normal_random_variable
         return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](auto x) { return dist(gen); });
     }
 };
+double wrapMax(double x, double max);
+double wrapMinMax(double x, double min, double max);
 float euclidean_dist(Point A, Point B);
 float euclidean_dist_sqrd(Point A, Point B);
 float euclidean_dist_sqrd_joint(joint_angles A, joint_angles B);

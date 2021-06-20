@@ -10,6 +10,9 @@
 #include "forward_kin/get_endeffector.h"
 #include "inverse_kinematics/unserService.h"
 
+
+/* good routes:
+ * - [0.56, 0.3, 0.5] -> [0.12, 0.05, 0.4]*/
 using namespace std::chrono;
 
 int main(int argc, char **argv)
@@ -32,8 +35,7 @@ int main(int argc, char **argv)
   ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
   ros::Publisher traj_pub = n.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10);
   forward_kin::get_endeffector srv;
-  sensor_msgs::JointState joint_state_msg;
-  joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+  sensor_msgs::JointState joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
   inverse_kinematics::unserService srv_inv;
   ros::ServiceClient client = n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
   ros::ServiceClient client_inv = n.serviceClient<inverse_kinematics::unserService>("inverse_kinematics_node/unserService");
@@ -69,14 +71,15 @@ int main(int argc, char **argv)
     for (int i = 0; i < 6; i++) {
       if ((srv_inv.response.ik_jointAngles[i] < joint_ranges[i][0] ||
            srv_inv.response.ik_jointAngles[i] > joint_ranges[i][1])) {
-        for(int j = 0; j <6; j++) {
-          float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-          if(p<0.5) {
-            arr[j] = arr[j] * 1.01;
-          }
-          else{
-            arr[j] = arr[j] * 0.99;
-          }
+        float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        if(p<0.3) {
+          arr[i] = arr[i] * 1.1;
+        }
+        else if(p<0.0){
+          arr[i]= arr[i] *(-1);
+        }
+        else{
+          arr[i] = arr[i] * 0.9;
         }
         not_feasible = true;
         break;
@@ -98,7 +101,7 @@ int main(int argc, char **argv)
   float d_ = -0.7;
   float e_ = 0;
   float f_ = 0;
-  float step_size = 0.03;
+  float step_size = 0.01;
   bool goal_joint = true;
   int num_nodes_extra = 5000;
   /*ros::param::get("~ss", step_size);
@@ -183,9 +186,9 @@ int main(int argc, char **argv)
   // Line list is red
   line_list[0].color.r = 1.0;
   line_list[0].color.a = 1.0;
-  line_list[0].pose.position.x = 0.45;
-  line_list[0].pose.position.y = 0;
-  line_list[0].pose.position.z = 0.7;
+  line_list[0].pose.position.x = 0.35;
+  line_list[0].pose.position.y = 0.2;
+  line_list[0].pose.position.z = 0.5;
   line_list[0].scale.x = 0.15;
   line_list[0].scale.y = 0.15;
   line_list[0].scale.z = 0.15;

@@ -108,37 +108,47 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params, r
   goal_p = get_end_effector(goal_point);
   // check if valid
   bool not_feasible = false;
-  for (int i = 0; i <goal_point.size(); i++) {
+  for (int i = 0; i < goal_point.size(); i++) {
     if ((goal_point[i] < params.joint_ranges[i][0] || goal_point[i] > params.joint_ranges[i][1])) {
       not_feasible = true;
-      ROS_ERROR("GOAL POINT NOT FEASIBLE");
+      ROS_ERROR("GOAL POINT NOT FEASIBLE (out of range)");
       break;
     }
   }
   if(check_collision(goal_point)){
     not_feasible = true;
-    ROS_ERROR("GOAL POINT NOT FEASIBLE");
+    ROS_ERROR("GOAL POINT NOT FEASIBLE (Collision)");
   }
   auto arr = srv_inv.request.initial_joint_angles;
   while(not_feasible) {
+    auto angles = srv_inv.response.ik_jointAngles;
+    for(int i = 0; i < 6; i++){
+      angles[i] = wrapMinMax(angles[i], -M_PI, M_PI);
+    }
     for (int i = 0; i < 6; i++) {
-      if ((srv_inv.response.ik_jointAngles[i] < params.joint_ranges[i][0] ||
-           srv_inv.response.ik_jointAngles[i] > params.joint_ranges[i][1])) {
+      if ((angles[i] < params.joint_ranges[i][0] ||
+           angles[i] > params.joint_ranges[i][1])) {
         for(int j = 0; j <6; j++) {
           float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-          if(p<0.5) {
-            arr[j] = arr[j] * 1.01;
+          if(p<0.3) {
+            arr[j] = arr[j] * 1.1;
+          }
+          else if(p<0.5){
+            arr[j] = arr[j] *(-1);
           }
           else{
-            arr[j] = arr[j] * 0.99;
+            arr[j] = arr[j] * 0.9;
           }
         }
+        //ROS_ERROR("GOAL POINT NOT FEASIBLE (out of range)");
+
         not_feasible = true;
         break;
       }
       else if(check_collision((joint_angles){static_cast<float>(srv_inv.response.ik_jointAngles[0]), static_cast<float>(srv_inv.response.ik_jointAngles[1]), static_cast<float>(srv_inv.response.ik_jointAngles[2]),
                                              static_cast<float>(srv_inv.response.ik_jointAngles[3]), static_cast<float>(srv_inv.response.ik_jointAngles[4]), static_cast<float>(srv_inv.response.ik_jointAngles[5])})){
         not_feasible = true;
+        //ROS_ERROR("GOAL POINT NOT FEASIBLE (Collision)");
       }
       else{
         not_feasible = false;
@@ -551,20 +561,26 @@ void rrt::initialize_world() {
   mDispatcher = new btCollisionDispatcher(mConfig);
   mBroadphase = new btDbvtBroadphase();
   mColWorld = new btCollisionWorld(mDispatcher, mBroadphase, mConfig);
-  auto cyl0 = add_cylinder(btVector3(0.05, 0.3/2, 0.05), 2);
+  /*auto cyl0 = add_cylinder(btVector3(0.05, 0.3/2, 0.05), 2);
   auto cyl1 = add_cylinder(btVector3(0.06, 0.316/2, 0.06), 1);
   auto cyl2 = add_cylinder(btVector3(0.05, 0.2/2, 0.05), 2);
   auto cyl3 = add_cylinder(btVector3(0.07, 0.385/2, 0.07),2);
   auto cyl4 = add_cylinder(btVector3(0.05, 0.2, 0.05), 2);
-  auto cyl5 = add_cylinder(btVector3(0.005, 0.2, 0.005), 2);
-  auto sphere = add_sphere(0.1);
+  auto cyl5 = add_cylinder(btVector3(0.005, 0.05, 0.005), 2);*/
+  auto cyl0 = add_cylinder(btVector3(0.05, 0.05, 0.3/2), 2);
+  auto cyl1 = add_cylinder(btVector3(0.06, 0.316/2, 0.06), 1);
+  auto cyl2 = add_cylinder(btVector3(0.05, 0.05, 0.2/2), 2);
+  auto cyl3 = add_cylinder(btVector3(0.07, 0.07, 0.385/2),2);
+  auto cyl4 = add_cylinder(btVector3(0.05, 0.05, 0.107), 2);
+  auto cyl5 = add_cylinder(btVector3(0.005, 0.005, 0.05), 2);
+  auto sphere = add_sphere(0.075);
   auto box = add_body_obstacle(0.4);
   btTransform tr;
   tr.setIdentity();
-  tr.setOrigin(btVector3(0.45, 0, 0.7));
+  tr.setOrigin(btVector3(0.35, 0.2, 0.5));
   sphere->setWorldTransform(tr);
   tr.setOrigin(btVector3(0.35, 0, 0.1));
-  box->setWorldTransform(tr),
+  box->setWorldTransform(tr);
   mObjects.push_back(cyl0);
   mObjects.push_back(cyl1);
   mObjects.push_back(cyl2);
@@ -670,8 +686,10 @@ bool rrt::check_collision(joint_angles angles) {
   Matrix<float, 4, 1> in_3;
   in_3 << 0, 0, -0.192, 1;
   Matrix<float, 4, 1> col_center_3 = joint4*in_3;
+  btMatrix3x3 rot3;
+  eig_to_bt(joint4, rot3);
   tr.setOrigin(btVector3(col_center_3[0], col_center_3[1], col_center_3[2]));
-  tr.setBasis(rot2);
+  tr.setBasis(rot3);
   mObjects.at(3)->setWorldTransform(tr);
 
   get_transformationmatrix2(angles[5], a(5), d(5), alpha(5), joint5);
@@ -698,10 +716,11 @@ bool rrt::check_collision(joint_angles angles) {
   mObjects.at(5)->setWorldTransform(tr);
 
   SimulationContactResultCallback cb;
-  for(int i = 0; i<5; i++){
+  for(int i = 0; i<mObjects.size(); i++){
     for(int j = 0; j<mColObjects.size(); j++) {
       mColWorld->contactPairTest(mObjects.at(i), mColObjects.at(j), cb);
       if (cb.bCollision) {
+        ROS_ERROR("Collision at cylinder %i with obstacle %i", i, j);
         return true;
       }
 
