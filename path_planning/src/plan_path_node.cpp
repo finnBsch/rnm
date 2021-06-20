@@ -37,7 +37,8 @@ int main(int argc, char **argv)
   inverse_kinematics::unserService srv_inv;
   ros::ServiceClient client = n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
   ros::ServiceClient client_inv = n.serviceClient<inverse_kinematics::unserService>("inverse_kinematics_node/unserService");
-  boost::array<double, 6> des_ef = {0.3, 0.0, 0.75, 0, 0, M_PI};
+  std_msgs::Float64MultiArray goal_point_ = *(ros::topic::waitForMessage<std_msgs::Float64MultiArray>("/goal_p",ros::Duration(10)));
+  boost::array<double, 6> des_ef = {goal_point_.data[0], goal_point_.data[1], goal_point_.data[2], 0, 0, M_PI};
   boost::array<double, 7> arr = {joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2],
                                  joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5],
                                  joint_state_msg.position[6]};

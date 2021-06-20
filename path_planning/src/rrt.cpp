@@ -103,7 +103,7 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params, r
 
   // robot params
   a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
-  d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+  d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107+0.1;
   alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
   goal_p = get_end_effector(goal_point);
   // check if valid
@@ -556,6 +556,7 @@ void rrt::initialize_world() {
   auto cyl2 = add_cylinder(btVector3(0.05, 0.2/2, 0.05), 2);
   auto cyl3 = add_cylinder(btVector3(0.07, 0.385/2, 0.07),2);
   auto cyl4 = add_cylinder(btVector3(0.05, 0.2, 0.05), 2);
+  auto cyl5 = add_cylinder(btVector3(0.005, 0.2, 0.005), 2);
   auto sphere = add_sphere(0.1);
   auto box = add_body_obstacle(0.4);
   btTransform tr;
@@ -569,6 +570,7 @@ void rrt::initialize_world() {
   mObjects.push_back(cyl2);
   mObjects.push_back(cyl3);
   mObjects.push_back(cyl4);
+  mObjects.push_back(cyl5);
   mColObjects.push_back(sphere);
   mColObjects.push_back(box);
 }
@@ -686,6 +688,14 @@ bool rrt::check_collision(joint_angles angles) {
 
   get_transformationmatrix2(0, a(7), d(7), alpha(7), joint7);
   joint7 = joint6*joint7;
+  Matrix<float, 4, 1> in_5;
+  in_5 << 0, 0, -0.05, 1;
+  Matrix<float, 4, 1> col_center_5 = joint7*in_5;
+  btMatrix3x3 rot5;
+  eig_to_bt(joint7, rot5);
+  tr.setOrigin(btVector3(col_center_5[0], col_center_5[1], col_center_5[2]));
+  tr.setBasis(rot5);
+  mObjects.at(5)->setWorldTransform(tr);
 
   SimulationContactResultCallback cb;
   for(int i = 0; i<5; i++){
