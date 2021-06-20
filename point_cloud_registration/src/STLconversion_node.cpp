@@ -25,7 +25,13 @@
 #include <pcl/features/fpfh.h>
 #include <pcl/registration/ia_ransac.h>
 #include <pcl/registration/icp.h>
-//#include <pcl/registration/ndt.h>
+#include <pcl/registration/ndt.h>
+
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/fpfh_omp.h>
+#include <pcl/registration/sample_consensus_prerejective.h>
+#include <pcl/segmentation/sac_segmentation.h>
+
 
 //using namespace std::chrono_literals;
 
@@ -40,8 +46,8 @@ class FeatureCloud
 
   FeatureCloud () :
       search_method_xyz_ (new SearchMethod),
-      normal_radius_ (0.02f),
-      feature_radius_ (0.02f)
+      normal_radius_ (0.025f),
+      feature_radius_ (0.045f)
   {}
 
   ~FeatureCloud () {}
@@ -149,9 +155,9 @@ class TemplateAlignment
   };
 
   TemplateAlignment () :
-      min_sample_distance_ (0.005f),//0.05
-      max_correspondence_distance_ (0.002f*0.002f), //0.01f*0.01f
-      nr_iterations_ (500)
+      min_sample_distance_ (0.05f),//0.05
+      max_correspondence_distance_ (0.1f*0.1f), //0.01f*0.01f
+      nr_iterations_ (300)
   {
     // Initialize the parameters in the Sample Consensus Initial Alignment (SAC-IA) algorithm
     sac_ia_.setMinSampleDistance (min_sample_distance_);
@@ -354,7 +360,7 @@ int main(int argc, char** argv)
 
   // load stitched point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud_backup.pcd", *stitched_cloud);
+  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
 
   vg.setInputCloud (stitched_cloud);
   vg.setLeafSize (0.005, 0.005, 0.005);
@@ -373,6 +379,7 @@ int main(int argc, char** argv)
   //pass.setFilterLimits (0, depth_limit);
   //pass.filter (*stitched_cloud);
 
+  /*
   // Assign to the target FeatureCloud
   FeatureCloud target_cloud;
   target_cloud.setInputCloud (stitched_cloud);
@@ -400,54 +407,158 @@ int main(int argc, char** argv)
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::transformPointCloud (*best_template.getPointCloud (), *transformed_cloud, best_alignment.final_transformation);
 
+*/
 
+  // Types
+  typedef pcl::PointXYZRGBNormal PointNT;
+  typedef pcl::PointCloud<PointNT> PointCloudT;
+  typedef pcl::FPFHSignature33 FeatureT;
+  typedef pcl::FPFHEstimationOMP<PointNT,PointNT,FeatureT> FeatureEstimationT;
+  typedef pcl::PointCloud<FeatureT> FeatureCloudT;
+  typedef pcl::visualization::PointCloudColorHandlerCustom<PointNT> ColorHandlerT;
+
+  // Point clouds
+  PointCloudT::Ptr object (new PointCloudT);
+  PointCloudT::Ptr object_aligned (new PointCloudT);
+  PointCloudT::Ptr scene (new PointCloudT);
+  FeatureCloudT::Ptr object_features (new FeatureCloudT);
+  FeatureCloudT::Ptr scene_features (new FeatureCloudT);
+
+  pcl::io::loadPCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *scene);
+
+  pcl::io::vtkPolyDataToPointCloud(polydata, *object);
+
+  for (int i = 0; i < object->points.size(); i++)
+  {
+    object->points[i].x /=1000 ;
+    object->points[i].y /=1000 ;
+    object->points[i].z /=1000 ;
+    //skeleton_cloud_scaled->points.push_back(pcl::PointXYZRGB(pt.x * xStretch, pt.y * yStretch, pt.z * zStretch));
+  }
+
+  // Downsample
+  pcl::console::print_highlight ("Downsampling...\n");
+  pcl::VoxelGrid<PointNT> grid;
+  const float leaf = 0.005f;
+  grid.setLeafSize (leaf, leaf, leaf);
+  grid.setInputCloud (object);
+  grid.filter (*object);
+  grid.setInputCloud (scene);
+  grid.filter (*scene);
+
+  pcl::console::print_highlight ("Estimating scene normals...\n");
+  pcl::NormalEstimationOMP<PointNT,PointNT> nest;
+  nest.setRadiusSearch (0.01);
+  nest.setInputCloud (object);
+  nest.compute (*object);
+  nest.setInputCloud (scene);
+  nest.compute (*scene);
+
+  // Estimate features
+  pcl::console::print_highlight ("Estimating features...\n");
+  FeatureEstimationT fest;
+  fest.setRadiusSearch (0.025);
+  fest.setInputCloud (object);
+  fest.setInputNormals (object);
+  fest.compute (*object_features);
+  fest.setInputCloud (scene);
+  fest.setInputNormals (scene);
+  fest.compute (*scene_features);
+
+  // Perform alignment
+  pcl::console::print_highlight ("Starting alignment...\n");
+  pcl::SampleConsensusPrerejective<PointNT,PointNT,FeatureT> align;
+  align.setInputSource (object);
+  align.setSourceFeatures (object_features);
+  align.setInputTarget (scene);
+  align.setTargetFeatures (scene_features);
+  align.setMaximumIterations (50000); // Number of RANSAC iterations
+  align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+  align.setCorrespondenceRandomness (5); // Number of nearest features to use
+  align.setSimilarityThreshold (0.8f); // Polygonal edge length similarity threshold
+  align.setMaxCorrespondenceDistance (2.5f * leaf); // Inlier threshold
+  align.setInlierFraction (0.5f); // Required inlier fraction for accepting a pose hypothesis
+
+  {
+    pcl::ScopeTime t("Alignment");
+    align.align (*object_aligned);
+  }
+
+  if (align.hasConverged ())
+  {
+  /*
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr object_aligned_RGB (new pcl::PointCloud<pcl::PointXYZRGB>);
+    object_aligned_RGB->resize(object_aligned->size());
+
+    for (size_t i = 0; i < object_aligned->points.size(); ++i)
+    {
+      object_aligned_RGB->points[i].x=object_aligned->points[i].x; //error
+      object_aligned_RGB->points[i].y=object_aligned->points[i].y; //error
+      object_aligned_RGB->points[i].z=object_aligned->points[i].z; //error
+      object_aligned_RGB->points[i].r=object_aligned->points[i].r; //error
+      object_aligned_RGB->points[i].g=object_aligned->points[i].g; //error
+      object_aligned_RGB->points[i].b=object_aligned->points[i].b; //error
+    }
+    */
 
 /*
   pcl::NormalDistributionsTransform<pcl::PointXYZRGB, pcl::PointXYZRGB> ndt;
   //Set the NDT parameter dependent on the scale
   //Set the minimum conversion difference for the termination condition
-  ndt.setTransformationEpsilon(0.000000000000001);//0.01
+  ndt.setTransformationEpsilon(0.01);//0.01
   //Set the maximum step size for More-Thuente line search
   ndt.setStepSize(0.1); //0.1
   //Set the resolution of the NDT grid structure (VoxelGridCovariance)
   ndt.setResolution(0.1); //1.0
   //Set the maximum number of matching iterations
-  ndt.setMaximumIterations(100);
+  ndt.setMaximumIterations(10);
   // Set the point cloud to be registered
-  ndt.setInputCloud(skeleton_cloud);
+  ndt.setInputCloud(transformed_cloud);
   //Set point cloud registration target
   ndt.setInputTarget(stitched_cloud);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  //pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   ndt.align (*transformed_cloud);
-  pcl::transformPointCloud (*skeleton_cloud, *transformed_cloud, ndt.getFinalTransformation());
+  pcl::transformPointCloud (*transformed_cloud, *transformed_cloud, ndt.getFinalTransformation());
 */
 
-  pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-  icp.setInputSource(transformed_cloud);
-  icp.setInputTarget(stitched_cloud);
+
+  /*
+  pcl::IterativeClosestPoint<pcl::PointXYZRGBNormal, pcl::PointXYZRGBNormal> icp;
+  icp.setInputSource(object_aligned);
+  icp.setInputTarget(scene);
 
   //ICP parameters (examples), we still need to adjust them
   //icp.setEuclideanFitnessEpsilon(1);
   //icp.setTransformationEpsilon(1e-20);
-  icp.setMaximumIterations(200);
+  icp.setMaximumIterations(50);
 
   //align new cloud to stitched cloud and add to the total stitched cloud.
-  icp.align(*transformed_cloud);
-
+  icp.align(*object_aligned);
+*/
 
 
   //pcl::visualization::PCLVisualizer::Ptr viewer4;
   //viewer4 = simpleViscomb(stitched_cloud,skeleton_cloud);
 
   sensor_msgs::PointCloud2 output;
-  pcl::toROSMsg(*transformed_cloud, output);
+  pcl::toROSMsg(*object_aligned, output);
   output.header.frame_id = "rgb_camera_link";
   publisher.publish (output);
 
   sensor_msgs::PointCloud2 output_stitch;
-  pcl::toROSMsg(*stitched_cloud, output_stitch);
+  pcl::toROSMsg(*scene, output_stitch);
   output_stitch.header.frame_id = "rgb_camera_link";
   publisher_stitch.publish (output_stitch);
+
+  }
+  else
+  {
+    pcl::console::print_error ("Alignment failed!\n");
+    return (1);
+  }
+
+  return (0);
+
 //pcl::io::savePCDFile( "/home/niklas/Documents/RNM/skeleton_cloud.pcd", *skeleton_cloud, true ); // Binary format
 
 //--------------------
