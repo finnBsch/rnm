@@ -7,6 +7,7 @@ project(calibration)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+## set(OpenCV_DIR /usr/local/lib/cmake/opencv4) ## did not work
 find_package(catkin REQUIRED COMPONENTS
         roscpp
         rospy
@@ -18,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
         tf2_ros
         )
 find_package( OpenCV REQUIRED )
+## find_package(OpenCV REQUIRED PATHS "/usr/local/include/opencv2") ## did not work
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-//#include "OCVprecomp.hpp"
-#include "OCVcalib3d.hpp"
+#include "precomp.hpp"
+#include "opencv2/calib3d.hpp"
 
 namespace cv {
 

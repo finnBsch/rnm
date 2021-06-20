@@ -7,20 +7,25 @@
 
 #include <fstream>
 
-#include <opencv2/imgcodecs.hpp>
-#include "OCVcalib3d.hpp"  // header file that includes the calibrateHandEye method
-#include "OCVcalibration_handeye.cpp"
-#include "cv_bridge/cv_bridge.h"
-#include <cstdlib>
-//#include <opencv2/calib3d.hpp>
+//#include <opencv2/imgcodecs.hpp>
+#include <opencv4/opencv2/imgcodecs.hpp>
+//#include "OCVcalib3d.hpp"
+//#include "OCVcalibration_handeye.cpp"
+//#include "cv_bridge/cv_bridge.h" // apparently this forces use of cv 3.2
+//#include <cstdlib>
+//#include <sstream>
+
+#include <opencv4/opencv2/imgproc.hpp>
 //#include <opencv2/imgproc.hpp>
-#include <sstream>
+
+#include <opencv4/opencv2/calib3d.hpp>
+//#include <opencv2/calib3d.hpp>
 #include <string>
 #include "forward_kin/get_endeffector.h"
-#include "geometry_msgs/Pose.h"
-#include "image_transport/image_transport.h"
+//#include "geometry_msgs/Pose.h"
+//#include "image_transport/image_transport.h"
 #include "ros/ros.h"
-#include "sensor_msgs/Image.h"
+//#include "sensor_msgs/Image.h"
 
 using namespace std;
 //using namespace cv;
@@ -247,38 +252,21 @@ int calculatePose() {
 void handEye(){
     ROS_INFO("Starting hand-eye calibration.");
     cv::Mat R_cam2gripper, t_cam2gripper;
-    calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper, cv::CALIB_HAND_EYE_TSAI);
+    //calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper, cv::CALIB_HAND_EYE_TSAI);
+    cv::calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper); //, cv::CALIB_HAND_EYE_TSAI);
     cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
     cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
 }
 
 int main(int argc, char** argv){
+
+    // print out opencv version
+    cout << "OpenCV version : " << CV_VERSION << endl;
+
     ros::init(argc, argv, "hand_eye_calibration");
     cameraCalibration();
     readCalibrationData();
     calculatePose();
     handEye();
-    /*
-    Calibrator obj;
-    ros::Rate loop_rate(50);
-    cout << "press 's' to add current keyframe, 'c' to calibrate, 'q' to quit program" << endl;
-    while (ros::ok()){
-        int key = obj.showImage();
-        if(key == 's')
-        {
-            obj.saveData();
-        }
-        if(key == 'c')
-        {
-            obj.calibrate();
-        }
-        if(key == 'q')
-        {
-            break;
-        }
-        ros::spinOnce();
-    }
-     */
-    //ros::spin();
     return 0;
 }
