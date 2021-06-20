@@ -218,7 +218,7 @@ class TemplateAlignment {
     // ICP parameters (examples), we still need to adjust them
     // icp.setEuclideanFitnessEpsilon(1);
     // icp.setTransformationEpsilon(1e-20);
-    icp.setMaximumIterations(20);
+    icp.setMaximumIterations(200);
 
     // align new cloud to stitched cloud and add to the total stitched cloud.
     icp.align(*registration_output);
@@ -307,7 +307,7 @@ class AlignService
 
     // load stitched point cloud
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-    // pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
+    //pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud);
     pcl::PCLPointCloud2 stitched_cloud_PC2;
     pcl_conversions::toPCL(req.stitched_cloud, stitched_cloud_PC2);
     pcl::fromPCLPointCloud2(stitched_cloud_PC2, *stitched_cloud);

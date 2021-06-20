@@ -176,9 +176,9 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
   pcl::toROSMsg(*stitched_cloud, output);
   publisher.publish (output);
   // Safe stitched cloud from bagfile
- // if( msg_counter == 140){
-  //  pcl::io::savePCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud, true ); // Binary format
-  //}
+  if( msg_counter == 140){
+    pcl::io::savePCDFile( "/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud, true ); // Binary format
+  }
   }
 }
 
