@@ -9,7 +9,7 @@ ros::Publisher publisher;
 
 void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states, int& msg_counter)
 {
-  if (msg_counter % 20 == 0 && msg_counter != 0){
+  if (msg_counter % 10 == 0){
     point_cloud_registration::PCJScombined PCJS;
     PCJS.PC = *cloud_msg;
     PCJS.JS = *joint_states;
