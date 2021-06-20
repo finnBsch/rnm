@@ -144,6 +144,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast")
  add_executable(${PROJECT_NAME}_node src/inverse_kinematics_node.cpp src/jacobian.h src/jacobian.cpp)
 
 ## Rename C++ executable without prefix
@@ -163,6 +164,7 @@ target_link_libraries(${PROJECT_NAME}_node
         ${EIGEN3_LIBRARIES}
         ${OpenCV_LIBS}
  )
+add_dependencies(${PROJECT_NAME}_node inverse_kinematics_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##

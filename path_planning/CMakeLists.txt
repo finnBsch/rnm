@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
         sensor_msgs
         std_msgs
         forward_kin
+        inverse_kinematics
         )
 find_package( PkgConfig REQUIRED)
 find_package( Bullet REQUIRED)
