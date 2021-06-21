@@ -81,7 +81,8 @@ target_include_directories(franka_example_controllers PUBLIC
 add_executable(test_move_node src/test_move.cpp)
 add_executable(trajectory_test_node src/trajectory_test_node.cpp)
 add_executable(inverse_kinematics_test_move_node src/inverse_kinematics_test_move_node.cpp)
-add_executable(needle_insertion src/needle_insertion.cpp)
+add_executable(needle_insertion src/needle_insertion.cpp src/Path.cpp src/Path.h src/Trajectory.cpp
+        src/Trajectory.h)
 
 target_link_libraries(trajectory_test_node PUBLIC
         ${catkin_LIBRARIES}

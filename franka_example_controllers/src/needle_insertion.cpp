@@ -11,7 +11,12 @@
 #include "inverse_kinematics/unserService.h"
 #include "forward_kin/get_endeffector.h"
 #include <eigen3/Eigen/Dense>
+#include "Trajectory.h"
+#include "Path.h"
+#include <list>
+#include "trajectory_msgs/JointTrajectory.h"
 
+using namespace std;
 using namespace Eigen;
 
 
@@ -21,6 +26,10 @@ class RobotArm
 {
 
 private:
+    float fac = 0.05;
+    float fac2 = 0.02;
+    std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
+    std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     ros::NodeHandle nh_;
     std::vector<std::string> joint_names_;
     unsigned int num_joints_;
@@ -143,15 +152,46 @@ public:
                                         srv.response.ik_jointAngles[5],
                                         srv.response.ik_jointAngles[6]};
         }
-
-        for (int i=0; i<scaling_;i++){
+        list<VectorXd> waypoints;
+        VectorXd waypoint(6);
+        VectorXd max_acc(6);
+        VectorXd max_vel(6);
+        for(int i = 0; i < received_joint_angles.size(); i++){
+            for(int j = 0; j < received_joint_angles[i].size()-1; j++){
+                waypoint[j] = received_joint_angles[i][j];
+            }
+            waypoints.push_back(waypoint);
+        }
+        for(int i = 0; i < 6; i++){
+            max_acc[i] = max_accs[i];
+            max_vel[i] = max_vels[i];
+        }
+        Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
+        trajectory.outputPhasePlaneTrajectory();
+        array<vector<float>, 6> joints_smooth;
+        ros::Publisher traj_pub = nh.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10);
+        trajectory_msgs::JointTrajectory traj_msg;
+        trajectory_msgs::JointTrajectoryPoint pt;
+        if(trajectory.isValid()) {
+            double duration = trajectory.getDuration();
+            ROS_INFO("Trajectory duration: %f s", duration);
+            for(double t = 0.0; t < duration; t += 0.001) {
+                for(int k = 0; k<joints_smooth.size(); k++) {
+                    joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
+                    pt.positions.assign(joints_smooth[k].begin(), joints_smooth[k].end());
+                    traj_msg.points.push_back(pt);
+                }
+            }
+        }
+        traj_pub.publish(traj_msg);
+        /*for (int i=0; i<scaling_;i++){
             for (int j =0;j<7; j++){
                 ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
             }
             ROS_INFO("--------------------------");
         }
 
-        finalJointAngles = received_joint_angles[0];
+        finalJointAngles = received_joint_angles[0];*/
 
     }
 
@@ -246,7 +286,7 @@ int main(int argc, char** argv)
     ros::Rate loop_rate(1000);
     while (ros::ok())
     {
-        arm.sendStepCommand();
+        //arm.sendStepCommand();
         ros::spinOnce();
         loop_rate.sleep();
     }

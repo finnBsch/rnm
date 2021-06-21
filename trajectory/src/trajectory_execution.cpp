@@ -35,7 +35,8 @@ public:
 int main(int argc, char **argv){
     ros::init(argc, argv, "listener");
     ros::NodeHandle n;
-    ros::Publisher trajectory_publisher = n.advertise<std_msgs::Float64MultiArray>("/joint_position_example_controller_sim/joint_command", 1000);
+    // TODO differ between sim
+    ros::Publisher trajectory_publisher = n.advertise<std_msgs::Float64MultiArray>("/joint_position_example_controller/joint_command", 1000);
     trajectory_executer traj_exec(trajectory_publisher);
     ros::Subscriber sub = n.subscribe("trajectory", 5, &trajectory_executer::execute_trajectory,&traj_exec);
     ros::spin();
