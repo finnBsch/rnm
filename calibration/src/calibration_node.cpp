@@ -24,15 +24,16 @@ using namespace cv;
 using namespace std;
 
 // define number of frames  to be extracted and used for calibration... later on this will be number of good frame pairs
-int n_frames = 10;
+int n_frames = 20;
 
 // package path
-string path = "/home/lars/catkin_ws/src";
+string path = "/home/finn/cal_data";
 
 // counters for the filenames
 int pose_rgb = 1;
 int pose_ir = 1;
 int js_count = 0;
+int rgb_count = 0;
 
 // container for camera calibration data
 std::vector<cv::Mat> rvecs, tvecs;
@@ -40,20 +41,23 @@ std::vector<cv::Mat> cameraPosesR;
 std::vector<cv::Mat> cameraPosesR_Mat;
 std::vector<cv::Mat> cameraPosesT;
 // container for poses as geometry_msgs
-vector<geometry_msgs::TransformStamped> allRobotPoses;
+vector<tf::StampedTransform> allRobotPoses;
 
 // tf listener to get robot pose
-tf2_ros::Buffer tfBuffer;
+tf::TransformListener* tfListener;
 //tf2_ros::TransformListener tfListener;
 cv::String robot_base = "panda_link0";
 cv::String gripper = "panda_link8";
 
 // saving jointState msg
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
-  // get robot pose
-  geometry_msgs::TransformStamped robot_pose = tfBuffer.lookupTransform(robot_base, gripper, ros::Time(0));
-  allRobotPoses.push_back(robot_pose);
-  js_count++;
+  if(js_count<n_frames) {
+    // get robot pose
+    tf::StampedTransform robot_pose;
+    tfListener->lookupTransform(robot_base, gripper, ros::Time(0), robot_pose);
+    allRobotPoses.push_back(robot_pose);
+    js_count++;
+  }
 }
 
 // ir image writing
@@ -83,20 +87,23 @@ void irImageWrite(const sensor_msgs::ImageConstPtr& msg) {
 // rgb image writing
 void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   try {
-    // convert image from ros msg to bgr8 (cv)
-    cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
+    if(rgb_count < n_frames) {
+      // convert image from ros msg to bgr8 (cv)
+      cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image;
 
-    // create filename
-    stringstream ss;
-    string name = "/frame_reader/cal_imgs/new/rgb/pose_";
-    string type = ".jpg";
-    ss << path << name << (pose_rgb) << type; // pose = counter, set at start
-    string filename = ss.str();
-    ss.str("");
-    // write img
-    imwrite(filename, img);
-    std::cout << "rgb: Pose_" << pose_rgb << " img written." << endl;
-    pose_rgb++;
+      // create filename
+      stringstream ss;
+      string name = "/rgb/pose_";
+      string type = ".jpg";
+      ss << path << name << (pose_rgb) << type;  // pose = counter, set at start
+      string filename = ss.str();
+      ss.str("");
+      // write img
+      imwrite(filename, img);
+      std::cout << "rgb: Pose_" << pose_rgb << " img written." << endl;
+      pose_rgb++;
+      rgb_count++;
+    }
   }
   catch (cv_bridge::Exception &e) {
     std::cout << "Could not write rgb: Pose_" << pose_rgb-1 << " image." << endl;
@@ -111,7 +118,7 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for(int i = 0; i<n_frames; i++){
-    rgbFileNames[i] = "/home/lars/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
+    rgbFileNames[i] = "/home/finn/cal_data/rgb/pose_" + to_string(i+1) + ".jpg";
   }
   //std::vector<cv::String> irFileNames;
   // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
@@ -125,7 +132,7 @@ int cameraCalibration() {
   std::vector<std::vector<cv::Point3f>> rgbObjP;  // Checkerboard world coordinates
 
   // Define checkerboard Parameters for both frames
-  int fieldSize = 40;
+  float fieldSize = 0.040;
   int checkerBoard[2] = {9, 6};        // Checkerboard pattern
   cv::Size patternSize(9 - 1, 6 - 1);  // Number of inner corners per a chessboard row and column
 
@@ -167,9 +174,12 @@ int cameraCalibration() {
                                                      + cv::CALIB_CB_FILTER_QUADS);
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
+      vector<Point_<float>> temp_ = rgbcorners[i2];
       cv::cornerSubPix(
-          rgbgray, rgbcorners[i2], cv::Size(11, 11), cv::Size(-1, -1),// winsize 11,11 gute
+          rgbgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),// winsize 11,11 gute
           cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
+      rgbcorners[i2] = temp_;
+
       rgbObjP.push_back(rgbobjp);
       i2++;
     } else {
@@ -184,13 +194,13 @@ int cameraCalibration() {
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
 
-   for(int i =0; i <  rgbFileNames.size() ; i++){
-     // Display the detected pattern on the chessboard
-     rgbimg = cv::imread(rgbFileNames[i]);
-     cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
-     cv::imshow("RGB chessboard corner detection", rgbimg);
-     cv::waitKey(0);
-   }
+  for(int i =0; i <  rgbFileNames.size() ; i++){
+    // Display the detected pattern on the chessboard
+    rgbimg = cv::imread(rgbFileNames[i]);
+    cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
+    cv::imshow("RGB chessboard corner detection", rgbimg);
+    cv::waitKey(0);
+  }
 
   /*
   // Detect corners of the checkerboard in the IR Frames
@@ -255,11 +265,18 @@ int cameraCalibration() {
     cout << "rvec camera" << rvec << endl;
     cout << "tvec camera" << tvec << endl;
 
-        cameraPosesR.push_back(rvec);
+    //Mat R;
+    //Rodrigues(rvec, R);
+    //R = R.t();
+    //tvec = -R*tvec;
+    //Rodrigues(R, rvec);
+    cameraPosesR.push_back(rvec);
     cv::Mat temp;
     cv::Rodrigues(rvec, temp);
     cameraPosesR_Mat.push_back(temp);
     cameraPosesT.push_back(tvec);
+    cout << "adjusted rvec camera" << rvec << endl;
+    cout << "adjusted tvec camera" << tvec << endl;
   }
 
 /*
@@ -365,15 +382,20 @@ void angaxis2quat(cv::Mat angaxis, vector<double>& quat)
   quat[3] = cos(angle/2);
 }
 
-void transform2rv(geometry_msgs::TransformStamped transform, cv::Mat& rvec, cv::Mat& tvec){
+void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
   tvec = cv::Mat::zeros(3,1,CV_64F);
-  rvec = cv::Mat::zeros(3,1,CV_64F);
-  auto rot = transform.transform.rotation;
-  auto tran = transform.transform.translation;
-  quat2angaxis(rot.x, rot.y, rot.z, rot.w, rvec);
-  tvec.at<double>(0,0) = tran.x;
-  tvec.at<double>(1,0) = tran.y;
-  tvec.at<double>(2,0) = tran.z;
+  rvec = cv::Mat::zeros(3,3,CV_64F);
+  auto rot = transform.getBasis();
+  for(int i = 0; i < 3; i++){
+    for(int k = 0; k < 3; k++){
+      rvec.at<double>(i, k) = rot[i][k];
+    }
+  }
+  auto tran = transform.getOrigin();
+  //quat2angaxis(rot.getX(), rot.y, rot.z, rot.w, rvec);
+  tvec.at<double>(0,0) = tran.getX();
+  tvec.at<double>(1,0) = tran.getY();
+  tvec.at<double>(2,0) = tran.getZ();
   return;
 }
 
@@ -395,7 +417,7 @@ void handEye(){
 
   ROS_INFO("Starting hand-eye calibration.");
 
-  calibrateHandEye(R_gripper2base, t_gripper2base, rvecs, tvecs, R_cam2gripper, t_cam2gripper);
+  calibrateHandEye(R_gripper2base, t_gripper2base, cameraPosesR_Mat, cameraPosesT, R_cam2gripper, t_cam2gripper);
   cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
   cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
 
@@ -427,14 +449,14 @@ int main(int argc, char** argv) {
   ros::init(argc, argv,"calibration_node");
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
+  tfListener = new tf::TransformListener();
   // callbacks. each image type has its own saving callback
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
   ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWrite);
 
   std::cout << "\nready to receive frames" << endl;
-  while(js_count < n_frames
-      ) {
+  while(js_count < n_frames || rgb_count < n_frames) {
     ros::spinOnce();
   }
   cout << "\ncollected " << js_count << " frames" << endl;

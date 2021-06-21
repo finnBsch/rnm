@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
         sensor_msgs
         forward_kin
         tf2_ros
+        tf
         )
 find_package( OpenCV REQUIRED )
 ## find_package(OpenCV REQUIRED PATHS "/usr/local/include/opencv2") ## did not work
