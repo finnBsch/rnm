@@ -161,6 +161,7 @@ add_executable(skeleton_splitter src/skeleton_splitter.cpp)
 add_executable(Scanner src/Scanner.cpp)
 add_executable(STLRegistration src/STLRegistration.cpp)
 add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
+add_executable(PointCloudRecording src/PointCloudRecording.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -184,6 +185,7 @@ target_link_libraries(skeleton_splitter ${catkin_LIBRARIES})
 target_link_libraries(Scanner ${catkin_LIBRARIES})
 target_link_libraries(STLRegistration ${catkin_LIBRARIES})
 target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
+target_link_libraries(PointCloudRecording ${catkin_LIBRARIES})
 
 add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})

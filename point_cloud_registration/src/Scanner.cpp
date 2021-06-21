@@ -50,6 +50,12 @@ class Scanner {
   //check if the joint states reached the desired position. if so, increment the nextPose counter and enter the getPointCloud function
   //TODO: implement an approximate comparison, since the actual joint states will not exactly become the desired ones
   void comparePose(const sensor_msgs::JointStateConstPtr& joint_state){
+    sensor_msgs::JointState tempJS;
+
+    for (int i = 0; i < 7; ++i) {
+      tempJS.position[i] = round(joint_state->position[i]*10000)/10000;
+    }
+
     if (goal_poses[nextPose].position == joint_state->position){
       std::cerr << "goal pose reached!" << std::endl;
       nextPose++;
@@ -106,6 +112,7 @@ class Scanner {
       sendGoalPose();
     }else{
       nh_.shutdown();
+      ros::shutdown();
       //this does not shut down the whole node for some reason
       //TODO: find a better solution
     }
@@ -127,7 +134,5 @@ main (int argc, char** argv)
 
   Scanner scan(nh);
   scan.startScan();
-
-  ros::spin ();
 }
 
