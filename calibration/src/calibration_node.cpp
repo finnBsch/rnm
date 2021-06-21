@@ -12,8 +12,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgcodecs.hpp>
-#include "OCVcalib3d.hpp"  //  calibrateHandEye method
-#include "OCVcalibration_handeye.cpp"
+#include "cv_handeye.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_listener.h>
 
@@ -28,7 +27,7 @@ using namespace std;
 int n_frames = 10;
 
 // package path
-string path = "/home/nico/catkin_ws/src";
+string path = "/home/lars/catkin_ws/src";
 
 // counters for the filenames
 int pose_rgb = 1;
@@ -37,7 +36,9 @@ int js_count = 0;
 
 // container for camera calibration data
 std::vector<cv::Mat> rvecs, tvecs;
-
+std::vector<cv::Mat> cameraPosesR;
+std::vector<cv::Mat> cameraPosesR_Mat;
+std::vector<cv::Mat> cameraPosesT;
 // container for poses as geometry_msgs
 vector<geometry_msgs::TransformStamped> allRobotPoses;
 
@@ -110,7 +111,7 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for(int i = 0; i<n_frames; i++){
-    rgbFileNames[i] = "/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
+    rgbFileNames[i] = "/home/lars/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
   }
   //std::vector<cv::String> irFileNames;
   // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
@@ -161,7 +162,6 @@ int cameraCalibration() {
     cv::Mat rgbgray;         // grayscale the image
     cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
     bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i2],
-
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
                                                      //+ cv::CALIB_CB_NORMALIZE_IMAGE
                                                      + cv::CALIB_CB_FILTER_QUADS);
@@ -184,13 +184,13 @@ int cameraCalibration() {
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
 
-  // for(int i =0; i <  rgbFileNames.size() ; i++){
-  //   // Display the detected pattern on the chessboard
-  //   rgbimg = ;
-  //   cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
-  //   cv::imshow("RGB chessboard corner detection", rgbimg);
-  //   cv::waitKey(0);
-  // }
+   for(int i =0; i <  rgbFileNames.size() ; i++){
+     // Display the detected pattern on the chessboard
+     rgbimg = cv::imread(rgbFileNames[i]);
+     cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
+     cv::imshow("RGB chessboard corner detection", rgbimg);
+     cv::waitKey(0);
+   }
 
   /*
   // Detect corners of the checkerboard in the IR Frames
@@ -246,12 +246,16 @@ int cameraCalibration() {
 
   cv::Mat rvec;
   cv::Mat tvec;
-  std::cout << "aAAA " << rgbObjP.size() << " bbb" << rgbcorners.size() << "cccc " << rgbFileNames.size() << std::endl;
+  std::cout << "AAA " << rgbObjP.size() << " bbb" << rgbcorners.size() << "cccc " << rgbFileNames.size() << std::endl;
   for (int i = 0; i < rgbFileNames.size(); i++) {
     cv::InputArray rgb1ObjP = rgbObjP[i];
     cv::InputArray rgb1corners = rgbcorners[i];
     cv::solvePnPRansac(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec);
-    cameraPosesR.push_back(rvec);
+
+    cout << "rvec camera" << rvec << endl;
+    cout << "tvec camera" << tvec << endl;
+
+        cameraPosesR.push_back(rvec);
     cv::Mat temp;
     cv::Rodrigues(rvec, temp);
     cameraPosesR_Mat.push_back(temp);
@@ -381,6 +385,9 @@ void handEye(){
   {
     cv::Mat R, t;
     transform2rv(allRobotPoses[i], R, t);
+    cout << "R" << R <<endl;
+    cout << "t " << t << endl;
+
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
   }

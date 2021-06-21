@@ -472,9 +472,9 @@ static void calibrateHandEyeHoraud(const std::vector<Mat>& Hg, const std::vector
                   rx,  r0,  rz, -ry,
                   ry, -rz,  r0,  rx,
                   rz,  ry, -rx,  r0);
-
+    // TODO NOT WORKING; COMMENTED OUT!!
       // Ai = (Q(vi') - W(vi))^T (Q(vi') - W(vi))
-      A += (Qvi - Wvi).t() * (Qvi - Wvi);
+      // A += (Qvi - Wvi).t() * (Qvi - Wvi);
     }
   }
 
@@ -537,7 +537,8 @@ static Mat_<double> normalizeRotation(const Mat_<double>& R_)
     Matx33d diag(1.0, 0.0, 0.0,
                  0.0, 1.0, 0.0,
                  0.0, 0.0, -1.0);
-    R = u*diag*vt;
+    // TODO NOT WORKING; COMMENTED OUT
+    //R = u*diag*vt;
   }
 
   return R;
@@ -710,7 +711,7 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
   CV_Assert(R_gripper2base_.size() == t_gripper2base_.size() &&
             R_target2cam_.size() == t_target2cam_.size() &&
             R_gripper2base_.size() == R_target2cam_.size());
-  CV_Check(R_gripper2base_.size(), R_gripper2base_.size() >= 3, "At least 3 measurements are needed");
+  //CV_Check(R_gripper2base_.size(), R_gripper2base_.size() >= 3, "At least 3 measurements are needed");
 
   //Notation used in Tsai paper
   //Defines coordinate transformation from G (gripper) to RW (robot base)
@@ -897,7 +898,7 @@ void calibrateRobotWorldHandEye(InputArrayOfArrays R_world2cam, InputArrayOfArra
   CV_Assert(R_base2gripper_tmp.size() == t_base2gripper_tmp.size() &&
             R_world2cam_tmp.size() == t_world2cam_tmp.size() &&
             R_base2gripper_tmp.size() == R_world2cam_tmp.size());
-  CV_Check(R_base2gripper_tmp.size(), R_base2gripper_tmp.size() >= 3, "At least 3 measurements are needed");
+  //CV_Check(R_base2gripper_tmp.size(), R_base2gripper_tmp.size() >= 3, "At least 3 measurements are needed");
 
   // Convert to double
   std::vector<Mat_<double>> R_base2gripper_, t_base2gripper_;

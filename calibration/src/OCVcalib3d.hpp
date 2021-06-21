@@ -47,6 +47,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
+#include <opencv2/imgproc.hpp>
+
 
 /**
   @defgroup calib3d Camera Calibration and 3D Reconstruction
@@ -3551,11 +3553,11 @@ class CV_EXPORTS_W StereoSGBM : public StereoMatcher
 
 
 //! cv::undistort mode
-enum UndistortTypes
+/*enum UndistortTypes
 {
   PROJ_SPHERICAL_ORTHO  = 0,
   PROJ_SPHERICAL_EQRECT = 1
-};
+};*/
 
 /** @brief Transforms an image to compensate for lens distortion.
 
@@ -3586,10 +3588,10 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 @param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
 cameraMatrix but you may additionally scale and shift the result by using a different matrix.
  */
-CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
+/*CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
                              InputArray cameraMatrix,
                              InputArray distCoeffs,
-                             InputArray newCameraMatrix = noArray() );
+                             InputArray newCameraMatrix = noArray() );*/
 
 /** @brief Computes the undistortion and rectification transformation map.
 
@@ -3659,7 +3661,7 @@ void initUndistortRectifyMap(InputArray cameraMatrix, InputArray distCoeffs,
                              Size size, int m1type, OutputArray map1, OutputArray map2);
 
 //! initializes maps for #remap for wide-angle
-CV_EXPORTS
+/*CV_EXPORTS
 float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
                            Size imageSize, int destImageWidth,
                            int m1type, OutputArray map1, OutputArray map2,
@@ -3672,7 +3674,7 @@ float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
 {
   return initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize, destImageWidth,
                               m1type, map1, map2, (UndistortTypes)projType, alpha);
-}
+}*/
 
 /** @brief Returns the default new camera matrix.
 
@@ -3695,10 +3697,11 @@ each view where the principal points are located at the center.
 @param imgsize Camera view image size in pixels.
 @param centerPrincipalPoint Location of the principal point in the new camera matrix. The
 parameter indicates whether this location should be at the image center or not.
- */
+ *//*
+ *
 CV_EXPORTS_W
 Mat getDefaultNewCameraMatrix(InputArray cameraMatrix, Size imgsize = Size(),
-                              bool centerPrincipalPoint = false);
+                              bool centerPrincipalPoint = false);*/
 
 /** @brief Computes the ideal point coordinates from the observed point coordinates.
 
@@ -3739,19 +3742,19 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 #stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
 @param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
 #stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
- */
+ *//*
 CV_EXPORTS_W
 void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R = noArray(), InputArray P = noArray());
 /** @overload
     @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
- */
+ *//*
 CV_EXPORTS_AS(undistortPointsIter)
 void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R, InputArray P, TermCriteria criteria);
-
+*/
 //! @} calib3d
 
 /** @brief The methods in this namespace use a so-called fisheye camera model.
