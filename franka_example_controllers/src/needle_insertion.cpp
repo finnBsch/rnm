@@ -91,7 +91,7 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         o1 << 0.417488, 0.0473712, 0.551279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
         //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
@@ -284,7 +284,7 @@ int main(int argc, char** argv)
 
 
     // Amount of movement in each joint
-    std::string command_topic = "/joint_position_example_controller_sim/joint_command";
+    std::string command_topic = "/joint_position_example_controller/joint_command";
     ros::param::get("~command_topic", command_topic);
     ROS_INFO_STREAM("command_topic: " << command_topic);
 

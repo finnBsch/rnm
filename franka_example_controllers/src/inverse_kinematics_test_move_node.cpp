@@ -87,7 +87,7 @@ public:
         std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        double incrementalCounter =counter/100000.;
+        double incrementalCounter =counter/1000000.;
 
         bool simYes = false;
         if(simYes){
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
 
 
     // Amount of movement in each joint
-    std::string command_topic = "/joint_position_example_controller_sim/joint_command";
+    std::string command_topic = "/joint_position_example_controller/joint_command";
     ros::param::get("~command_topic", command_topic);
     ROS_INFO_STREAM("command_topic: " << command_topic);
 

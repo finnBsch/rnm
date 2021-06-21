@@ -137,7 +137,9 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params, r
             arr[j] = arr[j] *(-1);
           }
           else{
-            arr[j] = arr[j] * 0.9;
+              float LO = params.joint_ranges[j][0];
+              float HI = params.joint_ranges[j][1];
+              arr[i] = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
           }
         }
         //ROS_ERROR("GOAL POINT NOT FEASIBLE (out of range)");
@@ -494,14 +496,20 @@ vector<tuple<Point, joint_angles>> rrt::return_goal_path() {
     max_acc[i] = params.max_accs[i];
     max_vel[i] = params.max_vels[i];
   }
-  Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
+  std::reverse(waypoints.begin(), waypoints.end());
+  Trajectory trajectory(Path(waypoints, 0.01),max_vel, max_acc, 0.0005);
   trajectory.outputPhasePlaneTrajectory();
   if(trajectory.isValid()) {
     double duration = trajectory.getDuration();
     ROS_INFO("Trajectory duration: %f s", duration);
-    for(double t = 0.0; t < duration; t += 0.001) {
+    for(double t = 0.0; t <= duration; t += 0.001) {
       for(int k = 0; k<joints_smooth.size(); k++) {
-        joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
+          if(t>duration){
+              joints_smooth[k].push_back(trajectory.getPosition(duration)[k]);
+          }
+          else {
+              joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
+          }
       }
     }
   }
