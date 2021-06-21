@@ -27,16 +27,16 @@ private:
     std::string command_topic_;
     long counter = 0;
     int amount_of_movements_ = 0;
-    int scaling = 10;
     std::vector<double> init_position{};
     ros::Publisher command_pub;
     std::array<double,7> finalJointAngles;
     std::vector<double> delta_angle;
-    std::array<std::array<double, 7>, 10> received_joint_angles;
+    int scaling_ = 100;
+    std::array<std::array<double, 7>, 100> received_joint_angles;
 
 public:
 
-    MatrixXd getLinePoints(VectorXd o1, VectorXd o2,int scalingFactor){
+    MatrixXd getLinePoints(VectorXd o1, VectorXd o2){
         VectorXd p1(3);
         VectorXd p2(3);
         VectorXd line(3);
@@ -45,9 +45,9 @@ public:
         p1 << o1(0),o1(1),o1(2);  //Endpunkt (x,y,z) aus Pathplanning
         p2 << o2(0),o2(1),o2(2);  //Zielpunkt (x,y,z)
         line=p2-p1;      //Strecke zwischen p1 und p2
-        scaledLine=line/scalingFactor; //Skallierte Länge der Strecke
-        MatrixXd LinePoints(3,scalingFactor);
-        for(int i=0;i<scalingFactor;i++){
+        scaledLine=line/scaling_; //Skallierte Länge der Strecke
+        MatrixXd LinePoints(3,scaling_);
+        for(int i=0;i<scaling_;i++){
             //Speichert alle Punkte (x,y,z) in Matrix Linepoints (3xi) ab
             LinePoints(0,i)=    p1(0)+scaledLine(0)*(i+1);
             LinePoints(1,i)=    p1(1)+scaledLine(1)*(i+1);
@@ -81,10 +81,15 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o1 << 0.359209, 0.303714, 0.317182, 0.5, 0.5, 0.5;
-        o2 << 0.547385, 0.423563, 0.597289, 0.5, 0.5, 0.5;
-        MatrixXd points(3,scaling);
-        points = getLinePoints(o1, o2, scaling);
+        o1 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
+        o2 << 0.717488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; // Punkt 2 von Niklas
+
+        MatrixXd points(3,scaling_);
+        points = getLinePoints(o1, o2);
 
         for (int i = 0; i<points.rows();i++){
             for(int j = 0; j<points.cols();j++){
@@ -104,7 +109,7 @@ public:
                                             init_position[5],
                                             init_position[6]};
 
-        for(int i = 0; i<scaling;i++) {
+        for(int i = 0; i<scaling_;i++) {
 
 
             if(i>=1) {
@@ -139,7 +144,7 @@ public:
                                         srv.response.ik_jointAngles[6]};
         }
 
-        for (int i=0; i<scaling;i++){
+        for (int i=0; i<scaling_;i++){
             for (int j =0;j<7; j++){
                 ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
             }
@@ -155,9 +160,9 @@ public:
         std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        double incrementalCounter =counter/10.;
+        double incrementalCounter =counter/10000.;
 
-        bool simYes = true;
+        bool simYes = false;
         if(simYes){
 
             for (int i = 0; i < 7; ++i) {
@@ -206,7 +211,7 @@ public:
                 ROS_INFO("finalJointAngle %f", finalJointAngles[i]);
             }
             amount_of_movements_++;
-            if (amount_of_movements_ == scaling) {
+            if (amount_of_movements_ == scaling_) {
                 ros::shutdown();
             } else {
                 ROS_INFO("Amount of Movement %i", amount_of_movements_);

@@ -58,7 +58,7 @@ public:
                                             init_position[5],
                                             init_position[6]};
 
-        srv.request.desired_endeffector = {0.559209, 0.503714, 0.517182, 0.5, 0.6, 0.4};
+        srv.request.desired_endeffector = {0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0};
 
         auto a = client.call(srv);
         if (a)
@@ -89,7 +89,7 @@ public:
         // here it is just a sine wave on the initial joint angles
         double incrementalCounter =counter/100000.;
 
-        bool simYes = true;
+        bool simYes = false;
         if(simYes){
 
             for (int i = 0; i < 7; ++i) {
