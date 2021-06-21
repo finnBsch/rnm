@@ -192,6 +192,8 @@ add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
 add_dependencies(Synchronizer point_cloud_registration_generate_messages_cpp)
 add_dependencies(STLRegistration point_cloud_registration_generate_messages_cpp)
 add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
+add_dependencies(Scanner point_cloud_registration_generate_messages_cpp)
+add_dependencies(PointCloudRecording point_cloud_registration_generate_messages_cpp)
 
 
 #############
