@@ -79,7 +79,10 @@ int main(int argc, char **argv)
           arr[i]= arr[i] *(-1);
         }
         else{
-          arr[i] = arr[i] * 0.9;
+          //arr[i] = arr[i] * 0.9;
+          float LO = joint_ranges[i][0];
+          float HI = joint_ranges[i][1];
+          arr[i] = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
         }
         not_feasible = true;
         break;

@@ -167,7 +167,7 @@ public:
 * @param: VectorXd endeffector
 * returns: Matrix4d Transformationmatrix
 */
-Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
+    Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         Matrix3d rotation;
         Matrix4d matrix;
 
@@ -176,6 +176,9 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         AngleAxisd pitchAngle(endeffector(5), Vector3d::UnitX());
 
         Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+        ROS_INFO("EF x: %f", endeffector[0]);
+        ROS_INFO("EF y: %f", endeffector[1]);
+        ROS_INFO("EF z: %f", endeffector[2]);
         ROS_INFO("quaternionen x: %f", q.x());
         ROS_INFO("quaternionen y: %f", q.y());
         ROS_INFO("quaternionen z: %f", q.z());
@@ -190,9 +193,9 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
                     * AngleAxisd (endeffector(5), Vector3d::UnitZ());
 */
         matrix << rotation(0,0), rotation(0,1), rotation(0,2), endeffector(0),
-                  rotation(1,0), rotation(1,1), rotation(1,2), endeffector(1),
-                  rotation(2,0), rotation(2,1), rotation(2,2), endeffector(2),
-                                       0,                      0,                     0,                    1;
+                rotation(1,0), rotation(1,1), rotation(1,2), endeffector(1),
+                rotation(2,0), rotation(2,1), rotation(2,2), endeffector(2),
+                0,                      0,                     0,                    1;
 
         return matrix;
     }
@@ -205,51 +208,54 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
  * returns: VectorXd desiredThetas
  */
     boost::array<double, 7> incrementalStep() {
+        bool not_found = true;
+        while(not_found) {
+            // FOR TESTING
+            counter_ = counter_ + 1;
 
-        // FOR TESTING
-        counter_ = counter_ + 1;
-
-        // GET CURRENT TRANSFORMATION MATRIX
-        if(size_ ==12) {
-            current_transformationmatrix_vector_ << get_transformation_Vector();
-        }
-
-        //---------------- DO INCREMENTAL CALCULATION ----------------
-
-        // DIFFERENCE CALCULATION OF DELTA_A
-        delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
-
-        // Calculate the absolute of the delta_A Vector
-        for (int i=0;i<size_;i++){
-            abs_delta_A(i) = abs(delta_A(i));
-        }
-
-        //ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
-
-        // check if largest entry of absolute is smaller than error
-        if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
-
-            if(counter_ == limit_) {
-               ROS_ERROR("Limit ueberstritten: %i", counter_);
-            } else {
-                ROS_INFO("FINISHED");
+            // GET CURRENT TRANSFORMATION MATRIX
+            if (size_ == 12) {
+                current_transformationmatrix_vector_ << get_transformation_Vector();
             }
-            return transformVectorToArray(joint_angles_);
 
-        } else {
+            //---------------- DO INCREMENTAL CALCULATION ----------------
 
-            // calculate Jacobian and pseudoinverse
-            J = calculateJacobian(joint_angles_, size_);
+            // DIFFERENCE CALCULATION OF DELTA_A
+            delta_A = final_transformationmatrix_vector_ - current_transformationmatrix_vector_;
 
-            //correction of joint angles
-            deltaQ = J.completeOrthogonalDecomposition().solve(delta_A);
+            // Calculate the absolute of the delta_A Vector
+            for (int i = 0; i < size_; i++) {
+                abs_delta_A(i) = abs(delta_A(i));
+            }
 
-            joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
-            //pre_joint_angles = joint_angles_ + deltaQ * incrementalStepSize;
-            //joint_angles_ = checkBoundaries(pre_joint_angles);
+            //ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
+
+            // check if largest entry of absolute is smaller than error
+            if (abs_delta_A.maxCoeff() <
+                0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
+
+                if (counter_ == limit_) {
+                    ROS_ERROR("Limit ueberstritten: %i", counter_);
+                } else {
+                    ROS_INFO("FINISHED");
+                }
+                return transformVectorToArray(joint_angles_);
+
+            } else {
+
+                // calculate Jacobian and pseudoinverse
+                J = calculateJacobian(joint_angles_, size_);
+
+                //correction of joint angles
+                deltaQ = J.completeOrthogonalDecomposition().solve(delta_A);
+
+                joint_angles_ = joint_angles_ + deltaQ * incrementalStepSize;
+                //pre_joint_angles = joint_angles_ + deltaQ * incrementalStepSize;
+                //joint_angles_ = checkBoundaries(pre_joint_angles);
 
 
-            return incrementalStep();
+                //return incrementalStep();
+            }
         }
     }
 

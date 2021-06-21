@@ -70,6 +70,7 @@ public:
     // Initialize
     RobotArm(ros::NodeHandle nh, std::string command_topic): nh_(nh), num_joints_(7), command_topic_(command_topic_),init_position(7),delta_angle(7)
     {
+        ros::Publisher traj_pub = nh_.advertise<trajectory_msgs::JointTrajectory>("/trajectory", 10);
         ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
         inverse_kinematics::unserService srv;
 
@@ -90,8 +91,8 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o1 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
-        o2 << 0.717488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        o1 << 0.417488, 0.0473712, 0.551279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
         //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
@@ -117,7 +118,13 @@ public:
                                             init_position[4],
                                             init_position[5],
                                             init_position[6]};
-
+        received_joint_angles[0] = {init_position[0],
+                                    init_position[1],
+                                    init_position[2],
+                                    init_position[3],
+                                    init_position[4],
+                                    init_position[5],
+                                    init_position[6]};
         for(int i = 0; i<scaling_;i++) {
 
 
@@ -144,7 +151,7 @@ public:
                 exit; //TODO find better solution
             }
 
-            received_joint_angles[i] = {srv.response.ik_jointAngles[0],
+            received_joint_angles[i+1] = {srv.response.ik_jointAngles[0],
                                         srv.response.ik_jointAngles[1],
                                         srv.response.ik_jointAngles[2],
                                         srv.response.ik_jointAngles[3],
@@ -169,21 +176,24 @@ public:
         Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
         trajectory.outputPhasePlaneTrajectory();
         array<vector<float>, 6> joints_smooth;
-        ros::Publisher traj_pub = nh.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10);
         trajectory_msgs::JointTrajectory traj_msg;
         trajectory_msgs::JointTrajectoryPoint pt;
         if(trajectory.isValid()) {
             double duration = trajectory.getDuration();
-            ROS_INFO("Trajectory duration: %f s", duration);
+            ROS_INFO("Trajectory durrration: %f s", duration);
             for(double t = 0.0; t < duration; t += 0.001) {
+                pt.positions.clear();
                 for(int k = 0; k<joints_smooth.size(); k++) {
                     joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
-                    pt.positions.assign(joints_smooth[k].begin(), joints_smooth[k].end());
-                    traj_msg.points.push_back(pt);
+                    pt.positions.push_back(trajectory.getPosition(t)[k]);
                 }
+                traj_msg.points.push_back(pt);
             }
         }
+        ROS_INFO("Points : %i ", traj_msg.points.size());
+        //std::reverse(traj_msg.points.begin(),traj_msg.points.end());
         traj_pub.publish(traj_msg);
+        ros::spinOnce();
         /*for (int i=0; i<scaling_;i++){
             for (int j =0;j<7; j++){
                 ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
