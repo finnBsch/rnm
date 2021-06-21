@@ -89,7 +89,7 @@ public:
         // here it is just a sine wave on the initial joint angles
         double incrementalCounter =counter/100000.;
 
-        bool simYes = true;
+        bool simYes = false;
         if(simYes){
 
             for (int i = 0; i < 7; ++i) {

@@ -81,12 +81,13 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        //o1 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
-        o1 << 0.617488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
-        o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+        o1 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
+        o2 << 0.717488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
-        //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; PUNKT VON NIKLAS
+        //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; // Punkt 2 von Niklas
+
         MatrixXd points(3,scaling_);
         points = getLinePoints(o1, o2);
 
@@ -159,9 +160,9 @@ public:
         std::vector<double> goal_position;
         // calculate new joint angles
         // here it is just a sine wave on the initial joint angles
-        double incrementalCounter =counter/10.;
+        double incrementalCounter =counter/10000.;
 
-        bool simYes = true;
+        bool simYes = false;
         if(simYes){
 
             for (int i = 0; i < 7; ++i) {
