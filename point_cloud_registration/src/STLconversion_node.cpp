@@ -436,6 +436,9 @@ int main(int argc, char** argv)
     //skeleton_cloud_scaled->points.push_back(pcl::PointXYZRGB(pt.x * xStretch, pt.y * yStretch, pt.z * zStretch));
   }
 
+  //transformation
+   pcl::transformPointCloud(*object, *object, initial_tf);
+
   // Downsample
   pcl::console::print_highlight ("Downsampling...\n");
   pcl::VoxelGrid<PointNT> grid;
@@ -486,6 +489,7 @@ int main(int argc, char** argv)
 
   if (align.hasConverged ())
   {
+
   /*
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr object_aligned_RGB (new pcl::PointCloud<pcl::PointXYZRGB>);
     object_aligned_RGB->resize(object_aligned->size());
@@ -522,7 +526,7 @@ int main(int argc, char** argv)
 */
 
 
-  /*
+
   pcl::IterativeClosestPoint<pcl::PointXYZRGBNormal, pcl::PointXYZRGBNormal> icp;
   icp.setInputSource(object_aligned);
   icp.setInputTarget(scene);
@@ -530,11 +534,11 @@ int main(int argc, char** argv)
   //ICP parameters (examples), we still need to adjust them
   //icp.setEuclideanFitnessEpsilon(1);
   //icp.setTransformationEpsilon(1e-20);
-  icp.setMaximumIterations(50);
+  icp.setMaximumIterations(200);
 
   //align new cloud to stitched cloud and add to the total stitched cloud.
   icp.align(*object_aligned);
-*/
+
 
 
   //pcl::visualization::PCLVisualizer::Ptr viewer4;

@@ -12,9 +12,12 @@
 #include <eigen3/Eigen/Dense>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <std_msgs/Float64MultiArray.h>
 #include "forward_kin/get_endeffector.h"
 #include "point_cloud_registration/PCJScombined.h"
 #include "point_cloud_registration/alignment_service.h"
+#include "point_cloud_registration/registrationResults.h"
 
 class PCStitch
 {
@@ -23,6 +26,7 @@ class PCStitch
         nh_ (nh),
         handeye_ (handeye),
         pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1)),
+        pub_reg_(nh.advertise<point_cloud_registration::registrationResults> ("registrationResults", 1)),
         message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -35,6 +39,7 @@ class PCStitch
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_xyz_;
   ros::NodeHandle nh_;
   ros::Publisher pub_;
+  ros::Publisher pub_reg_;
   sensor_msgs::JointState joint_states_;
   Eigen::Matrix4f transformation_matrix;
   Eigen::Matrix4f handeye_;
@@ -136,21 +141,52 @@ class PCStitch
   }
 
   void saveCloud(){
-    pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+    pcl::io::savePCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
   }
 
-  void calculateSkeletonPosition(){
+  void calculateSkeletonPosition() {
     point_cloud_registration::alignment_service srv;
 
-    ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>("STLRegistration/alignment_service");
-    pcl::toROSMsg(*stitched_cloud_,srv.request.stitched_cloud);
+    ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>(
+        "STLRegistration/alignment_service");
+    pcl::toROSMsg(*stitched_cloud_, srv.request.stitched_cloud);
     client.call(srv);
 
-    transformation_matrix << srv.response.alignment_transformation.data[0],srv.response.alignment_transformation.data[1],srv.response.alignment_transformation.data[2],srv.response.alignment_transformation.data[3],
-        srv.response.alignment_transformation.data[4],srv.response.alignment_transformation.data[5],srv.response.alignment_transformation.data[6],srv.response.alignment_transformation.data[7],
-        srv.response.alignment_transformation.data[8],srv.response.alignment_transformation.data[9],srv.response.alignment_transformation.data[10],srv.response.alignment_transformation.data[11],
-        srv.response.alignment_transformation.data[12],srv.response.alignment_transformation.data[13],srv.response.alignment_transformation.data[14],srv.response.alignment_transformation.data[15];
+    transformation_matrix << srv.response.alignment_transformation.data[0],
+        srv.response.alignment_transformation.data[1],
+        srv.response.alignment_transformation.data[2],
+        srv.response.alignment_transformation.data[3],
+        srv.response.alignment_transformation.data[4],
+        srv.response.alignment_transformation.data[5],
+        srv.response.alignment_transformation.data[6],
+        srv.response.alignment_transformation.data[7],
+        srv.response.alignment_transformation.data[8],
+        srv.response.alignment_transformation.data[9],
+        srv.response.alignment_transformation.data[10],
+        srv.response.alignment_transformation.data[11],
+        srv.response.alignment_transformation.data[12],
+        srv.response.alignment_transformation.data[13],
+        srv.response.alignment_transformation.data[14],
+        srv.response.alignment_transformation.data[15];
     std::cerr << transformation_matrix << std::endl;
+  }
+  void publishRegResults(){
+
+    Eigen::Vector4f needle_startpoint;
+    Eigen::Vector4f needle_goalpoint;
+    float box_length = 0.8;
+    float box_width = 0.4;
+    needle_startpoint = {-30.0/1000, -100.674/1000, 160.0/1000, 1.0};
+    needle_goalpoint = {-4.0/1000, -21.0/1000, 22.0/1000, 1.0};
+    needle_startpoint = transformation_matrix*needle_startpoint;
+    needle_goalpoint = transformation_matrix*needle_goalpoint;
+    point_cloud_registration::registrationResults reg_results;
+    tf::matrixEigenToMsg(needle_startpoint, reg_results.needle_startpoint);
+    tf::matrixEigenToMsg(needle_goalpoint, reg_results.needle_goalpoint);
+    tf::matrixEigenToMsg(transformation_matrix, reg_results.registration_transformation);
+    reg_results.box_length = box_length;
+    reg_results.box_width = box_width;
+  pub_reg_.publish(reg_results);
   }
 
  public:
@@ -167,6 +203,7 @@ class PCStitch
       publishCloud();
       saveCloud();
       calculateSkeletonPosition();
+      publishRegResults();
     }
   }
 };
