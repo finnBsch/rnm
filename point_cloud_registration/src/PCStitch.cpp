@@ -40,13 +40,13 @@ class PCStitch
   Eigen::Matrix4f handeye_;
   int message_counter_;
 
-  const int message_limit = 15;
+  const int message_limit = 11;
   const float leaf_size = 0.005;
   const Eigen::Vector4f xyz_min = {0.15, -0.5, 0.02, 1.0};
   const Eigen::Vector4f xyz_max = {0.7, 0.5, 0.3, 1.0};
   const int mean_k = 50;
-  const double std_dev_max = 0.5;
-  const int icp_max = 10;
+  const double std_dev_max = 1;
+  const int icp_max = 50;
   const double icp_epsilon = 1e-20;
 
 
@@ -55,27 +55,24 @@ class PCStitch
     pcl_conversions::toPCL(PCJS->PC, *received_cloud_);
     joint_states_ = PCJS->JS;
     message_counter_++;
+    pcl::fromPCLPointCloud2(*received_cloud_, *cloud_xyz_);
   }
 
   void subsample(){
-    pcl::PCLPointCloud2ConstPtr cloudPtr(received_cloud_);
-    pcl::PCLPointCloud2 pc2_cloud_subsample;
-
     // Perform the actual filtering
-    pcl::VoxelGrid<pcl::PCLPointCloud2> vg;
-    vg.setInputCloud (cloudPtr);
+    pcl::VoxelGrid<pcl::PointXYZRGB> vg;
+    vg.setInputCloud (cloud_xyz_);
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
-    vg.filter (pc2_cloud_subsample);
+    vg.filter (*cloud_xyz_);
 
-    pcl::fromPCLPointCloud2(pc2_cloud_subsample, *cloud_xyz_);
   }
 
-  void outlierRemoval(){
+  void outlierRemoval(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& outlierCloud){
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(cloud_xyz_);
+    sor.setInputCloud(outlierCloud);
     sor.setMeanK(mean_k);
     sor.setStddevMulThresh(std_dev_max);
-    sor.filter(*cloud_xyz_);
+    sor.filter(*outlierCloud);
   }
 
   void transform(){
@@ -138,7 +135,7 @@ class PCStitch
     pub_.publish (output);
   }
 
-  void safeCloud(){
+  void saveCloud(){
     pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
   }
 
@@ -159,13 +156,16 @@ class PCStitch
  public:
   void addCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
     receiveCloud(PCJS);
-    subsample();
-    outlierRemoval();
     transform();
     crop();
+    outlierRemoval(cloud_xyz_);
+    subsample();
     ICP();
     publishCloud();
     if (message_counter_ == message_limit){
+      outlierRemoval(stitched_cloud_);
+      publishCloud();
+      saveCloud();
       calculateSkeletonPosition();
     }
   }
