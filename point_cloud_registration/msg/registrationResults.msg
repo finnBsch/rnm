@@ -1,0 +1,5 @@
+std_msgs/Float64MultiArray needle_startpoint
+std_msgs/Float64MultiArray needle_goalpoint
+float64 box_length
+float64 box_width
+std_msgs/Float64MultiArray registration_transformation

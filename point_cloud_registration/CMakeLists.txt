@@ -9,6 +9,8 @@ project(point_cloud_registration)
 ## is used, also find other catkin packages
 
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(catkin REQUIRED COMPONENTS
         pcl_conversions
@@ -62,6 +64,7 @@ find_package(Eigen3 REQUIRED)
 add_message_files(
   FILES
   PCJScombined.msg
+        registrationResults.msg
 )
 
 # Generate services in the 'srv' folder
@@ -189,6 +192,7 @@ target_link_libraries(PointCloudRecording ${catkin_LIBRARIES})
 
 add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
+add_dependencies(PCStitch point_cloud_registration_generate_messages_cpp)
 add_dependencies(Synchronizer point_cloud_registration_generate_messages_cpp)
 add_dependencies(STLRegistration point_cloud_registration_generate_messages_cpp)
 add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
