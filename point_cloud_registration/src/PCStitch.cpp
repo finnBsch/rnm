@@ -148,7 +148,7 @@ class PCStitch
     point_cloud_registration::alignment_service srv;
 
     ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>(
-        "STLRegistration/alignment_service");
+        "STLRegistration2/alignment_service");
     pcl::toROSMsg(*stitched_cloud_, srv.request.stitched_cloud);
     client.call(srv);
 
@@ -219,7 +219,10 @@ main (int argc, char** argv)
 
   Eigen::Matrix4f handeye;
   handeye << -0.0342177, -0.0224303,   0.999141,  0.0357424,
-      -0.998979, -0.0285611,  -0.034854, -0.0232153,
+      -0.998979, -0.0285611,  -0.034854, -0.0232153, // sensor_msgs::PointCloud2 output_stitch;
+    // pcl::toROSMsg(*stitched_cloud, output_stitch);
+    // output_stitch.header.frame_id = "rgb_camera_link";
+    // publisher_stitch.publish (output_stitch);
       0.0293307,  -0.999324, -0.0214294,  0.0547717,
       0,          0,          0,          1;
   PCStitch pcs(nh, handeye);

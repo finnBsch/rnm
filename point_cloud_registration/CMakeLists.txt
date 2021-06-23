@@ -64,7 +64,7 @@ find_package(Eigen3 REQUIRED)
 add_message_files(
   FILES
   PCJScombined.msg
-        registrationResults.msg
+  registrationResults.msg
 )
 
 # Generate services in the 'srv' folder
@@ -163,6 +163,7 @@ add_executable(PCStitch src/PCStitch.cpp)
 add_executable(skeleton_splitter src/skeleton_splitter.cpp)
 add_executable(Scanner src/Scanner.cpp)
 add_executable(STLRegistration src/STLRegistration.cpp)
+add_executable(STLRegistration2 src/STLRegistration2.cpp)
 add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
 add_executable(PointCloudRecording src/PointCloudRecording.cpp)
 
@@ -187,6 +188,7 @@ target_link_libraries(PCStitch ${catkin_LIBRARIES})
 target_link_libraries(skeleton_splitter ${catkin_LIBRARIES})
 target_link_libraries(Scanner ${catkin_LIBRARIES})
 target_link_libraries(STLRegistration ${catkin_LIBRARIES})
+target_link_libraries(STLRegistration2 ${catkin_LIBRARIES})
 target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
 target_link_libraries(PointCloudRecording ${catkin_LIBRARIES})
 
@@ -195,6 +197,7 @@ add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch point_cloud_registration_generate_messages_cpp)
 add_dependencies(Synchronizer point_cloud_registration_generate_messages_cpp)
 add_dependencies(STLRegistration point_cloud_registration_generate_messages_cpp)
+add_dependencies(STLRegistration2 point_cloud_registration_generate_messages_cpp)
 add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
 add_dependencies(Scanner point_cloud_registration_generate_messages_cpp)
 add_dependencies(PointCloudRecording point_cloud_registration_generate_messages_cpp)

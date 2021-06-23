@@ -44,7 +44,7 @@ main (int argc, char** argv)
 
   ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
 
-  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::alignment_service>("STLRegistration/alignment_service");
+  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::alignment_service>("STLRegistration2/alignment_service");
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud_backup.pcd", *stitched_cloud);
   pcl::toROSMsg(*stitched_cloud,srv.request.stitched_cloud);
