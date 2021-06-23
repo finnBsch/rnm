@@ -36,24 +36,26 @@
 class FeatureCloud
 {
  public:
-  // A bit of shorthand
+
   typedef pcl::PointXYZRGBNormal PointNT;
   typedef pcl::PointCloud<PointNT> PointCloudT;
   typedef pcl::FPFHSignature33 FeatureT;
   typedef pcl::FPFHEstimationOMP<PointNT,PointNT,FeatureT> FeatureEstimationT;
   typedef pcl::PointCloud<FeatureT> FeatureCloudT;
-  typedef pcl::visualization::PointCloudColorHandlerCustom<PointNT> ColorHandlerT;
+
+  float leaf_size_;
 
   FeatureCloud () :
       normal_radius_ (0.01f),
-      feature_radius_ (0.025f)
+      feature_radius_ (0.025f),
+      leaf_size_(0.005f)
   {}
 
   ~FeatureCloud () {}
 
   // Process the given cloud
   void
-  setInputCloud (PointCloud::Ptr xyz)
+  setInputCloud (PointCloudT::Ptr xyz)
   {
     xyz_ = xyz;
     processInput ();
@@ -63,7 +65,7 @@ class FeatureCloud
   void
   loadfromSTL (const std::string &STL_file)
   {
-    xyz_ = PointCloud::Ptr (new PointCloud);
+    xyz_ = PointCloudT::Ptr (new PointCloudT);
     pcl::PolygonMesh mesh;
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     pcl::io::loadPolygonFileSTL( STL_file,mesh);
@@ -79,21 +81,15 @@ class FeatureCloud
   }
 
   // Get a pointer to the cloud 3D points
-  PointCloud::Ptr
+  PointCloudT::Ptr
   getPointCloud () const
   {
     return (xyz_);
   }
 
-  // Get a pointer to the cloud of 3D surface normals
-  SurfaceNormals::Ptr
-  getSurfaceNormals () const
-  {
-    return (normals_);
-  }
 
   // Get a pointer to the cloud of feature descriptors
-  LocalFeatures::Ptr
+  FeatureCloudT::Ptr
   getLocalFeatures () const
   {
     return (features_);
@@ -112,9 +108,9 @@ class FeatureCloud
   //Perform voxel grid filtering
   void
   voxelGridFiltering() {
-    pcl::VoxelGrid<pcl::PointXYZRGB> vg;
+    pcl::VoxelGrid<pcl::PointXYZRGBNormal> vg;
     vg.setInputCloud(xyz_);
-    vg.setLeafSize(leaf_size, leaf_size, leaf_size);
+    vg.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
     vg.filter(*xyz_);
   }
 
@@ -132,8 +128,9 @@ class FeatureCloud
 
   // Compute the local feature descriptors
   void
-  computeLocalFeatures ()
+  featureEstimation ()
   {
+    features_ = FeatureCloudT::Ptr (new FeatureCloudT);
     pcl::console::print_highlight ("Estimating features...\n");
     FeatureEstimationT fest;
     fest.setRadiusSearch (feature_radius_);
@@ -144,11 +141,179 @@ class FeatureCloud
 
  private:
   // Point cloud data
-  PointCloud::Ptr xyz_;
-  FeatureEstimationT features_;
+  PointCloudT::Ptr xyz_;
+  FeatureCloudT::Ptr features_;
 
   // Parameters
   float normal_radius_;
   float feature_radius_;
-  float leaf_size = 0.005;
 };
+
+class CloudAlignment {
+ public:
+
+  typedef pcl::PointXYZRGBNormal PointNT;
+  typedef pcl::PointCloud<PointNT> PointCloudT;
+  typedef pcl::FPFHSignature33 FeatureT;
+  // For storing alignment results
+  struct Result {
+    float fitness_score_coarse;
+    float fitness_score_icp;
+    Eigen::Matrix4f final_transformation_coarse;
+    Eigen::Matrix4f final_transformation_ICP;
+    PointCloudT skeleton_cloud_tf;
+
+  };
+
+  CloudAlignment()
+      :
+
+        nr_iterations_(50000),
+        number_of_samples_(3),
+        k_value_(5),
+        similarity_threshold_(0.65f),
+        max_correspondence_distance_(2.5*0.005),
+        inlier_fraction_(0.7f),
+        nr_iterations_icp_(50)
+  {
+    // Input parameters in alignment algorithm
+    align_.setMaximumIterations(nr_iterations_);
+    align_.setNumberOfSamples(number_of_samples_);
+    align_.setCorrespondenceRandomness(k_value_);
+    align_.setSimilarityThreshold(similarity_threshold_);
+    align_.setMaxCorrespondenceDistance(max_correspondence_distance_);
+    align_.setInlierFraction(inlier_fraction_);
+  }
+
+  ~CloudAlignment() {}
+
+  //Define the target cloud to which the source cloud will be aligned
+  void setTargetCloud(FeatureCloud& target_cloud) {
+    target_ = target_cloud;
+    align_.setInputTarget(target_cloud.getPointCloud());
+    align_.setTargetFeatures(target_cloud.getLocalFeatures());
+  }
+
+  /*
+  // Add the given cloud to the list of template clouds
+  void
+  addTemplateCloud (FeatureCloud &template_cloud)
+  {
+    templates_.push_back (template_cloud);
+  }
+   */
+
+  // Align the given template cloud to the target specified by setTargetCloud ()
+  void align(FeatureCloud& template_cloud, CloudAlignment::Result& result) {
+    align_.setInputSource(template_cloud.getPointCloud());
+    align_.setSourceFeatures(template_cloud.getLocalFeatures());
+    PointCloudT::Ptr registration_output(new PointCloudT);
+    align_.align(*registration_output);
+
+    //result.fitness_score_coarse = (float)align_.getFitnessScore(max_correspondence_distance_);
+    result.final_transformation_coarse = align_.getFinalTransformation();
+
+    if (align_.hasConverged ())
+    {
+      //pcl::IterativeClosestPoint<PointNT , PointNT> icp;
+      icp.setInputSource(registration_output);
+      icp.setInputTarget(target_.getPointCloud());
+
+      // ICP parameters (examples), we still need to adjust them
+      // icp.setEuclideanFitnessEpsilon(1);
+      // icp.setTransformationEpsilon(1e-20);
+      icp.setMaximumIterations(nr_iterations_icp_);
+
+      // align new cloud to stitched cloud and add to the total stitched cloud.
+      icp.align(*registration_output);
+      result.fitness_score_icp = icp.getFitnessScore();
+      result.final_transformation_ICP = icp.getFinalTransformation();
+      result.skeleton_cloud_tf = *registration_output;
+    }
+    else
+    {
+      pcl::console::print_error ("Alignment failed!\n");
+    }
+  }
+
+ private:
+  // A list of template clouds and the target to which they will be aligned
+
+  FeatureCloud target_;
+
+ pcl::SampleConsensusPrerejective<PointNT,PointNT,FeatureT> align_;
+  pcl::IterativeClosestPoint<PointNT, PointNT> icp;
+  int nr_iterations_;
+  float number_of_samples_;
+  float k_value_;
+  float similarity_threshold_;
+  float max_correspondence_distance_;
+  float inlier_fraction_;
+  int nr_iterations_icp_;
+};
+// ------------------------------------------------------------------------------------------------------
+
+  class AlignService
+{
+ public:
+  AlignService(ros::NodeHandle& nodeHandle){
+    nh_ = nodeHandle;
+    pub_ = nodeHandle.advertise<sensor_msgs::PointCloud2>("/skeleton_cloud_tf", 1);
+
+  }
+  ros::NodeHandle nh_;
+  ros::Publisher pub_;
+
+  bool alignmentService(point_cloud_registration::alignment_service::Request& req,
+                        point_cloud_registration::alignment_service::Response& res) {
+
+    const std::string STL_file_name =  "/home/niklas/Documents/RNM/Scanning/Skeleton.stl";
+
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>());
+    pcl::PCLPointCloud2 stitched_cloud_PC2;
+    pcl_conversions::toPCL(req.stitched_cloud, stitched_cloud_PC2);
+    pcl::fromPCLPointCloud2(stitched_cloud_PC2, *stitched_cloud);
+
+    FeatureCloud skeleton_scanned;
+    skeleton_scanned.setInputCloud(stitched_cloud);
+
+    FeatureCloud skeleton_stl;
+    skeleton_stl.loadfromSTL(STL_file_name);
+
+    CloudAlignment alignment;
+    CloudAlignment::Result alignment_results;
+    alignment.setTargetCloud(skeleton_scanned);
+
+    {
+      pcl::ScopeTime t("Alignment");
+      alignment.align (skeleton_stl,alignment_results);
+    }
+
+    Eigen::Matrix4f final_transformation;
+    final_transformation =alignment_results.final_transformation_ICP * alignment_results.final_transformation_coarse;
+    tf::matrixEigenToMsg(final_transformation, res.alignment_transformation);
+    std::cout << res.alignment_transformation;
+
+    // Print the alignment fitness score (values less than 0.00002 are good)
+    printf("Fitness score coarse alignment: %f\n", alignment_results.fitness_score_coarse);
+    printf("Fitness score ICP alignment: %f\n", alignment_results.fitness_score_icp);
+
+    sensor_msgs::PointCloud2 output;
+    pcl::toROSMsg(alignment_results.skeleton_cloud_tf, output);
+    output.header.frame_id = "rgb_camera_link";
+    pub_.publish(output);
+    return true;
+  }
+};
+
+
+int main(int argc, char** argv) {
+  ros::init(argc, argv, "STLRegistration2");
+  ros::NodeHandle nodeHandle("~");
+
+  AlignService Alignment(nodeHandle);
+  // Register a callback function (a function that is called every time a new message arrives)
+  ros::ServiceServer service = nodeHandle.advertiseService("alignment_service", &AlignService::alignmentService,&Alignment);
+  ros::spin();
+
+}
