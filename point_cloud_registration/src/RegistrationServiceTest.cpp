@@ -30,10 +30,29 @@
 #include "point_cloud_registration/alignment_service.h"
 #include <eigen_conversions/eigen_msg.h>
 #include <visualization_msgs/Marker.h>
+#include "point_cloud_registration/registration_results_service.h"
 
 int
 main (int argc, char** argv)
 {
+  ros::init(argc, argv, "RegistrationServiceTest");
+  ros::NodeHandle nh;
+
+  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::registration_results_service>("registration_results_service");
+
+  point_cloud_registration::registration_results_service srv;
+
+  if (client.call(srv)){
+    std::cout << "box width, length, height: " << srv.response.registration_results.box_width << ", " << srv.response.registration_results.box_length << ", " << srv.response.registration_results.box_height << std::endl;
+    std::cout << "transformation matrix: " << srv.response.registration_results.registration_transformation;
+    std::cout << "transformed start point: " << srv.response.registration_results.needle_startpoint << std::endl;
+    std::cout << "transformed goal point: " << srv.response.registration_results.needle_goalpoint << std::endl;
+    std::cout << "transformed skeleton center: " << srv.response.registration_results.skeleton_centerpoint << std::endl;
+  }else{
+    std::cerr << "SERVICE CALL FAILED!";
+  }
+
+/*
   ros::init (argc, argv, "RegistrationServiceTest");
   ros::NodeHandle nh;
   //Let the publisher publish on topic transformed_clouds
@@ -106,5 +125,6 @@ main (int argc, char** argv)
 
 
     marker_pub.publish(points);
+*/
 
 }
