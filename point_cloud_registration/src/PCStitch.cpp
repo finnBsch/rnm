@@ -49,12 +49,14 @@ class PCStitch
   const int mean_k = 50;
   const double std_dev_max = 1;
   const int icp_max = 50;
-  const float box_length = 0.8;
-  const float box_width = 0.4;
-  const float box_height = 0.3;
+  const float box_length = 0.73;
+  const float box_width = 0.355;
+  const float box_height = 0.27;
+  const Eigen::Vector3f box_centerpoint = {-32.5/1000, -65/1000, 5/1000};
   const Eigen::Vector4f needle_startpoint = {-30.0/1000, -100.674/1000, 160.0/1000, 1.0};
   const Eigen::Vector4f needle_goalpoint = {-4.0/1000, -21.0/1000, 22.0/1000, 1.0};
-  const Eigen::Vector4f skeleton_centerpoint = {0.0, 0.0, 0.0, 1.0};
+  const Eigen::Vector4f skeleton_centerpoint =  {-32.5/1000, -65/1000, 5/1000, 1.0};
+
 
 
   void receiveCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
@@ -139,7 +141,7 @@ class PCStitch
   }
 
   void saveCloud(){
-    pcl::io::savePCDFile("/home/konrad/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
+    pcl::io::savePCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
   }
 
   void calculateSkeletonPosition() {
