@@ -27,7 +27,8 @@ using namespace std;
 int n_frames = 20;
 
 // package path
-string path = "/home/finn/cal_data";
+//string path = "/home/finn/cal_data";
+string path = "/home/nico/CLionProjects/rnm_ws/src";
 
 // counters for the filenames
 int pose_rgb = 1;
@@ -118,7 +119,8 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for(int i = 0; i<n_frames; i++){
-    rgbFileNames[i] = "/home/finn/cal_data/rgb/pose_" + to_string(i+1) + ".jpg";
+    //rgbFileNames[i] = "/home/finn/cal_data/rgb/pose_" + to_string(i+1) + ".jpg";
+    rgbFileNames[i] = "/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
   }
   //std::vector<cv::String> irFileNames;
   // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
@@ -417,7 +419,7 @@ void handEye(){
 
   ROS_INFO("Starting hand-eye calibration.");
 
-  calibrateHandEye(R_gripper2base, t_gripper2base, cameraPosesR_Mat, cameraPosesT, R_cam2gripper, t_cam2gripper);
+  calibrateHandEye_(R_gripper2base, t_gripper2base, cameraPosesR_Mat, cameraPosesT, R_cam2gripper, t_cam2gripper);
   cout << "hand eye transformation: translation:\n" << t_cam2gripper << endl;
   cout << "hand eye transformation: rotation:\n" << R_cam2gripper << endl;
 

@@ -16,7 +16,7 @@ Mat homogeneousInverse(const Mat& T)
 
   return Tinv;
 }
-void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
+void calibrateHandEye_(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
                       InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                       OutputArray R_cam2gripper, OutputArray t_cam2gripper)
 {
@@ -72,7 +72,7 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
 
 
   //can switch to Tsai here
-  calibrateHandEyeTsai(Hg, Hc, Rcg, Tcg);
+  calibrateHandEyeTsai_(Hg, Hc, Rcg, Tcg);
 
   Rcg.copyTo(R_cam2gripper);
   Tcg.copyTo(t_cam2gripper);
@@ -151,7 +151,7 @@ Mat rot2quat(const Mat& R)
 
   return (Mat_<double>(4,1) << qw, qx, qy, qz);
 }
-void  calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<Mat>& Hc,
+void  calibrateHandEyeTsai_(const std::vector<Mat>& Hg, const std::vector<Mat>& Hc,
                            Mat& R_cam2gripper, Mat& t_cam2gripper)
 {
   //Number of unique camera position pairs

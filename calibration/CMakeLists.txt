@@ -165,7 +165,6 @@ add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp src/cv_
 target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
-target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS}   ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 ##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${catkin_LIBRARIES})
