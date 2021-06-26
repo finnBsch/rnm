@@ -36,8 +36,8 @@
 using namespace cv;
 Mat homogeneousInverse(const Mat& T);
 //void calibrateHandEyeQR24(std::vector<Mat>& Hg, const std::vector<Mat>& Hc, Mat& R_cam2gripper, Mat& t_cam2gripper);
-void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base, InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam, OutputArray R_cam2gripper, OutputArray t_cam2gripper);
-void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<Mat>& Hc, Mat& R_cam2gripper, Mat& t_cam2gripper);
+void calibrateHandEye_(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base, InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam, OutputArray R_cam2gripper, OutputArray t_cam2gripper);
+void calibrateHandEyeTsai_(const std::vector<Mat>& Hg, const std::vector<Mat>& Hc, Mat& R_cam2gripper, Mat& t_cam2gripper);
 Mat rot2quatMinimal(const Mat& R);
 Mat rot2quat(const Mat& R);
 Mat skew(const Mat& v);
