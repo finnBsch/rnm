@@ -75,9 +75,6 @@ public:
 
             if(lower_joint_limits[i] > pre_joint_angles(i)){
                 pre_joint_angles(i) = lower_joint_limits[i] + 0.0873;
-                //output of Iteration step
-                //ROS_INFO("counter: %i", counter_);
-                //ROS_INFO("i = %i", i);
 
             }
             if(upper_joint_limits[i] < pre_joint_angles(i)){
@@ -184,11 +181,6 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
 
 
         rotation = q.matrix();
-        /*
-        rotation = AngleAxisd(endeffector(3), Vector3d::UnitX())
-                    * AngleAxisd(endeffector(4), Vector3d::UnitY())
-                    * AngleAxisd (endeffector(5), Vector3d::UnitZ());
-*/
         matrix << rotation(0,0), rotation(0,1), rotation(0,2), endeffector(0),
                   rotation(1,0), rotation(1,1), rotation(1,2), endeffector(1),
                   rotation(2,0), rotation(2,1), rotation(2,2), endeffector(2),
@@ -223,8 +215,6 @@ Matrix4d convertEndeffectorToTransformation(VectorXd endeffector){
         for (int i=0;i<size_;i++){
             abs_delta_A(i) = abs(delta_A(i));
         }
-
-        //ROS_INFO("Max delta %f",abs_delta_A.maxCoeff());
 
         // check if largest entry of absolute is smaller than error
         if (abs_delta_A.maxCoeff() < 0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
