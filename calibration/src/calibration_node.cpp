@@ -42,7 +42,7 @@ std::vector<cv::Mat> cameraPosesR;
 std::vector<cv::Mat> cameraPosesR_Mat;
 std::vector<cv::Mat> cameraPosesT;
 // container for joint states as geometry_msgs
-vector<tf::StampedTransform> allRobotPoses;
+vector<tf::StampedTransform> allJointStates;
 
 // tf listener to get robot pose
 tf::TransformListener* tfListener;
@@ -54,9 +54,9 @@ cv::String gripper = "panda_link8";
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
   if(js_count<n_frames) {
     // get robot pose
-    tf::StampedTransform robot_pose;
-    tfListener->lookupTransform(robot_base, gripper, ros::Time(0), robot_pose);
-    allRobotPoses.push_back(robot_pose);
+    tf::StampedTransform joint_state;
+    tfListener->lookupTransform(robot_base, gripper, ros::Time(0), joint_state);
+    allJointStates.push_back(joint_state);
     js_count++;
   }
 }
@@ -186,7 +186,7 @@ int cameraCalibration() {
     } else {
       rgbcorners.erase(next(rgbcorners.begin(), i - i_deleted));
       cout << endl << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
-      allRobotPoses.erase(next(allRobotPoses.begin(), i - i_deleted));
+      allJointStates.erase(next(allJointStates.begin(), i - i_deleted));
       cout << endl << "!!!!!!!!Joint state " << rgbFileNames[i] << "not used!!!!!!!!" << endl << endl;
       i_deleted++;
     }
@@ -276,8 +276,8 @@ int cameraCalibration() {
     cv::Rodrigues(rvec, temp);
     cameraPosesR_Mat.push_back(temp);
     cameraPosesT.push_back(tvec);
-    cout << "pose rotation matrix: " << temp << endl;
-    cout << "pose translation vector: " << tvec << endl;
+    cout << "R_target2cam: " << temp << endl;
+    cout << "t_target2cam: " << tvec << endl;
   }
 
 /*
@@ -404,12 +404,12 @@ void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
 void handEye(){
 
   vector<cv::Mat> R_gripper2base, t_gripper2base;
-  for(int i=0; i<allRobotPoses.size(); i++)
+  for(int i=0; i<allJointStates.size(); i++)
   {
     cv::Mat R, t;
-    transform2rv(allRobotPoses[i], R, t);
-    cout << "R" << R <<endl;
-    cout << "t " << t << endl;
+    transform2rv(allJointStates[i], R, t);
+    cout << "R_gripper2base" << R <<endl;
+    cout << "t_gripper2base " << t << endl;
 
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);

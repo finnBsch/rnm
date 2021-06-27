@@ -13,30 +13,26 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_listener.h>
 #include <opencv2/core/mat.hpp>
-#include <boost/filesystem.hpp>
+
 
 using namespace std;
 using namespace cv;
 using geometry_msgs::TransformStamped;
-namespace fs = boost::filesystem;
 
 //// ws path
-//fs::path path = "/home/nico/CLionProjects/rnm_ws";
 string path = "/home/nico/CLionProjects/rnm_ws";
 
 //// calibration data path, contains: joints.txt, pose.txt, trk.txt
-//fs::path pathCal = "/home/nico/Documents/RNM/Rosbag/calibration/calibration";
 string pathCal = "/home/nico/Documents/RNM/Rosbag/calibration/calibration";
 
 // container for camera calibration data
+/*
 std::vector<cv::Mat> cameraPosesR;
 std::vector<cv::Mat> cameraPosesR_Mat;
 std::vector<cv::Mat> cameraPosesT;
+*/
 cv::Mat joint_states;
-vector<cv::Mat> R_gripper2base, t_gripper2base;
-
-// container for joint states
-vector<tf::StampedTransform> allJointStates;
+vector<cv::Mat> R_gripper2base, t_gripper2base; // poses
 
 // tf listener to get robot pose
 tf::TransformListener* tfListener;
@@ -48,31 +44,19 @@ cv::String gripper = "panda_link8";
 void readJointStates() {
   //// joint states
   try {
-    // ifstream file("/home/nico/Documents/RNM/Rosbag/calibration/calibration/joints.txt");
-    ifstream file(pathCal + "joints.txt");
-    // string file_line;
-    int rows = 0;
+    ifstream file(pathCal + "/joints.txt");
     string line;
-    for (line; getline(file, line);) {
-      std::istringstream stream(line);
-      // char separator = " ";
-
-
-      // under maintenance
-      string separator = " "; // not sure if this works
-      double x;
-      // read *both* a number and space:
-      while (stream >> x && stream >> separator) {
-        joint_states.push_back(x);
+    while (getline(file, line)) {
+      istringstream stream(line);
+      double d;
+      while (stream >> d) {
+        joint_states.push_back(d);
       }
-      rows++;
     }
-    joint_states = joint_states.reshape(1, rows);
-    for (int i = 0; i<joint_states.rows; i++)
-      //double row = joint_states.row(i);
-      //allJointStates.push_back(joint_states.row(i));
-
-
+    // rows++;
+    cout << joint_states.size() << endl;
+    joint_states = joint_states.reshape(1, 40); // 7 per row, 40 rows
+    cout << "joint_states: " << joint_states << endl;
     ROS_INFO("Done reading joint states.");
   }
   catch (...) {
@@ -82,28 +66,46 @@ void readJointStates() {
 
 void readEndPoses() {
   //// end-effector poses
-  // gripper to base
+  // reading: 40 lines, each line consists of 16 entries (4x4 homogeneous rot + trans matrix)
+  // need to split into R matrix and t vector
+
+  // first pushing R entries of one matrix to oneR_gripper2base, t equivalently
+  // then pushing those matrices to the vectors of matrices (R_gripper2base, t_gri...)
+  Mat oneR_gripper2base;
+  Mat onet_gripper2base;
   try {
-    ifstream file(pathCal + "poses.txt");
-    // string file_line;
-    int rows = 0;
-    string line; // 16 entries
-    for (line; getline(file, line);) {
-      std::istringstream stream(line);
-      // char separator = " ";
-      string separator = " ";
-      double x;
-      // read *both* a number and space:
-      while (stream >> x && stream >> separator) {
-        joint_states.push_back(x);
+    int rot_count = 1; // 3 entries to R mat, next entry to t mat, 3 times, then toss next four entries (0 0 0 1), then repeat for next line
+    ifstream file(pathCal + "/pose.txt");
+    string line;
+    while (getline(file, line)) {
+      istringstream stream(line);
+      double d;
+
+
+      if (rot_count != 4 && rot_count != 8 && rot_count < 12) {
+        while (stream >> d) {
+          oneR_gripper2base.push_back(d);
+          rot_count++;
+        }
       }
-      rows++;
+      else if (rot_count < 12) {
+        while (stream >> d) {
+          onet_gripper2base.push_back(d);
+          rot_count++;
+        }
+      }
+      rot_count = 1;
+      oneR_gripper2base = oneR_gripper2base.reshape(1, 3);
+      onet_gripper2base = onet_gripper2base.reshape(1, 3);
+      R_gripper2base.push_back(oneR_gripper2base);
+      t_gripper2base.push_back(onet_gripper2base);
+      cout << "oneR_gripper2base: " << oneR_gripper2base << endl;
+      cout << "onet_gripper2base: " << onet_gripper2base << endl;
     }
-    joint_states = joint_states.reshape(1, rows);
-    ROS_INFO("Done reading end-effector poses.");
+    ROS_INFO("Done reading gripper to base transformation.");
   }
   catch (...) {
-    ROS_INFO("Error while reading end-effector poses!!!");
+    ROS_INFO("Error while reading gripper to base transformation!!!");
   }
 }
 
@@ -142,7 +144,7 @@ int main(int argc, char** argv) {
 
   readJointStates();
   readEndPoses();
-  readCheckPoses();
+  //readCheckPoses();
 
   //////////
   ros::NodeHandle nh;
