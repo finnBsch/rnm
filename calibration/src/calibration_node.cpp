@@ -28,7 +28,7 @@ int n_frames = 10;
 
 // package path
 //string path = "/home/finn/cal_data";
-string path = "/home/nico/CLionProjects/rnm_ws/src";
+string path = "/home/rnm_grp1/rgb";
 
 // counters for the filenames
 int pose_rgb = 1;
@@ -70,7 +70,7 @@ void irImageWrite(const sensor_msgs::ImageConstPtr& msg) {
 
     // create filename
     stringstream ss;
-    string name = "/frame_reader/cal_imgs/new/ir/pose_";
+    string name = "/pose_";
     string type = ".jpg";
     ss << path << name << (pose_ir) << type; // pose = counter, set at start
     string filename = ss.str();
@@ -94,7 +94,7 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
 
       // create filename
       stringstream ss;
-      string name = "/rgb/pose_";
+      string name = "/pose_";
       string type = ".jpg";
       ss << path << name << (pose_rgb) << type;  // pose = counter, set at start
       string filename = ss.str();
@@ -119,7 +119,7 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for(int i = 0; i<n_frames; i++){
-    rgbFileNames[i] = "/home/nico/catkin_ws/src/frame_reader/cal_imgs/new/rgb/pose_" + to_string(i+1) + ".jpg";
+    rgbFileNames[i] = "/home/rnm_grp1/rgb/pose_" + to_string(i+1) + ".jpg";
   }
   //std::vector<cv::String> irFileNames;
   // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");

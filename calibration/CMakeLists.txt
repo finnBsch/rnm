@@ -148,7 +148,7 @@ include_directories(
 add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
 add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
-add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from_folder_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
+add_executable(${PROJECT_NAME}_calibrate_from_folder_node src/calibration_from_folder_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -165,7 +165,7 @@ target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS}   ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_calibrate_from_folder_node ${OpenCV_LIBS}  ${catkin_LIBRARIES} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 ##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${catkin_LIBRARIES})
 ##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 
