@@ -27,7 +27,7 @@ class RobotArm
 
 private:
     float fac = 0.05;
-    float fac2 = 0.02;
+    float fac2 = 0.003;
     std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     ros::NodeHandle nh_;
@@ -86,8 +86,8 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o1 << 0.417488, 0.0473712, 0.551279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
-        o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+        o1 << 0.417488, 0.3273712, 0.251279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
+        o2 << 0.117488, -0.5273712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.417488, 0.2473712, 0.251279, 0.0,     3.14, 0.0;
         //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
@@ -181,6 +181,7 @@ public:
                     joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
                     pt.positions.push_back(trajectory.getPosition(t)[k]);
                 }
+                pt.positions.push_back(init_position[6]);
                 traj_msg.points.push_back(pt);
             }
         }
