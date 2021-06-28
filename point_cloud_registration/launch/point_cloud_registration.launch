@@ -1,6 +1,6 @@
 <launch>
-    <!-- <node name="Scanner" pkg="point_cloud_registration" type="Scanner"></node> -->
-    <node name="Synchronizer" pkg="point_cloud_registration" type="Synchronizer"></node>
+    <!-- <node name="Scanner_node" pkg="point_cloud_registration" type="Scanner_node"></node> -->
+    <node name="Synchronizer_node" pkg="point_cloud_registration" type="Synchronizer_node"></node>
     <node name="PC_stitching_node" pkg="point_cloud_registration" type="PC_stitching_node"></node>
     <node name="STLRegistration_node" pkg = "point_cloud_registration" type="STLRegistration_node"></node>
     <node name="pcl_registration_forward_kin_node" pkg="forward_kin" type="forward_kin_node"></node>
