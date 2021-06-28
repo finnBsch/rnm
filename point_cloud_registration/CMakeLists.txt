@@ -81,6 +81,7 @@ add_executable(Scanner_node src/Scanner_node.cpp)
 add_executable(STLRegistration_node src/STLRegistration_node.cpp)
 #add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
 add_executable(PointCloudRecording src/PointCloudRecording.cpp)
+#add_executable(joint_states_publisher src/joint_states_publisher.cpp)
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(VoxelGridFilter ${catkin_LIBRARIES})
@@ -96,6 +97,7 @@ target_link_libraries(Scanner_node ${catkin_LIBRARIES})
 target_link_libraries(STLRegistration_node ${catkin_LIBRARIES})
 #target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
 target_link_libraries(PointCloudRecording ${catkin_LIBRARIES})
+#target_link_libraries(joint_states_publisher ${catkin_LIBRARIES})
 
 #add_dependencies(PCMatrixTransform ${catkin_EXPORTED_TARGETS})
 add_dependencies(PCStitch ${catkin_EXPORTED_TARGETS})
@@ -106,4 +108,5 @@ add_dependencies(STLRegistration_node point_cloud_registration_generate_messages
 #add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
 add_dependencies(Scanner_node point_cloud_registration_generate_messages_cpp)
 add_dependencies(PointCloudRecording point_cloud_registration_generate_messages_cpp)
+#add_dependencies(joint_states_publisher point_cloud_registration_generate_messages_cpp)
 
