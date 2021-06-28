@@ -29,6 +29,15 @@ struct rrt_params{
     std::vector<float> max_accs;
 
 };
+struct waypointStruct{
+    joint_angles position;
+    array<float, 6> velocity;
+    array<float, 6> acceleration;
+    array<float, 3> pos3d;
+};
+struct trajectoryStruct{
+    vector<waypointStruct> waypoints;
+};
 void point_to_flann(joint_angles p, float* data);
 joint_angles flann_to_point(float* data);
 Matrix<float, 6, 1> sample_unit_ball();

@@ -10,7 +10,6 @@
 #include "forward_kin/get_endeffector.h"
 #include "inverse_kinematics/unserService.h"
 
-
 /* good routes:
  * - [0.56, 0.3, 0.5] -> [0.12, 0.05, 0.4]*/
 using namespace std::chrono;
@@ -34,6 +33,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "plan_path_node");
     ros::NodeHandle n;
     ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    ros::Publisher pub_accs = n.advertise<std_msgs::Float64MultiArray>("accs", 10);
+    std_msgs::Float64MultiArray acc_msg;
     ros::Publisher traj_pub;
     forward_kin::get_endeffector srv;
     sensor_msgs::JointState joint_state_msg;
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
     ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f",goal[0], goal[1], goal[2], goal[3], goal[4], goal[5]);
 
     float fac = 0.05;
-    float fac2 = 0.003;
+    float fac2 = 0.05;
     std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
@@ -249,6 +250,8 @@ int main(int argc, char **argv)
 
     ROS_INFO_STREAM("Found Path in : " << duration.count());
     auto goal_path = tree->return_goal_path();
+    auto planned_nodes = tree->return_planned_nodes();
+
     line_list[1].header.frame_id = "/world"; // TODO Find correct frame
     line_list[1].header.stamp = ros::Time::now();
     line_list[1].ns = "plan_path_node";
@@ -270,12 +273,12 @@ int main(int argc, char **argv)
     trajectory_msgs::JointTrajectory traj_msg;
     trajectory_msgs::JointTrajectoryPoint pt;
     int i = 0;
-    for(auto point_path_pair:goal_path){
+    for(auto wp:goal_path.waypoints){
         pt.positions.clear();
-        p.x = (std::get<0>(point_path_pair))[0];
-        p.y = (std::get<0>(point_path_pair))[1];
-        p.z = (std::get<0>(point_path_pair))[2];
-        pt.positions.assign(std::get<1>(point_path_pair).begin(), std::get<1>(point_path_pair).end());
+        p.x = wp.pos3d[0];
+        p.y = wp.pos3d[1];
+        p.z = wp.pos3d[2];
+        pt.positions.assign(wp.position.begin(), wp.position.end());
         pt.positions.push_back(static_cast<float>(joint_state_msg.position[6]));
         traj_msg.points.push_back(pt);
         if(i%100==0) {
@@ -283,9 +286,17 @@ int main(int argc, char **argv)
         }
         i++;
     }
+    ros::Rate loop_rate(1000);
+    for(auto wp:goal_path.waypoints){
+        acc_msg.data.clear();
+        for(int i =0; i<wp.acceleration.size(); i++){
+            acc_msg.data.push_back(wp.acceleration[i]);
+        }
+        pub_accs.publish(acc_msg);
+        loop_rate.sleep();
+    }
     marker_pub.publish(line_list[1]);
     marker_pub.publish(line_list[3]);
-    //std::reverse(traj_msg.points.begin(),traj_msg.points.end());
     traj_pub.publish(traj_msg);
     ros::spin();
 }

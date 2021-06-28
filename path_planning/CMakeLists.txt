@@ -145,8 +145,7 @@ include_directories(
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast" )
 add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/rrt_node.h
-        src/plan_path_node.cpp src/utility.cpp src/utility.h src/spline.h src/Path.cpp src/Path.h
-        src/Trajectory.cpp src/Trajectory.h) # TODO: insert correct NODE cpp
+        src/plan_path_node.cpp src/utility.cpp src/utility.h src/spline.h src/Trajectory.cpp src/Path.cpp src/Trajectory.h src/Path.h) # TODO: insert correct NODE cpp
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

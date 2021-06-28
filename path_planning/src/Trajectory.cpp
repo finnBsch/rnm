@@ -250,6 +250,10 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		pathPos += timeStep * 0.5 * (oldPathVel + pathVel);
 
 		if(nextDiscontinuity != switchingPoints.end() && pathPos > nextDiscontinuity->first) {
+            if (pathPos - nextDiscontinuity->first < eps)
+            {
+                continue;
+            }
 			pathVel = oldPathVel + (nextDiscontinuity->first - oldPathPos) * (pathVel - oldPathVel) / (pathPos - oldPathPos);
 			pathPos = nextDiscontinuity->first;
 		}
@@ -490,4 +494,24 @@ VectorXd Trajectory::getVelocity(double time) const {
 	const double pathVel = previous->pathVel + timeStep * acceleration;
 	
 	return path.getTangent(pathPos) * pathVel;
+}
+Eigen::VectorXd Trajectory::getAcceleration(double time_) const
+{
+    std::list<TrajectoryStep>::const_iterator it = getTrajectorySegment(time_);
+    std::list<TrajectoryStep>::const_iterator previous = it;
+    previous--;
+
+    double time_step = it->time - previous->time;
+    const double acceleration =
+            2.0 * (it->pathPos - previous->pathPos - time_step * previous->pathVel) / (time_step * time_step);
+
+    time_step = time_ - previous->time;
+    const double path_pos =
+            previous->pathPos + time_step * previous->pathVel + 0.5 * time_step * time_step * acceleration;
+    const double path_vel = previous->pathVel + time_step * acceleration;
+    Eigen::VectorXd path_acc =
+            (path.getTangent(path_pos) * path_vel - path.getTangent(previous->pathPos) * previous->pathVel);
+    if (time_step > 0.0)
+        path_acc /= time_step;
+    return path_acc;
 }
