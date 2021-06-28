@@ -23,8 +23,8 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_m
 int
 main (int argc, char** argv)
 {
-  ros::init (argc, argv, "Synchronizer");
-  ros::NodeHandle nh;
+  ros::init (argc, argv, "Synchronizer_node");
+  ros::NodeHandle nh("~");
   int msg_count = 0;
   //Let the publisher publish on topic transformed_clouds
   publisher = nh.advertise<point_cloud_registration::PCJScombined> ("PCJScombined", 50);
