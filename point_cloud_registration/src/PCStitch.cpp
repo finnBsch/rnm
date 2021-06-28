@@ -223,7 +223,7 @@ main (int argc, char** argv)
 
   PCStitch pcs(nh, handeye);
 
-  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
+  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("Synchronizer_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
 
   ros::spin();
 }

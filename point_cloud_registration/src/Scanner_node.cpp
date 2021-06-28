@@ -129,8 +129,8 @@ class Scanner {
 int
 main (int argc, char** argv)
 {
-  ros::init (argc, argv, "Scanner");
-  ros::NodeHandle nh;
+  ros::init (argc, argv, "Scanner_node");
+  ros::NodeHandle nh("~");
 
   Scanner scan(nh);
   scan.startScan();
