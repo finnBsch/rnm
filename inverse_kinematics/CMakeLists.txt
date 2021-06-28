@@ -7,7 +7,7 @@ project(inverse_kinematics)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 find_package(catkin REQUIRED COMPONENTS
         roscpp
         sensor_msgs
@@ -60,11 +60,11 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
- add_service_files(
-         FILES
-   unserService.srv
+add_service_files(
+        FILES
+        unserService.srv
 
- )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -74,10 +74,10 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
- )
+generate_messages(
+        DEPENDENCIES
+        std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -109,10 +109,10 @@ find_package(OpenCV REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES inverse_kinematics
-#  CATKIN_DEPENDS roscpp rospy
-#  DEPENDS system_lib
+        #  INCLUDE_DIRS include
+        #  LIBRARIES inverse_kinematics
+        #  CATKIN_DEPENDS roscpp rospy
+        #  DEPENDS system_lib
         DEPENDS EIGEN3
         CATKIN_DEPENDS message_runtime
 )
@@ -124,8 +124,8 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+        # include
+        ${catkin_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIRS}
         ${OpenCV_INCLUDE_DIRS}
 )
@@ -144,7 +144,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
- add_executable(${PROJECT_NAME}_node src/inverse_kinematics_node.cpp src/jacobian.h src/jacobian.cpp)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast")
+add_executable(${PROJECT_NAME}_node src/inverse_kinematics_node.cpp src/jacobian.h src/jacobian.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -162,7 +163,8 @@ target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
         ${EIGEN3_LIBRARIES}
         ${OpenCV_LIBS}
- )
+        )
+add_dependencies(${PROJECT_NAME}_node inverse_kinematics_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
