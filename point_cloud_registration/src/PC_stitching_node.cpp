@@ -21,6 +21,7 @@
 class PCStitch
 {
  public:
+  //constructor which receives the node handle and handeye transfromation matrix
   PCStitch(ros::NodeHandle& nh, Eigen::Matrix4f handeye):
         nh_ (nh),
         handeye_ (handeye),
@@ -28,15 +29,16 @@ class PCStitch
         message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
-    cloud_xyz_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
+    received_cloud_xyz_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
   }
 
+  //private member variables first non constants then constants
  private:
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud_;
-  pcl::PCLPointCloud2* received_cloud_{};
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_xyz_;
   ros::NodeHandle nh_;
   ros::Publisher pub_;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud_;
+  pcl::PCLPointCloud2* received_cloud_{};
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr received_cloud_xyz_;
   sensor_msgs::JointState joint_states_;
   Eigen::Matrix4f transformation_matrix_;
   Eigen::Matrix4f handeye_;
@@ -52,30 +54,30 @@ class PCStitch
   const float box_length = 0.73;
   const float box_width = 0.355;
   const float box_height = 0.27;
-  const Eigen::Vector3f box_centerpoint = {-32.5/1000, -65/1000, 5/1000};
   const Eigen::Vector4f needle_startpoint = {-30.0/1000, -100.674/1000, 160.0/1000, 1.0};
   const Eigen::Vector4f needle_goalpoint = {-4.0/1000, -21.0/1000, 22.0/1000, 1.0};
   const Eigen::Vector4f skeleton_centerpoint =  {-32.5/1000, -65/1000, 5/1000, 1.0};
 
 
-
+//function to receive a new point cloud and joint states and save them. Increment message counter.
   void receiveCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
     received_cloud_ = new pcl::PCLPointCloud2;
     pcl_conversions::toPCL(PCJS->PC, *received_cloud_);
     joint_states_ = PCJS->JS;
-    pcl::fromPCLPointCloud2(*received_cloud_, *cloud_xyz_);
+    pcl::fromPCLPointCloud2(*received_cloud_, *received_cloud_xyz_);
     message_counter_++;
   }
 
+  //subsampling using a voxel grid filter
   void subsample(){
-    // Perform the actual filtering
     pcl::VoxelGrid<pcl::PointXYZRGB> vg;
-    vg.setInputCloud (cloud_xyz_);
+    vg.setInputCloud (received_cloud_xyz_);
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
-    vg.filter (*cloud_xyz_);
+    vg.filter (*received_cloud_xyz_);
 
   }
 
+  //remove outliers using a statistical outlier removal filter
   void outlierRemoval(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& outlierCloud){
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(outlierCloud);
@@ -84,6 +86,7 @@ class PCStitch
     sor.filter(*outlierCloud);
   }
 
+  //transformation using the forward kinematics service, so all the point clouds are in the robot base frame
   void transform(){
     forward_kin::get_endeffector srv;
 
@@ -94,56 +97,52 @@ class PCStitch
 
     srv.request.joint_angles = angles;
 
-    // --------------- GET A MATRIX -------------------
     client.call(srv);
 
-    // get the current Transformation matrix Matrix from the forward_kin node
     Eigen::Matrix4f transform;
     transform << srv.response.layout.data[0],srv.response.layout.data[1],srv.response.layout.data[2],srv.response.layout.data[3],
         srv.response.layout.data[4],srv.response.layout.data[5],srv.response.layout.data[6],srv.response.layout.data[7],
         srv.response.layout.data[8],srv.response.layout.data[9],srv.response.layout.data[10],srv.response.layout.data[11],
         srv.response.layout.data[12],srv.response.layout.data[13],srv.response.layout.data[14],srv.response.layout.data[15];
     transform = transform*handeye_;
-    
-    //Transformation of the filtered cloud
-    pcl::transformPointCloud (*cloud_xyz_, *cloud_xyz_, transform);
+
+    pcl::transformPointCloud (*received_cloud_xyz_, *received_cloud_xyz_, transform);
   }
 
+  //CropBox filter to cut out the skeleton from the whole point cloud
   void crop(){
     pcl::CropBox<pcl::PointXYZRGB> crop;
     crop.setMin(Eigen::Vector4f(xyz_min));
     crop.setMax(Eigen::Vector4f(xyz_max));
-    crop.setInputCloud(cloud_xyz_);
-    crop.filter(*cloud_xyz_);
+    crop.setInputCloud(received_cloud_xyz_);
+    crop.filter(*received_cloud_xyz_);
   }
 
+  //ICP algorithm for fine alignment
   void ICP(){
+    //if the stitched cloud is empty, just write the received cloud into it
     if (stitched_cloud_->empty()){
-      *stitched_cloud_ = *cloud_xyz_;
+      *stitched_cloud_ = *received_cloud_xyz_;
     }else{
-      //Set clouds for the ICP algorithm
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr goal_cloud (new pcl::PointCloud<pcl::PointXYZRGB> ());
       pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-      icp.setInputSource(cloud_xyz_);
+      icp.setInputSource(received_cloud_xyz_);
       icp.setInputTarget(stitched_cloud_);
       icp.setMaximumIterations(icp_max);
 
-      //align new cloud to stitched cloud and add to the total stitched cloud.
       icp.align(*goal_cloud);
       *stitched_cloud_ += *goal_cloud;
     }
   }
 
+  //publish the stitched cloud
   void publishCloud(){
     sensor_msgs::PointCloud2 output;
     pcl::toROSMsg(*stitched_cloud_, output);
     pub_.publish (output);
   }
 
-  void saveCloud(){
-    pcl::io::savePCDFile("/home/niklas/Documents/RNM/stitched_cloud.pcd", *stitched_cloud_, true);
-  }
-
+  //call the registration service with the total stitched point cloud to receive a transformation matrix
   void calculateSkeletonPosition() {
     point_cloud_registration::alignment_service srv;
 
@@ -171,6 +170,14 @@ class PCStitch
     std::cerr << transformation_matrix_ << std::endl;
   }
 
+  //start a service which can be called to receive the registration results
+  void startService(){
+    ros::ServiceServer service = nh_.advertiseService("registration_results_service", &PCStitch::getRegistrationResults, this);
+    ros::spin();
+  }
+
+  //service function to give back the transformation results (transformation matrix, a box which covers the skeleton, the transormed center point of the box,
+  //the transformed needle start point and the transformed goal point inside the skeleton
   bool getRegistrationResults(point_cloud_registration::registration_results_service::Request& req, point_cloud_registration::registration_results_service::Response &res){
     res.registration_results.box_height = box_height;
     res.registration_results.box_length = box_length;
@@ -182,24 +189,21 @@ class PCStitch
     return true;
   }
 
-  void startService(){
-    ros::ServiceServer service = nh_.advertiseService("registration_results_service", &PCStitch::getRegistrationResults, this);
-    ros::spin();
-  }
-
+  //public function which calls all the the private functions in the right order, after a new cloud has arrived
  public:
   void addCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
     receiveCloud(PCJS);
     transform();
     crop();
-    outlierRemoval(cloud_xyz_);
+    outlierRemoval(received_cloud_xyz_);
     subsample();
     ICP();
     publishCloud();
+    //when all messages have arrived, call outlier removal one more time, publish the final stitched cloud, call the registration service and
+    // start the service from which other nodes can get the results
     if (message_counter_ == message_limit){
       outlierRemoval(stitched_cloud_);
       publishCloud();
-      saveCloud();
       calculateSkeletonPosition();
       startService();
     }
@@ -211,8 +215,7 @@ main (int argc, char** argv)
 {
   const int queue_size = 50;
 
-
-  ros::init (argc, argv, "PCStitch");
+  ros::init (argc, argv, "PC_stitching_node");
   ros::NodeHandle nh;
 
   Eigen::Matrix4f handeye;

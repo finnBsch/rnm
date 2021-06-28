@@ -1,9 +1,9 @@
 <launch>
     <!-- <node name="Scanner" pkg="point_cloud_registration" type="Scanner"></node> -->
     <node name="Synchronizer" pkg="point_cloud_registration" type="Synchronizer"></node>
-    <node name="PCStitch" pkg="point_cloud_registration" type="PCStitch"></node>
-    <node name="STLRegistration2" pkg = "point_cloud_registration" type="STLRegistration2"></node>
-    <node name="forward_kin_node" pkg="forward_kin" type="forward_kin_node"></node>
+    <node name="PC_stitching_node" pkg="point_cloud_registration" type="PC_stitching_node"></node>
+    <node name="STLRegistration_node" pkg = "point_cloud_registration" type="STLRegistration_node"></node>
+    <node name="pcl_registration_forward_kin_node" pkg="forward_kin" type="forward_kin_node"></node>
     <node name="rviz" pkg="rviz" type="rviz"></node>
     <node name="static_transform_publisher" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 world rgb_camera_link 100"></node>
 </launch>
