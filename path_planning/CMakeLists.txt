@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
         )
 find_package( PkgConfig REQUIRED)
 find_package( Bullet REQUIRED)
-find_package(toppra REQUIRED)
 pkg_check_modules( flann REQUIRED flann )
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions

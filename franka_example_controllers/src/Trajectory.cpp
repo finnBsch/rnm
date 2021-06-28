@@ -250,6 +250,10 @@ bool Trajectory::integrateForward(list<TrajectoryStep> &trajectory, double accel
 		pathPos += timeStep * 0.5 * (oldPathVel + pathVel);
 
 		if(nextDiscontinuity != switchingPoints.end() && pathPos > nextDiscontinuity->first) {
+            if (pathPos - nextDiscontinuity->first < eps)
+            {
+                continue;
+            }
 			pathVel = oldPathVel + (nextDiscontinuity->first - oldPathPos) * (pathVel - oldPathVel) / (pathPos - oldPathPos);
 			pathPos = nextDiscontinuity->first;
 		}

@@ -76,26 +76,21 @@ int main(int argc, char **argv)
     else
     {
         ROS_ERROR("Failed to call service inverse_kinematics");
-        return 1;
+        //return 1;
     }
     bool not_feasible = true;
+    bool succ = true;
+    boost::array<double, 7> angles;
     while(not_feasible) {
+        angles = srv_inv.response.ik_jointAngles;
+        for(int i = 0; i < 6; i++){
+            angles[i] = wrapMinMax(angles[i], -M_PI, M_PI);
+        }
         for (int i = 0; i < 6; i++) {
-            if ((srv_inv.response.ik_jointAngles[i] < joint_ranges[i][0] ||
-                 srv_inv.response.ik_jointAngles[i] > joint_ranges[i][1])) {
-                float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                if(p<0.3) {
-                    arr[i] = arr[i] * 1.1;
-                }
-                else if(p<0.0){
-                    arr[i]= arr[i] *(-1);
-                }
-                else{
-                    //arr[i] = arr[i] * 0.9;
-                    float LO = joint_ranges[i][0];
-                    float HI = joint_ranges[i][1];
-                    arr[i] = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
-                }
+            if ((angles[i] < joint_ranges[i][0] ||
+                 angles[i] > joint_ranges[i][1] || !succ)) {
+                //ROS_ERROR("GOAL POINT NOT FEASIBLE (out of range)");
+
                 not_feasible = true;
                 break;
             }
@@ -103,8 +98,24 @@ int main(int argc, char **argv)
                 not_feasible = false;
             }
         }
-        srv_inv.request.initial_joint_angles = arr;
-        client_inv.call(srv_inv);
+        if(not_feasible) {
+            for(int j = 0; j <6; j++) {
+                float p = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                if(p<0.3) {
+                    arr[j] = arr[j] * 1.1;
+                }
+                else if(p<0.5){
+                    arr[j] = arr[j] *(-1);
+                }
+                else{
+                    float LO = joint_ranges[j][0];
+                    float HI = joint_ranges[j][1];
+                    arr[j] = LO + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(HI-LO)));
+                }
+            }
+            srv_inv.request.initial_joint_angles = arr;
+            succ = client_inv.call(srv_inv);
+        }
     }
     //Point start = {(float)srv.response.end_effector_pos[0], (float)srv.response.end_effector_pos[1], (float)srv.response.end_effector_pos[2]};
     joint_angles start = {static_cast<float>(joint_state_msg.position[0]), static_cast<float>(joint_state_msg.position[1]),static_cast<float>(joint_state_msg.position[2]),
@@ -128,8 +139,8 @@ int main(int argc, char **argv)
     ros::param::get("~d", d_);
     ros::param::get("~e", e_);
     ros::param::get("~f", f_);*/
-    joint_angles goal = {static_cast<float>(srv_inv.response.ik_jointAngles[0]), static_cast<float>(srv_inv.response.ik_jointAngles[1]), static_cast<float>(srv_inv.response.ik_jointAngles[2]),
-                         static_cast<float>(srv_inv.response.ik_jointAngles[3]), static_cast<float>(srv_inv.response.ik_jointAngles[4]), static_cast<float>(srv_inv.response.ik_jointAngles[5])};
+    joint_angles goal = {static_cast<float>(angles[0]), static_cast<float>(angles[1]), static_cast<float>(angles[2]),
+                         static_cast<float>(angles[3]), static_cast<float>(angles[4]), static_cast<float>(angles[5])};
     ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f",goal[0], goal[1], goal[2], goal[3], goal[4], goal[5]);
 
     float fac = 0.05;

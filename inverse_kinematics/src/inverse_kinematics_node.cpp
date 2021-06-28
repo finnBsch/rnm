@@ -24,6 +24,7 @@ class IncrementalInverseKinematics {
 private:
 
     double incrementalStepSize;
+    bool successful = false;
     bool initializing = true;
     boost::array<double, 7> desired_joint_angles_;
     VectorXd joint_angles_;
@@ -59,7 +60,7 @@ public:
     // CONTRUCTOR FOR INVERSE KINEMATICS WITHOUT FORWARD KIN SERVICE CONNECTION
     explicit IncrementalInverseKinematics(int size): size_(size),joint_angles_(7, 1), current_transformationmatrix_vector_(size, 1), final_transformationmatrix_vector_(size, 1), a(8), d(8), alpha(8),vector(12,1),A_total(4,4),ret_mat(4,4), abs_delta_A(size_,1), endeffector(6){
         incrementalStepSize = 0.01;
-        limit_ = 10000;
+        limit_ = 500000;
         counter_ = 0;
         client_ = nullptr;
         a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
@@ -232,13 +233,16 @@ public:
 
             // check if largest entry of absolute is smaller than error
             if (abs_delta_A.maxCoeff() <
-                0.01) {// uncomment this if limit of iterations is desired || counter_ == limit_) {
+                0.01 || counter_ >= limit_) {
 
-                if (counter_ == limit_) {
+                if (counter_ >= limit_) {
                     ROS_ERROR("Limit ueberstritten: %i", counter_);
+                    successful = false;
                 } else {
+                    successful = true;
                     ROS_INFO("FINISHED");
                 }
+                counter_ = 0;
                 return transformVectorToArray(joint_angles_);
 
             } else {
@@ -275,6 +279,7 @@ public:
         }
         final_transformationmatrix_vector_ = convert4DMatrixTo12DVector(convertEndeffectorToTransformation(endeffector));
 
+
         //TODO goal pos in service
         //PERFORM INVERSE KINEMATICS
         desired_joint_angles_ = incrementalStep();
@@ -285,7 +290,7 @@ public:
                               desired_joint_angles_[2], desired_joint_angles_[3],
                               desired_joint_angles_[4], desired_joint_angles_[5], desired_joint_angles_[6]};
         ROS_INFO("Zähler %i", zaehlen);
-        return true;
+        return successful;
     }
 };
 
