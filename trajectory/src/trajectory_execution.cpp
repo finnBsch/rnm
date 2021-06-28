@@ -32,8 +32,8 @@ public:
 };
 
 
-int main(int argc, char **argv){
-    ros::init(argc, argv, "listener");
+int main(int argc, char **argv) {
+    ros::init(argc, argv, "trajectory_exec");
     ros::NodeHandle n;
     // TODO differ between sim
     ros::Publisher trajectory_publisher_sim = n.advertise<std_msgs::Float64MultiArray>("/joint_position_example_controller_sim/joint_command", 1000);

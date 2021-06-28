@@ -32,6 +32,7 @@ private:
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     ros::NodeHandle nh_;
     std::vector<std::string> joint_names_;
+    ros::Publisher* traj_pub;
     unsigned int num_joints_;
     std::string command_topic_;
     long counter = 0;
@@ -68,21 +69,15 @@ public:
 
 
     // Initialize
-    RobotArm(ros::NodeHandle nh, std::string command_topic): nh_(nh), num_joints_(7), command_topic_(command_topic_),init_position(7),delta_angle(7)
+    RobotArm(ros::NodeHandle nh): nh_(nh), num_joints_(7), init_position(7),delta_angle(7)
     {
-        ros::Publisher traj_pub = nh_.advertise<trajectory_msgs::JointTrajectory>("/trajectory", 10);
+        traj_pub = new ros::Publisher(nh_.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10));
         ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
         inverse_kinematics::unserService srv;
 
         sensor_msgs::JointState joint_state_msg;
 
-
-        if (command_topic.find("sim") != std::string::npos) {
-            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
-        }
-        else {
-            joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
-        }
+        joint_state_msg  = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
 
         for (size_t i = 0; i < 7; ++i) {
             init_position[i] = joint_state_msg.position[i];
@@ -91,10 +86,10 @@ public:
         //TODO request path planing points
         VectorXd o1(6);
         VectorXd o2(6);
-        o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         o1 << 0.417488, 0.0473712, 0.551279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
+        o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
-        //o2 << 0.417488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+        //o2 << 0.417488, 0.2473712, 0.251279, 0.0,     3.14, 0.0;
         //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
         //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; // Punkt 2 von Niklas
 
@@ -108,7 +103,6 @@ public:
             ROS_INFO("----------------------");
         }
 
-        command_pub = nh_.advertise<std_msgs::Float64MultiArray>(command_topic, 1);
 
         //give inverse kinematics the current joint angles of the robot
         srv.request.initial_joint_angles = {init_position[0],
@@ -152,12 +146,12 @@ public:
             }
 
             received_joint_angles[i+1] = {srv.response.ik_jointAngles[0],
-                                        srv.response.ik_jointAngles[1],
-                                        srv.response.ik_jointAngles[2],
-                                        srv.response.ik_jointAngles[3],
-                                        srv.response.ik_jointAngles[4],
-                                        srv.response.ik_jointAngles[5],
-                                        srv.response.ik_jointAngles[6]};
+                                          srv.response.ik_jointAngles[1],
+                                          srv.response.ik_jointAngles[2],
+                                          srv.response.ik_jointAngles[3],
+                                          srv.response.ik_jointAngles[4],
+                                          srv.response.ik_jointAngles[5],
+                                          srv.response.ik_jointAngles[6]};
         }
         list<VectorXd> waypoints;
         VectorXd waypoint(6);
@@ -192,7 +186,7 @@ public:
         }
         ROS_INFO("Points : %i ", traj_msg.points.size());
         //std::reverse(traj_msg.points.begin(),traj_msg.points.end());
-        traj_pub.publish(traj_msg);
+        traj_pub->publish(traj_msg);
         ros::spinOnce();
         /*for (int i=0; i<scaling_;i++){
             for (int j =0;j<7; j++){
@@ -279,17 +273,12 @@ public:
 int main(int argc, char** argv)
 {
     // Init the ROS node
-    ros::init(argc, argv, "simple_trajectory_player");
-    ros::NodeHandle nh("~");
+    ros::init(argc, argv, "needle_insertion");
+    ros::NodeHandle nh;
 
-
-    // Amount of movement in each joint
-    std::string command_topic = "/joint_position_example_controller/joint_command";
-    ros::param::get("~command_topic", command_topic);
-    ROS_INFO_STREAM("command_topic: " << command_topic);
 
     // create RobotArm object
-    RobotArm arm(nh,command_topic);
+    RobotArm arm(nh);
 
 
     // loop infinitely with a fixed frequency and send our commands
