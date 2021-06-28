@@ -3,29 +3,15 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <iostream>
-#include <thread>
-#include <pcl/common/angles.h> // for pcl::deg2rad
-#include <pcl/features/normal_3d.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/console/parse.h>
 #include <pcl/filters/voxel_grid.h>
-#include <limits>
-#include <fstream>
-#include <vector>
 #include <Eigen/Core>
-//#include <pcl/memory.h>
-#include <pcl/pcl_macros.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/fpfh.h>
-#include <pcl/registration/ia_ransac.h>
 #include <pcl/registration/icp.h>
-//#include <pcl/registration/ndt.h>
 #include <std_msgs/Float64MultiArray.h>
 #include "point_cloud_registration/alignment_service.h"
 #include <eigen_conversions/eigen_msg.h>
@@ -171,9 +157,9 @@ class CloudAlignment {
         nr_iterations_(50000),
         number_of_samples_(3),
         k_value_(5),
-        similarity_threshold_(0.65f),
+        similarity_threshold_(0.8f),
         max_correspondence_distance_(2.5*0.005),
-        inlier_fraction_(0.7f),
+        inlier_fraction_(0.6f),
         nr_iterations_icp_(50)
   {
     // Input parameters in alignment algorithm
@@ -194,15 +180,6 @@ class CloudAlignment {
     align_.setTargetFeatures(target_cloud.getLocalFeatures());
   }
 
-  /*
-  // Add the given cloud to the list of template clouds
-  void
-  addTemplateCloud (FeatureCloud &template_cloud)
-  {
-    templates_.push_back (template_cloud);
-  }
-   */
-
   // Align the given template cloud to the target specified by setTargetCloud ()
   void align(FeatureCloud& template_cloud, CloudAlignment::Result& result) {
     align_.setInputSource(template_cloud.getPointCloud());
@@ -220,8 +197,6 @@ class CloudAlignment {
       icp.setInputTarget(target_.getPointCloud());
 
       // ICP parameters (examples), we still need to adjust them
-      // icp.setEuclideanFitnessEpsilon(1);
-      // icp.setTransformationEpsilon(1e-20);
       icp.setMaximumIterations(nr_iterations_icp_);
 
       // align new cloud to stitched cloud and add to the total stitched cloud.
@@ -308,7 +283,7 @@ class CloudAlignment {
 
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "STLRegistration2");
+  ros::init(argc, argv, "STLRegistration_node");
   ros::NodeHandle nodeHandle("~");
 
   AlignService Alignment(nodeHandle);
