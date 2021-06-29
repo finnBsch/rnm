@@ -138,6 +138,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node src/forward_kin_node.cpp)
 add_executable(${PROJECT_NAME}_spam_node src/forward_kin_continuous.cpp)
+add_executable(${PROJECT_NAME}_forward_node src/forward_kinematics.cpp src/forward_kinematics.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
