@@ -15,6 +15,7 @@
 #include "cv_handeye.h"
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_listener.h>
+#include <boost/filesystem.hpp>
 
 #include <opencv2/core/mat.hpp>
 
@@ -94,7 +95,7 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
 
       // create filename
       stringstream ss;
-      string name = "/pose_";
+      string name = "/imgs/pose_";
       string type = ".jpg";
       ss << path << name << (pose_rgb) << type;  // pose = counter, set at start
       string filename = ss.str();
@@ -454,6 +455,8 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
   tfListener = new tf::TransformListener();
+  boost::filesystem::remove_all(path + "/imgs");
+  boost::filesystem::create_directory(path + "/imgs");
   // callbacks. each image type has its own saving callback
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   //image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
