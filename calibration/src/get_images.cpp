@@ -51,8 +51,10 @@ int main(int argc, char **argv) {
 
   // subscribe to camera topics
   // callbacks to fetch current images
-  image_transport::Subscriber rgb_sub = it.subscribe("/rgb/image_raw", 1, fetchRgbImg);
-  image_transport::Subscriber ir_sub = it.subscribe("/ir/image_raw", 1, fetchIrImg);
+  //image_transport::Subscriber rgb_sub = it.subscribe("/rgb/image_raw", 1, fetchRgbImg);
+  image_transport::Subscriber rgb_sub = it.subscribe("k4a/rgb/image_raw", 1, fetchRgbImg);
+  //image_transport::Subscriber ir_sub = it.subscribe("/ir/image_raw", 1, fetchIrImg);
+  image_transport::Subscriber ir_sub = it.subscribe("k4a/ir/image_raw", 1, fetchIrImg);
   ros::Subscriber joint_states_sub = n.subscribe("/joint_states", 1, fetchJointStates);
 
   // update publishers
