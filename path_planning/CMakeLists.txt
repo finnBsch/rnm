@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         forward_kin
         inverse_kinematics
+        point_cloud_registration
         )
 find_package( PkgConfig REQUIRED)
 find_package( Bullet REQUIRED)
