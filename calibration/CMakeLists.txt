@@ -13,8 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
         rospy
         cv_bridge
         image_transport
-        #message_generation
+        message_generation
         sensor_msgs
+        std_msgs
         forward_kin
         tf2_ros
         tf
@@ -55,6 +56,7 @@ find_package( OpenCV REQUIRED )
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
+
 ## Generate messages in the 'msg' folder
 #add_message_files(
         #FILES
@@ -64,11 +66,12 @@ find_package( OpenCV REQUIRED )
 #)
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
+ add_service_files(
+   FILES
+   handEyeCalibration.srv
 #   Service1.srv
 #   Service2.srv
-# )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -77,12 +80,10 @@ find_package( OpenCV REQUIRED )
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-##generate_messages(
-##        DEPENDENCIES
-##        sensor_msgs
-        #   std_msgs
-##)
+## Generate added messages and services with any dependencies listed here ##########################################
+generate_messages(
+        DEPENDENCIES std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -116,7 +117,7 @@ find_package( OpenCV REQUIRED )
 catkin_package(
         #  INCLUDE_DIRS include
         #  LIBRARIES calibration
-        CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+        CATKIN_DEPENDS roscpp rospy message_runtime
         #  DEPENDS system_lib
 )
 
@@ -158,17 +159,22 @@ add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
-target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS}   ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${catkin_LIBRARIES})
 ##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${catkin_LIBRARIES})
 ##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+
+
+add_dependencies(${PROJECT_NAME}_calibration_node ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_calibration_node calibration_generate_messages_cpp)
+#add_dependencies(${PROJECT_NAME}_calibration_node calibration_gencpp) #${catkin_EXPORTED_TARGETS}) ###############################
 
 #############
 ## Install ##

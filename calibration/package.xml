@@ -61,8 +61,6 @@
   <depend>forward_kin</depend>
 
 
-
-
   <build_export_depend>sensor_msgs</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
@@ -72,10 +70,6 @@
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
-
-
-
-
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

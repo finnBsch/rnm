@@ -20,6 +20,8 @@
 #include <opencv2/core/mat.hpp>
 
 #include <tf2_ros/transform_listener.h>
+#include "calibration/handEyeCalibration.h"
+
 
 using namespace cv;
 using namespace std;
@@ -44,6 +46,7 @@ std::vector<cv::Mat> R_target2cam;
 std::vector<cv::Mat> t_target2cam;
 // container for joint states as geometry_msgs
 vector<tf::StampedTransform> allJointStates;
+vector<tuple<matrix, trans_vector>> allTransforms;
 
 // tf listener to get robot pose
 tf::TransformListener* tfListener;
@@ -55,6 +58,7 @@ cv::String gripper = "panda_link8";
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
   if(js_count<n_frames) {
     // get robot pose
+    // TODO: Rotation matrix from msg + endeffector pos from msg
     tf::StampedTransform joint_state;
     tfListener->lookupTransform(robot_base, gripper, ros::Time(0), joint_state);
     allJointStates.push_back(joint_state);
@@ -404,9 +408,9 @@ void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
   return;
 }
 
+cv::Mat R_cam2gripper, t_cam2gripper;
 // perform hand-eye calibration with the calculated transforms
 void handEye(){
-
   vector<cv::Mat> R_gripper2base, t_gripper2base;
   for(int i=0; i<allJointStates.size(); i++)
   {
@@ -418,7 +422,6 @@ void handEye(){
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
   }
-  cv::Mat R_cam2gripper, t_cam2gripper;
 
   ROS_INFO("Starting hand-eye calibration.");
 
@@ -450,6 +453,31 @@ void handEye(){
   ROS_INFO("calibration saved to 'camera_hand_eye_calibration.yaml");
 }
 
+
+bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
+                   calibration::handEyeCalibration::Response &res) {
+  //float a = req.input; //dummy
+  boost::array<double, 9> f_R_cam2gripper;
+  boost::array<double, 3> f_t_cam2gripper;
+  f_R_cam2gripper[0] = R_cam2gripper.at<double>(0, 0);
+  f_R_cam2gripper[1] = R_cam2gripper.at<double>(0, 1);
+  f_R_cam2gripper[2] = R_cam2gripper.at<double>(0, 2);
+  f_R_cam2gripper[3] = R_cam2gripper.at<double>(1, 0);
+  f_R_cam2gripper[4] = R_cam2gripper.at<double>(1, 1);
+  f_R_cam2gripper[5] = R_cam2gripper.at<double>(1, 2);
+  f_R_cam2gripper[6] = R_cam2gripper.at<double>(2, 0);
+  f_R_cam2gripper[7] = R_cam2gripper.at<double>(2, 1);
+  f_R_cam2gripper[8] = R_cam2gripper.at<double>(2, 2);
+
+  f_t_cam2gripper[0] = t_cam2gripper.at<double>(0, 0);
+  f_t_cam2gripper[1] = t_cam2gripper.at<double>(1, 0);
+  f_t_cam2gripper[2] = t_cam2gripper.at<double>(2, 0);
+
+  res.R_cam2gripper = f_R_cam2gripper;
+  res.t_cam2gripper = f_t_cam2gripper;
+  return true;
+}
+
 int main(int argc, char** argv) {
   ros::init(argc, argv,"calibration_node");
   ros::NodeHandle nh;
@@ -471,7 +499,11 @@ int main(int argc, char** argv) {
   cameraCalibration();
   handEye();
 
+  ros::ServiceServer service = nh.advertiseService("handEyeCalibration", handEyeOutput);
+
   /* TODO: service that publishes matrix<xd> of defined size containing hand eye matrix*/
 
   return 0;
 }
+
+

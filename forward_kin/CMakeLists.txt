@@ -71,7 +71,7 @@ add_service_files(
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
-   DEPENDENCIES std_msgs
+   DEPENDENCIES std_msgs sensor_msgs
  )
 
 ################################################
@@ -108,7 +108,7 @@ catkin_package(
 #  LIBRARIES forward_kin
 #  CATKIN_DEPENDS roscpp sensor_msgs
   DEPENDS EIGEN3
-        CATKIN_DEPENDS message_runtime
+        CATKIN_DEPENDS message_runtime sensor_msgs
 )
 
 ###########
@@ -161,6 +161,7 @@ target_link_libraries(${PROJECT_NAME}_spam_node
 
 add_dependencies(${PROJECT_NAME}_spam_node forward_kin_gencpp)
 add_dependencies(${PROJECT_NAME}_node forward_kin_gencpp)
+add_dependencies(${PROJECT_NAME}_node forward_kin_generate_messages_cpp)
 #############
 ## Install ##
 #############
