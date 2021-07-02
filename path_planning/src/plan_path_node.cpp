@@ -59,8 +59,8 @@ int main(int argc, char **argv)
   //auto pcr_ret = client_pcr.call(srv_pcr);
   //auto pcr_res_gp = srv_pcr.response.registration_results.needle_goalpoint;
   //auto pcr_res_sp = srv_pcr.response.registration_results.needle_startpoint;
-  array<double, 3> pcr_res_sp = {0.5, -0.35, 0.45};
-  array<double, 3> pcr_res_gp = {0.4, -0.45, 0.35};
+  array<double, 3> pcr_res_sp = {0.35, 0.45, 0.35};
+  array<double, 3> pcr_res_gp = {0.35, 0.35, 0.25};
   Eigen::Matrix3d rotMatrix;
   Eigen::Vector3d vectorBefore(0, 0, 1);
   Eigen::Vector3d vectorAfter(pcr_res_gp[0] - pcr_res_sp[0], pcr_res_gp[1] - pcr_res_sp[1], pcr_res_gp[2] - pcr_res_sp[2]);
@@ -159,8 +159,8 @@ int main(int argc, char **argv)
   ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f",goal[0], goal[1], goal[2], goal[3], goal[4], goal[5]);
   ROS_INFO("Starting to find path from joint angles %f, %f, %f, %f, %f, %f",start[0], start[1], start[2], start[3], start[4], start[5]);
 
-  float fac = 0.05;
-  float fac2 = 0.05;
+  float fac = 0.03;
+  float fac2 = 0.002;
   std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
   std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
   rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
   line_list[3].scale.z = 0.3;
   line_list[3].pose.position.x = 0.35;
   line_list[3].pose.position.y = 0;
-  line_list[3].pose.position.z = 0.1;
+  line_list[3].pose.position.z = -0.5;
 
 
 
