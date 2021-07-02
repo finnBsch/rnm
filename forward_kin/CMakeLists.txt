@@ -71,7 +71,7 @@ add_service_files(
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
-   DEPENDENCIES std_msgs sensor_msgs
+   DEPENDENCIES std_msgs
  )
 
 ################################################
@@ -108,7 +108,7 @@ catkin_package(
 #  LIBRARIES forward_kin
 #  CATKIN_DEPENDS roscpp sensor_msgs
   DEPENDS EIGEN3
-        CATKIN_DEPENDS message_runtime sensor_msgs
+        CATKIN_DEPENDS message_runtime
 )
 
 ###########
@@ -136,8 +136,9 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/forward_kin_node.cpp)
+#add_executable(${PROJECT_NAME}_node src/forward_kin_node.cpp)
 add_executable(${PROJECT_NAME}_spam_node src/forward_kin_continuous.cpp)
+#add_executable(${PROJECT_NAME}_forward_node src/forward_kinematics.cpp src/forward_kinematics.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,18 +151,17 @@ add_executable(${PROJECT_NAME}_spam_node src/forward_kin_continuous.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${PROJECT_NAME}_node
-   ${catkin_LIBRARIES}
-   ${EIGEN3_LIBRARIES}
- )
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+#   ${EIGEN3_LIBRARIES}
+# )
 target_link_libraries(${PROJECT_NAME}_spam_node
         ${catkin_LIBRARIES}
         ${EIGEN3_LIBRARIES}
         )
 
 add_dependencies(${PROJECT_NAME}_spam_node forward_kin_gencpp)
-add_dependencies(${PROJECT_NAME}_node forward_kin_gencpp)
-add_dependencies(${PROJECT_NAME}_node forward_kin_generate_messages_cpp)
+#add_dependencies(${PROJECT_NAME}_node forward_kin_gencpp)
 #############
 ## Install ##
 #############

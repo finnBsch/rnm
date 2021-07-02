@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
         message_generation
         sensor_msgs
         std_msgs
-        forward_kin
+        #forward_kin
         tf2_ros
         tf
         )
@@ -149,6 +149,7 @@ include_directories(
 add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
 add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
+        #forward_kin/forward_kinematics.cpp forward_kin/forward_kinematics.h)
 add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from_folder_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
 
 ## Rename C++ executable without prefix

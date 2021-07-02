@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
   //image_transport::Subscriber ir_sub = it.subscribe("/ir/image_raw", 1, fetchIrImg);
   image_transport::Subscriber ir_sub = it.subscribe("k4a/ir/image_raw", 1, fetchIrImg);
   ros::Subscriber joint_states_sub = n.subscribe("/joint_states", 1, fetchJointStates);
+  //ros::Subscriber joint_states_sub = n.subscribe("/franka_state_controller/joint_states_desired", 1, fetchJointStates);
 
   // update publishers
   rgb_pub = n.advertise<sensor_msgs::Image>("calibration_rgb_img", 1);

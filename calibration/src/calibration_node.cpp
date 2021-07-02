@@ -16,6 +16,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
+#include <eigen3/Eigen/Dense>
 
 #include <opencv2/core/mat.hpp>
 
@@ -25,12 +26,13 @@
 
 using namespace cv;
 using namespace std;
+using namespace Eigen;
 
 // define number of frames  to be extracted and used for calibration... later on this will be number of good frame pairs
 int n_frames = 10;
 
 // package path
-string path = "/home/nico/cal_data";
+string path = "/home/lars/cal_data";
 //string path = "/home/rnm_grp1/rgb";
 
 // counters for the filenames
@@ -44,9 +46,16 @@ int rgb_count = 0;
 std::vector<cv::Mat> cameraPosesR;
 std::vector<cv::Mat> R_target2cam;
 std::vector<cv::Mat> t_target2cam;
+
+
+
 // container for joint states as geometry_msgs
-vector<tf::StampedTransform> allJointStates;
-vector<tuple<matrix, trans_vector>> allTransforms;
+//vector<tf::StampedTransform> allJointStates;
+vector<vector<double>> allJointStates;
+vector<array<cv::Mat,2>> allTransforms;
+
+
+
 
 // tf listener to get robot pose
 tf::TransformListener* tfListener;
@@ -54,14 +63,53 @@ tf::TransformListener* tfListener;
 cv::String robot_base = "panda_link0";
 cv::String gripper = "panda_link8";
 
+// from forward_kinematics:
+MatrixXd get_transformationmatrix(const float theta,
+                                  const float a,
+                                  const float d,
+                                  const float alpha) {
+  Matrix4d ret_mat;
+  ret_mat << cos(theta), -sin(theta), 0, a, sin(theta) * cos(alpha), cos(theta) * cos(alpha),
+      -sin(alpha), -d * sin(alpha), sin(theta) * sin(alpha), cos(theta) * sin(alpha), cos(alpha),
+      d * cos(alpha), 0, 0, 0, 1;
+  return ret_mat;
+}
+
+// forward_kinematics:
+array<Mat, 2> get_forward_kinematics_transformation(VectorXd a, vector<double> joint_angles_,
+                                                      VectorXd d, VectorXd alpha) {
+  array<MatrixXd, 8> a_;
+  Matrix4d A_total;
+  Mat R_gripper2base;
+  Mat t_gripper2base;
+
+  for (int i = 0; i < 7; i++) {
+    a_.at(i) = get_transformationmatrix(joint_angles_[i], a(i), d(i), alpha(i));
+  }
+  a_.at(7) = get_transformationmatrix(0, a(7), d(7), alpha(7));
+  A_total = a_.at(0) * a_.at(1) * a_.at(2) * a_.at(3) * a_.at(4) * a_.at(5) * a_.at(6) * a_.at(7);
+
+  for (int i = 0; i < A_total.rows() - 1; i++) {
+    for (int j = 0; j < A_total.cols() - 1; j++) {
+      R_gripper2base.at<double>(i, j) = A_total(i, j);
+    }
+    t_gripper2base.at<double>(i) = A_total(i, 3);
+  }
+
+  return {R_gripper2base, t_gripper2base};
+}
+
 // saving jointState msg
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
   if(js_count<n_frames) {
     // get robot pose
     // TODO: Rotation matrix from msg + endeffector pos from msg
-    tf::StampedTransform joint_state;
-    tfListener->lookupTransform(robot_base, gripper, ros::Time(0), joint_state);
-    allJointStates.push_back(joint_state);
+    //tf::StampedTransform joint_state;
+    //tfListener->lookupTransform(robot_base, gripper, ros::Time(0), joint_state);
+
+    vector<double> one_joint_states;
+    one_joint_states = msg.position;
+    allJointStates.push_back(one_joint_states);
     js_count++;
   }
 }
@@ -124,7 +172,7 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for(int i = 0; i<n_frames; i++){
-    rgbFileNames[i] = "/home/nico/cal_data/pose_" + to_string(i+1) + ".jpg";
+    rgbFileNames[i] = "/home/lars/cal_data/imgs/pose_" + to_string(i+1) + ".jpg";
   }
   //std::vector<cv::String> irFileNames;
   // std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
@@ -391,6 +439,7 @@ void angaxis2quat(cv::Mat angaxis, vector<double>& quat)
   quat[3] = cos(angle/2);
 }
 
+/*
 void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
   tvec = cv::Mat::zeros(3,1,CV_64F);
   rvec = cv::Mat::zeros(3,3,CV_64F);
@@ -407,21 +456,41 @@ void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
   tvec.at<double>(2,0) = tran.getZ();
   return;
 }
+*/
 
 cv::Mat R_cam2gripper, t_cam2gripper;
 // perform hand-eye calibration with the calculated transforms
 void handEye(){
+  static VectorXd a(8);
+  static VectorXd d(8);
+  static VectorXd alpha(8);
+  a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
+  d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+  alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
   vector<cv::Mat> R_gripper2base, t_gripper2base;
+
+
   for(int i=0; i<allJointStates.size(); i++)
   {
-    cv::Mat R, t;
-    transform2rv(allJointStates[i], R, t);
+    //cv::Mat R, t;
+    //transform2rv(allJointStates[i], R, t);
+
+
+    auto fw_ret = get_forward_kinematics_transformation(a,allJointStates[i], d, alpha);
+    auto R = fw_ret[0];
+    auto t = fw_ret[1];
+
+
+
     cout << "R_gripper2base" << R <<endl;
     cout << "t_gripper2base " << t << endl;
 
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
   }
+
+
+
 
   ROS_INFO("Starting hand-eye calibration.");
 
@@ -481,11 +550,12 @@ bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
 int main(int argc, char** argv) {
   ros::init(argc, argv,"calibration_node");
   ros::NodeHandle nh;
+
   image_transport::ImageTransport it(nh);
   tfListener = new tf::TransformListener();
   boost::filesystem::remove_all(path + "/imgs");
   boost::filesystem::create_directory(path + "/imgs");
-  // callbacks. each image type has its own saving callback
+
   image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
   //image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
   ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWrite);
