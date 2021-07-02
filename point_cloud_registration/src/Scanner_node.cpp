@@ -7,6 +7,7 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float64MultiArray.h>
 #include "point_cloud_registration/PCJScombined.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -16,7 +17,8 @@ class Scanner {
   Scanner(ros::NodeHandle& nh)
       : nh_(nh),
         nextPose(0),
-        pub_(nh_.advertise<point_cloud_registration::PCJScombined>("PCJScombined", 1))
+        pub_(nh_.advertise<point_cloud_registration::PCJScombined>("PCJScombined", 1)),
+        pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("move_command",1))
   {
     goal_poses[0].position = {0.07975098222703264, 0.1912801323522601, 0.016800910318580282, -1.780517308656089, -0.43001809130774604, 2.840706754071704, 1.2763794419674155};
     goal_poses[1].position = {0.07423677020502224, -0.16895207870170834, -0.01739294999455757, -2.148493787373226, -0.4594188762764029, 2.9986082050005596, 1.2267582378234292};
@@ -38,18 +40,25 @@ class Scanner {
  private:
   ros::NodeHandle nh_;
   ros::Publisher pub_;
+  ros::Publisher pose_publisher_;
   ros::Subscriber sub_;
   std::array<sensor_msgs::JointState, 15> goal_poses;
-  message_filters::Subscriber<sensor_msgs::PointCloud2> filtered_cloud;
-  message_filters::Subscriber<sensor_msgs::JointState> jointStates;
-  bool published_message;
+  //message_filters::Subscriber<sensor_msgs::PointCloud2> filtered_cloud;
+  //message_filters::Subscriber<sensor_msgs::JointState> jointStates;
+  //bool published_message;
+
+  //const int pc_queue_size = 50;
   int nextPose;
-  const int pc_queue_size = 50;
   const int js_queue_size = 500;
+  const int rounding_precision = 10000;
 
   //function from which we will send our goal pose to the path planning node
   void sendGoalPose(){
-
+    std_msgs::Float64MultiArray outputPose;
+    for (int i = 0; i < 7; ++i) {
+      outputPose.data[i] = goal_poses[nextPose].position[i];
+    }
+    pose_publisher_.publish(outputPose);
   }
 
   //subscribe to to the joint_states topic
@@ -60,15 +69,16 @@ class Scanner {
   }
 
   //check if the joint states reached the desired position. if so, increment the nextPose counter and enter the getPointCloud function
-  //TODO: implement an approximate comparison, since the actual joint states will not exactly become the desired ones
   void comparePose(const sensor_msgs::JointStateConstPtr& joint_state){
     sensor_msgs::JointState tempJS;
+    sensor_msgs::JointState rounded_goal_pose;
 
     for (int i = 0; i < 7; ++i) {
-      tempJS.position[i] = round(joint_state->position[i]*10000)/10000;
+      tempJS.position[i] = round(joint_state->position[i]*rounding_precision)/rounding_precision;
+      rounded_goal_pose.position[i] = round(goal_poses[nextPose].position[i]*rounding_precision)/rounding_precision;
     }
 
-    if (goal_poses[nextPose].position == joint_state->position){
+    if (goal_poses[nextPose].position == tempJS.position){
       std::cerr << "goal pose reached!" << std::endl;
       nextPose++;
       getPointCloud();
@@ -79,36 +89,37 @@ class Scanner {
   //boolean "published_message", to check (in the callback function) if there was already an message published for this goal pose
   void getPointCloud(){
 
-    std:cerr << "entered getPC" << std::endl;
+/*    std:cerr << "entered getPC" << std::endl;
     published_message = false;
     filtered_cloud.subscribe(nh_, "/points2", pc_queue_size);
     jointStates.subscribe(nh_, "/joint_states", js_queue_size);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::JointState> MySyncPolicy;
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(js_queue_size), filtered_cloud, jointStates);
     sync.registerCallback(boost::bind(&Scanner::publishMessage, this, _1, _2));
-    ros::spin();
+    ros::spin();*/
 
 
     //when we work with static poses, there is no need for time stamp matching, so we could just take the next incoming pointcloud and jointstates and publish them as a combined message
     //this would also make the callback function (publishMessage) unnecessary
-/*    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("points2");
+    //ros::Duration(0.5).sleep();
+    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("points2");
     sensor_msgs::JointStateConstPtr JS = ros::topic::waitForMessage<sensor_msgs::JointState>("joint_states");
 
      //make sure messages have been received (apparently not necessary, but maybe we should still keep it)
-     if(JS != NULL && PC != NULL){
+     //if(JS != NULL && PC != NULL){
        point_cloud_registration::PCJScombined PCJS;
        PCJS.PC = *PC;
        PCJS.JS = *JS;
        pub_.publish(PCJS);
        sendGoalPose();
-     }*/
+     //}
   }
 
   //callback function to publish the matched pc and js
   //first check, if there was already a message published for this pose. if so, do nothing
   //otherwise, unsubscribe from the topics, so no more messages come in and publish the received pc+js
   //as a last step, send the next goalPose
-  void publishMessage(const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states){
+/*  void publishMessage(const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const sensor_msgs::JointStateConstPtr& joint_states){
     std:cerr << "entered publish message" << std::endl;
       if(published_message){
         return;
@@ -128,7 +139,7 @@ class Scanner {
       //this does not shut down the whole node for some reason
       //TODO: find a better solution
     }
-  }
+  }*/
 
   //public function to start the scanning, first send a goal pose and then start checking, if it has been reached yet
  public:

@@ -219,6 +219,30 @@ main (int argc, char** argv)
   ros::NodeHandle nh;
 
   Eigen::Matrix4f handeye;
+
+/*  calibration::handeye_service srv;
+
+  ros::ServiceClient client = nh_.serviceClient<calibration::handeye_service>(
+      "calibration/handeye_service");
+  client.call(srv);
+
+  handeye << srv.response.handeye.data[0],
+      srv.response.handeye.data[1],
+      srv.response.handeye.data[2],
+      srv.response.handeye.data[3],
+      srv.response.handeye.data[4],
+      srv.response.handeye.data[5],
+      srv.response.handeye.data[6],
+      srv.response.handeye.data[7],
+      srv.response.handeye.data[8],
+      srv.response.handeye.data[9],
+      srv.response.handeye.data[10],
+      srv.response.handeye.data[11],
+      srv.response.handeye.data[12],
+      srv.response.handeye.data[13],
+      srv.response.handeye.data[14],
+      srv.response.handeye.data[15],*/
+
   handeye << -0.0342177, -0.0224303,   0.999141,  0.0357424,
       -0.998979, -0.0285611,  -0.034854, -0.0232153,
       0.0293307,  -0.999324, -0.0214294,  0.0547717,
