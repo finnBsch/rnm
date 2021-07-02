@@ -17,8 +17,8 @@ std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2
 std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
 
 void callback(const std_msgs::Float64MultiArray& msg) {
-    //auto start = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
-    auto start = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
+    auto start = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired",ros::Duration(10)));
+    //auto start = *(ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states",ros::Duration(10)));
     list<VectorXd> waypoints;
     VectorXd waypoint(7);
     VectorXd max_acc(7);
@@ -62,7 +62,7 @@ void callback(const std_msgs::Float64MultiArray& msg) {
 int main(int argc, char** argv) {
     ros::init(argc, argv, "move_to_point_node");
     ros::NodeHandle  nh("~");
-    traj_pub = new ros::Publisher(nh.advertise<trajectory_msgs::JointTrajectory>("/trajectory_sim", 10));
-    ros::Subscriber sub = nh.subscribe("/move_command", 10, callback);
+    traj_pub = new ros::Publisher(nh.advertise<trajectory_msgs::JointTrajectory>("/trajectory", 10));
+    ros::Subscriber sub = nh.subscribe("/Scanner_node/move_command", 10, callback);
     ros::spin();
 }
