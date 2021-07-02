@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(point_cloud_registration)
 
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(catkin REQUIRED COMPONENTS
         pcl_conversions
