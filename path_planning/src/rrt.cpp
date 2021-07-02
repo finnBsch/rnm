@@ -103,7 +103,7 @@ rrt::rrt(joint_angles start_point, joint_angles goal_point, rrt_params params, r
 
     // robot params
     a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
-    d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107+0.1;
+    d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107+0.172;
     alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
     goal_p = get_end_effector(goal_point);
     // check if valid
@@ -612,7 +612,7 @@ void rrt::initialize_world() {
     tr.setIdentity();
     tr.setOrigin(btVector3(0.35, 0.2, 0.5));
     sphere->setWorldTransform(tr);
-    tr.setOrigin(btVector3(0.35, 0, 0.1));
+    tr.setOrigin(btVector3(0.35, 0, -0.5));
     box->setWorldTransform(tr);
     mObjects.push_back(cyl0);
     mObjects.push_back(cyl1);
