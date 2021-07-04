@@ -12,14 +12,21 @@ ros::Publisher rgb_pub;
 ros::Publisher ir_pub;
 ros::Publisher joint_states_pub;
 
+// is being set true if joinState message is correct, set false again right after publishing
+bool success = false;
+
 //// callbacks:
 // fetch current image from sensor_msgs and publish it
 void fetchRgbImg(const sensor_msgs::ImageConstPtr& rgbmsg) {
-  try {
-    rgb_pub.publish(rgbmsg);
-    cout << "rgb message published successfully" << endl;
-  } catch (const std::exception&) {
-    ROS_ERROR("Could not publish rgb message !!!!");
+  while (success != 1) {
+    if (success == 1) {
+      try {
+        rgb_pub.publish(rgbmsg);
+        cout << "rgb message published successfully" << endl;
+      } catch (const std::exception&) {
+        ROS_ERROR("Could not publish rgb message !!!!");
+      }
+    }
   }
 }
 
@@ -33,12 +40,30 @@ void fetchIrImg(const sensor_msgs::ImageConstPtr& irmsg) {
 }
 
 void fetchJointStates(const sensor_msgs::JointState& msg) {
-  try {
-    joint_states_pub.publish(msg);
-    cout << "joint_states  message published successfully" << endl;
-  } catch (const std::exception&) {
-    ROS_ERROR("Could not publish joint_state message !!!!");
+  // 3/4 of all joint_states/position messages are corrupted
+  // need to check if message is good before publishing it
+  vector<double> one_joint_states;
+  one_joint_states = msg.position;
+  auto threshold = float(2);
+  auto sum = float(0);
+
+
+  while (success != 1) {
+    for (int i = 0; i < one_joint_states.size(); i++) {
+      sum += fabs(float(one_joint_states[i]));
+    }
+    cout << "sum: " << sum << endl;
+    if (sum > threshold) {
+      try {
+        joint_states_pub.publish(msg);
+        cout << "joint_states  message published successfully" << endl;
+        success = 1;
+      } catch (const std::exception&) {
+        ROS_ERROR("Could not publish joint_state message !!!!");
+      }
+    }
   }
+  success = 0;
 }
 
 int main(int argc, char **argv) {
