@@ -373,10 +373,10 @@ int cameraCalibration() {
     /////////////////////////////
     cv::Mat temp;
     cv::Rodrigues(rvec, temp);
-    temp = temp.t();
+    //temp = temp.t();
     R_target2cam.push_back(temp);
     cout << "R_target2cam: " << temp << endl;
-    tvec = -temp*tvec;
+    //tvec = -temp*tvec;
     t_target2cam.push_back(tvec);
     cout << "t_target2cam: " << tvec << endl;
   }
