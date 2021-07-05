@@ -1,0 +1,4 @@
+float64[64] input
+---
+float64[9]    R_cam2gripper
+float64[3]    t_cam2gripper

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(path_planning)
+project(calibration)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -7,19 +7,22 @@ project(path_planning)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+## set(OpenCV_DIR /usr/local/lib/cmake/opencv4) ## did not work
 find_package(catkin REQUIRED COMPONENTS
         roscpp
+        rospy
+        cv_bridge
+        image_transport
+        message_generation
         sensor_msgs
         std_msgs
-        forward_kin
-        inverse_kinematics
-        point_cloud_registration
+        #forward_kin
+        tf2_ros
+        tf
         )
-find_package( PkgConfig REQUIRED)
-find_package( Bullet REQUIRED)
-find_package( ruckig REQUIRED)
-pkg_check_modules( flann REQUIRED flann )
-find_package(Eigen3 REQUIRED)
+find_package( OpenCV REQUIRED )
+## find_package(OpenCV REQUIRED PATHS "/usr/local/include/opencv2") ## did not work
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -53,19 +56,22 @@ find_package(Eigen3 REQUIRED)
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
+
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+#add_message_files(
+        #FILES
+        #imagepair.msg
+        #   Message1.msg
+        #   Message2.msg
+#)
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
+ add_service_files(
+   FILES
+   handEyeCalibration.srv
 #   Service1.srv
 #   Service2.srv
-# )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -74,11 +80,10 @@ find_package(Eigen3 REQUIRED)
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs#   std_msgs
-# )
+## Generate added messages and services with any dependencies listed here ##########################################
+generate_messages(
+        DEPENDENCIES std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -111,9 +116,8 @@ find_package(Eigen3 REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         #  INCLUDE_DIRS include
-        #  LIBRARIES path_planning
-        DEPENDS EIGEN3
-        #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs
+        #  LIBRARIES calibration
+        CATKIN_DEPENDS roscpp rospy message_runtime
         #  DEPENDS system_lib
 )
 
@@ -125,14 +129,13 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
         # include
-        ${EIGEN3_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
-        ${BULLET_INCLUDE_DIR}
+        ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/path_planning.cpp
+#   src/${PROJECT_NAME}/calibration.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -143,11 +146,13 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
+add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
+add_executable(${PROJECT_NAME}_get_images_check_node src/get_images_check.cpp)
+add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
+add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
+        #forward_kin/forward_kinematics.cpp forward_kin/forward_kinematics.h)
+add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from_folder_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast" )
-add_executable(${PROJECT_NAME}_node src/rrt.cpp src/rrt.h src/rrt_node.cpp src/rrt_node.h
-        src/plan_path_node.cpp src/utility.cpp src/utility.h src/spline.h src/Trajectory.cpp src/Path.cpp src/Trajectory.h src/Path.h) # TODO: insert correct NODE cpp
-add_executable(move_to_point_node src/move_to_point.cpp src/Trajectory.cpp src/Path.cpp src/Trajectory.h src/Path.h)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -157,22 +162,24 @@ add_executable(move_to_point_node src/move_to_point.cpp src/Trajectory.cpp src/P
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+## add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_node
-        ${catkin_LIBRARIES} lz4
-        ${EIGEN3_LIBRARIES}
-        ${BULLET_LIBRARIES}
-        )
-target_link_libraries(move_to_point_node PUBLIC
-        ${catkin_LIBRARIES} lz4
-        ${EIGEN3_LIBRARIES}
-        ${BULLET_LIBRARIES}
-        )
-target_link_libraries(move_to_point_node PRIVATE ruckig::ruckig)
-add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(move_to_point_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_get_images_check_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS}   ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${catkin_LIBRARIES})
+##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${catkin_LIBRARIES})
+##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
+
+
+add_dependencies(${PROJECT_NAME}_calibration_node ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_calibration_node calibration_generate_messages_cpp)
+#add_dependencies(${PROJECT_NAME}_calibration_node calibration_gencpp) #${catkin_EXPORTED_TARGETS}) ###############################
+
 #############
 ## Install ##
 #############
@@ -220,7 +227,7 @@ add_dependencies(move_to_point_node ${catkin_EXPORTED_TARGETS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_path_planning.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_calibration.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
