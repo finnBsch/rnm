@@ -26,7 +26,6 @@ class Scanner {
     for (int i = 0; i < 15; ++i) {
       goal_poses[i].resize(7);
     }
-    ros::Duration(0.5).sleep();
     goal_poses[0] << 0.07975098222703264, 0.1912801323522601, 0.016800910318580282, -1.780517308656089, -0.43001809130774604, 2.840706754071704, 1.2763794419674155;
     goal_poses[1] << 0.07423677020502224, -0.16895207870170834, -0.01739294999455757, -2.148493787373226, -0.4594188762764029, 2.9986082050005596, 1.2267582378234292;
     goal_poses[2] << 0.09911098749072929, -0.1239977193691705, -0.00531071934126161, -2.048764962082538, -0.4053728662024609, 2.8943427835385838, 1.2215459212439252;
@@ -61,6 +60,9 @@ class Scanner {
 
   //function from which we will send our goal pose to the path planning node
   void sendGoalPose(){
+    if (nextPose == 0){
+      ros::Duration(5).sleep();
+    }
     std_msgs::Float64MultiArray outputPose;
     tf::matrixEigenToMsg(goal_poses[nextPose], outputPose);
     pose_publisher_.publish(outputPose);
