@@ -78,9 +78,7 @@ void JointPositionExampleController::update(const ros::Time&, const ros::Duratio
     index = 0;
   }
   else {
-    for (size_t i = 0; i < position_joint_handles_.size(); i++) {
-      command_[i] = position_joint_handles_[i].getPosition();
-    }
+    //command_ = current_traj_[index];
   }
 //std::cout << "\n" << std::endl;
   mutex.unlock();
