@@ -32,7 +32,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be extracted and used for calibration:
-int n_frames = 10;
+int n_frames = 40;
 
 // only one of the following should be true, with exception of use_preset
 
@@ -44,10 +44,11 @@ bool receive_frames = false; // <--- standard setting
 bool from_folder = false;
 // use written images for cameracal and joint_states.txt for handeye:
 bool from_folder_ = true;
+
 // using given k and K matrices:
 bool use_preset = false;
 // calibration data path:
-string path = "/home/nico/cal_data";
+string path = "/home/lars/cal_data";
 //string path = "/home/rnm_grp1/rgb";
 
 
@@ -81,7 +82,7 @@ MatrixXd get_transformationmatrix(const float theta,
 // calculating transformation (pose) from joint angles,
 // adapted version from forward_kinematics
 array<Mat, 2> get_forward_kinematics_transformation(VectorXd a, vector<double> joint_angles_,
-                                                      VectorXd d, VectorXd alpha) {
+                                                    VectorXd d, VectorXd alpha) {
   array<MatrixXd, 8> a_;
   Matrix4d A_total;
   Mat one_R_gripper2base = Mat::zeros(3,3, CV_64F);
@@ -133,8 +134,8 @@ void jointStatesWriteFile(const sensor_msgs::JointState& msg) {
 
   vector<double, allocator<void>::rebind<double>::other> position = msg.position;
   if (finput.is_open()) {
-    foutput << position[0] << co << position[1] << co << position[2] << co << position[3]
-            << co << position[4] << co << position[5] << co << position[6] << co
+    foutput << position[0] << " " << position[1] << " " << position[2] << " " << position[3]
+            << " " << position[4] << " " << position[5] << " " << position[6] << " "
             << endl;
     cout << "joint_states written to '" << path << "/joint_states.txt" << endl;
   }
@@ -244,34 +245,38 @@ int cameraCalibration() {
   std::size_t i2 = 0;
   std::size_t i = 0;
   std::size_t i_deleted = 0;
-  for (auto const& f : rgbFileNames) {
+  for(int i = 0; i < rgbFileNames.size(); i++){
+    cout << i << " " << rgbFileNames[i] << endl;
+  }
+  for (int i = 0; i < rgbFileNames.size();) {
+    string f = rgbFileNames[i];
     std::cout << std::string(f) << std::endl;
     rgbimg = cv::imread(f);  // Load the images
     cv::Mat rgbgray;         // grayscale the image
     cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
-    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i2],
+    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i],
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
-                                                         //+ cv::CALIB_CB_NORMALIZE_IMAGE
-                                                         + cv::CALIB_CB_FILTER_QUADS);
+                                                     //+ cv::CALIB_CB_NORMALIZE_IMAGE
+                                                     + cv::CALIB_CB_FILTER_QUADS);
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
-      vector<Point_<float>> temp_ = rgbcorners[i2];
+      vector<Point_<float>> temp_ = rgbcorners[i];
       cv::cornerSubPix(
           rgbgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),  // winsize 11,11 gute
           cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
-      rgbcorners[i2] = temp_;
+      rgbcorners[i] = temp_;
 
       rgbObjP.push_back(rgbobjp);
-      i2++;
+      i++;
     } else {
-      rgbcorners.erase(next(rgbcorners.begin(), i - i_deleted));
-      rgbFileNames.erase(next(rgbFileNames.begin(), i - i_deleted));
-      allJointStates.erase(next(allJointStates.begin(), i - i_deleted));
+      rgbcorners.erase(next(rgbcorners.begin(), i ));
+      rgbFileNames.erase(next(rgbFileNames.begin(), i));
+      allJointStates.erase(next(allJointStates.begin(), i ));
       cout << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl;
       i_deleted++;
     }
 
-    i++;
+   // i++;
   }
   cout << "All RGB Corners detected and safed in rgbcorners\n";
 
@@ -319,23 +324,23 @@ int cameraCalibration() {
   cout << "All IR Corners detected and safed in ircorners\n";
    */
 
-    // Calibrate the rgb frame intrinsics
-    Mat rgbK;  // calibration Matrix K
-    Mat rgbk = (Mat1d(1, 8));
-    std::vector<cv::Mat> rvecs, tvecs;
-    std::vector<double> stdIntrinsics, stdExtrinsics, perViewErrors;
-    int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
-                cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
-    //int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_RATIONAL_MODEL;
-    // try these cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT
+  // Calibrate the rgb frame intrinsics
+  Mat rgbK;  // calibration Matrix K
+  Mat rgbk = (Mat1d(1, 8));
+  std::vector<cv::Mat> rvecs, tvecs;
+  std::vector<double> stdIntrinsics, stdExtrinsics, perViewErrors;
+  int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
+              cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
+  //int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_RATIONAL_MODEL;
+  // try these cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT
 
-    std::cout << "Calibrating rgb intrinsics...\n" << endl;
+  std::cout << "Calibrating rgb intrinsics...\n" << endl;
 
-    float rgberror =
-        cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);
-    std::cout << "Reprojection error of rgb frames = " << rgberror << "\nK =\n"
-              << rgbK << "\nk=\n"
-              << rgbk << std::endl;
+  float rgberror =
+      cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);
+  std::cout << "Reprojection error of rgb frames = " << rgberror << "\nK =\n"
+            << rgbK << "\nk=\n"
+            << rgbk << std::endl;
 
   cv::Mat rvec;
   cv::Mat tvec;
