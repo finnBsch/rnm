@@ -32,7 +32,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be extracted and used for calibration:
-int n_frames = 40;
+int n_frames = 20;
 
 // only one of the following should be true, with exception of use_preset
 
@@ -48,8 +48,8 @@ bool from_folder_ = false;
 // using given k and K matrices:
 bool use_preset = false;
 // calibration data path:
-string path = "/home/lars/cal_data";
-//string path = "/home/rnm_grp1/rgb";
+//string path = "/home/lars/cal_data";
+string path = "/home/rnm_grp1/rgb";
 
 
 // counters for filenames
