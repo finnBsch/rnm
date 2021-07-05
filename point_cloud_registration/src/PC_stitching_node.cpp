@@ -46,7 +46,7 @@ class PCStitch
   Eigen::Matrix4f handeye_;
   int message_counter_;
 
-  const int message_limit = 11;
+  const int message_limit = 15;
   const float leaf_size = 0.005;
   const Eigen::Vector4f xyz_min = {0.15, -0.5, 0.02, 1.0};
   const Eigen::Vector4f xyz_max = {0.7, 0.5, 0.3, 1.0};
@@ -197,7 +197,7 @@ class PCStitch
   void addCloud(const point_cloud_registration::PCJScombined::ConstPtr& PCJS){
     receiveCloud(PCJS);
     transform();
-    crop();
+    //crop();
     outlierRemoval(received_cloud_xyz_);
     subsample();
     ICP();
@@ -253,7 +253,7 @@ main (int argc, char** argv)
 
   PCStitch pcs(nh, handeye);
 
-  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/Synchronizer_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
+  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/Scanner_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
 
   ros::spin();
 }

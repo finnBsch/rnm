@@ -21,7 +21,7 @@ class Scanner {
       : nh_(nh),
         nextPose(0),
         pub_(nh_.advertise<point_cloud_registration::PCJScombined>("PCJScombined", 1)),
-        pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("move_command",1))
+        pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("/move_command",1))
   {
     for (int i = 0; i < 15; ++i) {
       goal_poses[i].resize(7);
@@ -61,7 +61,7 @@ class Scanner {
   //function from which we will send our goal pose to the path planning node
   void sendGoalPose(){
     if (nextPose == 0){
-      ros::Duration(5).sleep();
+      ros::Duration(1).sleep();
     }
     std_msgs::Float64MultiArray outputPose;
     tf::matrixEigenToMsg(goal_poses[nextPose], outputPose);
@@ -87,7 +87,7 @@ class Scanner {
 
     if (rounded_goal_pose.position == tempJS.position){
       std::cerr << "goal pose reached!" << std::endl;
-      ros::Duration(0.2).sleep();
+      //ros::Duration(0.2).sleep();
       nextPose++;
       getPointCloud();
     }
@@ -110,7 +110,7 @@ class Scanner {
     //when we work with static poses, there is no need for time stamp matching, so we could just take the next incoming pointcloud and jointstates and publish them as a combined message
     //this would also make the callback function (publishMessage) unnecessary
     //ros::Duration(0.5).sleep();
-    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("k4a/points2");
+    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("/k4a/points2");
     sensor_msgs::JointStateConstPtr JS = ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired");
 
      //make sure messages have been received (apparently not necessary, but maybe we should still keep it)
@@ -119,7 +119,9 @@ class Scanner {
        PCJS.PC = *PC;
        PCJS.JS = *JS;
        pub_.publish(PCJS);
-       sendGoalPose();
+       if (nextPose<sizeof(goal_poses)) {
+         sendGoalPose();
+       }
      //}
   }
 
