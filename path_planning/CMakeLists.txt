@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
         point_cloud_registration
         )
 find_package( PkgConfig REQUIRED)
+find_package( ruckig REQUIRED)
 find_package( Bullet REQUIRED)
 pkg_check_modules( flann REQUIRED flann )
 find_package(Eigen3 REQUIRED)
