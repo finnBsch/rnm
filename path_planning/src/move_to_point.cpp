@@ -29,6 +29,7 @@ void callback(const std_msgs::Float64MultiArray& msg) {
   for(int j = 0; j < 7; j++){
     input.current_position[j] = start.position[j];
   }
+
   for(int j = 0; j < 7; j++){
     input.target_position[j] = msg.data[j];
   }
