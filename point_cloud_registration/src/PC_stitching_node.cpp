@@ -92,7 +92,7 @@ class PCStitch
   void transform(){
     forward_kin::get_endeffector srv;
 
-    ros::ServiceClient client = nh_.serviceClient<forward_kin::get_endeffector>("pcl_registration_forward_kin_node/get_endeffector");
+    ros::ServiceClient client = nh_.serviceClient<forward_kin::get_endeffector>("/pcl_registration_forward_kin_node/get_endeffector");
     boost::array<double, 7> angles = {joint_states_.position[0], joint_states_.position[1],joint_states_.position[2],
                                       joint_states_.position[3], joint_states_.position[4],joint_states_.position[5],
                                       joint_states_.position[6]};
@@ -149,7 +149,7 @@ class PCStitch
     point_cloud_registration::alignment_service srv;
 
     ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>(
-        "STLRegistration_node/alignment_service");
+        "/STLRegistration_node/alignment_service");
     pcl::toROSMsg(*stitched_cloud_, srv.request.stitched_cloud);
     client.call(srv);
 
@@ -219,7 +219,7 @@ main (int argc, char** argv)
   const int queue_size = 50;
 
   ros::init (argc, argv, "PC_stitching_node");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
 
   Eigen::Matrix4f handeye;
 

@@ -233,7 +233,7 @@ class CloudAlignment {
  public:
   AlignService(ros::NodeHandle& nodeHandle){
     nh_ = nodeHandle;
-    pub_ = nodeHandle.advertise<sensor_msgs::PointCloud2>("/skeleton_cloud_tf", 1);
+    pub_ = nodeHandle.advertise<sensor_msgs::PointCloud2>("skeleton_cloud_tf", 1);
 
   }
   ros::NodeHandle nh_;

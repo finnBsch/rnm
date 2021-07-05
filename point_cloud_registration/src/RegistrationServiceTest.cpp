@@ -36,9 +36,9 @@ int
 main (int argc, char** argv)
 {
   ros::init(argc, argv, "RegistrationServiceTest");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
 
-  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::registration_results_service>("registration_results_service");
+  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::registration_results_service>("/PC_stitching_node/registration_results_service");
 
   point_cloud_registration::registration_results_service srv;
 
