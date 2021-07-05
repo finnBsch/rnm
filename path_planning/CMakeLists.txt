@@ -16,8 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
         point_cloud_registration
         )
 find_package( PkgConfig REQUIRED)
-find_package( ruckig REQUIRED)
 find_package( Bullet REQUIRED)
+find_package( ruckig REQUIRED)
 pkg_check_modules( flann REQUIRED flann )
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
@@ -165,11 +165,12 @@ target_link_libraries(${PROJECT_NAME}_node
         ${EIGEN3_LIBRARIES}
         ${BULLET_LIBRARIES}
         )
-target_link_libraries(move_to_point_node
+target_link_libraries(move_to_point_node PUBLIC
         ${catkin_LIBRARIES} lz4
         ${EIGEN3_LIBRARIES}
         ${BULLET_LIBRARIES}
         )
+target_link_libraries(move_to_point_node PRIVATE ruckig::ruckig)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 add_dependencies(move_to_point_node ${catkin_EXPORTED_TARGETS})
 #############
