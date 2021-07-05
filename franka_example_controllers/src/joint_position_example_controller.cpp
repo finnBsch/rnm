@@ -46,9 +46,10 @@ bool JointPositionExampleController::init(hardware_interface::RobotHW* robot_har
         command_.push_back(0.);
   }
 
-  command_sub_ = node_handle.subscribe<std_msgs::Float64MultiArray>(std::string("joint_command"), 1,
-                                                                      &JointPositionExampleController::setCommandCallback, this,ros::TransportHints().tcpNoDelay());
-
+  //command_sub_ = node_handle.subscribe<std_msgs::Float64MultiArray>(std::string("joint_command"), 1,
+                                                                    //  &JointPositionExampleController::setCommandCallback, this,ros::TransportHints().tcpNoDelay());
+  trajectory_sub_ = node_handle.subscribe<trajectory_msgs::JointTrajectory>(std::string("/trajectory"), 1,
+                                                                            &JointPositionExampleController::setTrajCallback, this,ros::TransportHints().tcpNoDelay());
   return true;
 }
 
@@ -66,6 +67,14 @@ void JointPositionExampleController::update(const ros::Time&, const ros::Duratio
   for (size_t i = 0; i < position_joint_handles_.size(); i++) {
     position_joint_handles_.at(i).setCommand(command_.at(i));
   }
+  if(index < traj_.size()){
+    command_ = traj_[index];
+  }
+  else{
+    for (size_t i = 0; i < position_joint_handles_.size(); i++) {
+      command_[i] = position_joint_handles_[i].getPosition();
+    }
+  }
 //std::cout << "\n" << std::endl;
   mutex.unlock();
 }
@@ -74,6 +83,21 @@ void JointPositionExampleController::setCommandCallback(const std_msgs::Float64M
     mutex.lock();
     command_ = msg->data;
     mutex.unlock();
+}
+void JointPositionExampleController::setTrajCallback(const trajectory_msgs::JointTrajectoryConstPtr& msg) {
+  mutex.lock();
+  if(index<=traj_.size()) {
+    traj_.clear();
+    index = 0;
+    std::vector<double> com(7);
+    for (int i = 0; i < msg->points.size(); i++) {
+      for (int j = 0; j < 7; j++) {
+        com[j] = msg->points[i].positions[i];
+      }
+      traj_.push_back(com);
+    }
+  }
+  mutex.unlock();
 }
 
 }  // namespace franka_example_controllers

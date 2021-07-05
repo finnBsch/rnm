@@ -15,7 +15,7 @@ public:
         bool not_finished = true;
         int i = 0;
         while(ros::ok() && not_finished){
-            if(msg->points[i].positions.size() ==7) {
+            if(msg->points[i].positions.size() == 7) {
                 msg_.data.clear();
                 msg_.data.insert(msg_.data.end(), msg->points[i].positions.begin(), msg->points[i].positions.end());
                 pub.publish(msg_);

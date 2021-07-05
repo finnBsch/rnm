@@ -13,7 +13,7 @@
 #include <ros/node_handle.h>
 #include <ros/time.h>
 #include <std_msgs/Float64MultiArray.h>
-
+#include <trajectory_msgs/JointTrajectory.h>
 
 namespace franka_example_controllers {
 
@@ -29,9 +29,13 @@ class JointPositionExampleController : public controller_interface::MultiInterfa
   std::vector<hardware_interface::JointHandle> position_joint_handles_;
   ros::Duration elapsed_time_;
   std::array<double, 7> initial_pose_{};
+  int index = 0;
 
   ros::Subscriber command_sub_;
+  ros::Subscriber trajectory_sub_;
   std::vector<double> command_;
+  std::vector<std::vector<double>> traj_;
+  void setTrajCallback(const trajectory_msgs::JointTrajectoryConstPtr& msg);
   void setCommandCallback(const std_msgs::Float64MultiArrayConstPtr &msg);
   std::mutex mutex;
 };
