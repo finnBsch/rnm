@@ -5,7 +5,8 @@
 #include <array>
 #include <string>
 #include <vector>
-#include <mutex> 
+#include <mutex>
+#include <queue>
 
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/joint_command_interface.h>
@@ -28,13 +29,15 @@ class JointPositionExampleController : public controller_interface::MultiInterfa
   hardware_interface::PositionJointInterface* position_joint_interface_;
   std::vector<hardware_interface::JointHandle> position_joint_handles_;
   ros::Duration elapsed_time_;
+  ros::Duration last_exec;
   std::array<double, 7> initial_pose_{};
   int index = 0;
 
   ros::Subscriber command_sub_;
   ros::Subscriber trajectory_sub_;
   std::vector<double> command_;
-  std::vector<std::vector<double>> traj_;
+  std::queue<std::vector<std::vector<double>>> traj_;
+  std::vector<std::vector<double>> current_traj_;
   void setTrajCallback(const trajectory_msgs::JointTrajectoryConstPtr& msg);
   void setCommandCallback(const std_msgs::Float64MultiArrayConstPtr &msg);
   std::mutex mutex;

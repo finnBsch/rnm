@@ -28,7 +28,7 @@ bool JointPositionExampleController::init(hardware_interface::RobotHW* robot_har
   }
   if (joint_names.size() != 7) {
     ROS_ERROR_STREAM("JointPositionExampleController: Wrong number of joint names, got "
-                     << joint_names.size() << " instead of 7 names!");
+                         << joint_names.size() << " instead of 7 names!");
     return false;
   }
   position_joint_handles_.resize(7);
@@ -43,19 +43,19 @@ bool JointPositionExampleController::init(hardware_interface::RobotHW* robot_har
   }
 
   for (auto &joint_handle : position_joint_handles_) {
-        command_.push_back(0.);
+    command_.push_back(0.);
   }
 
   //command_sub_ = node_handle.subscribe<std_msgs::Float64MultiArray>(std::string("joint_command"), 1,
-                                                                    //  &JointPositionExampleController::setCommandCallback, this,ros::TransportHints().tcpNoDelay());
-  trajectory_sub_ = node_handle.subscribe<trajectory_msgs::JointTrajectory>(std::string("/trajectory"), 1,
-                                                                            &JointPositionExampleController::setTrajCallback, this,ros::TransportHints().tcpNoDelay());
+  //  &JointPositionExampleController::setCommandCallback, this,ros::TransportHints().tcpNoDelay());
+  trajectory_sub_ = node_handle.subscribe<trajectory_msgs::JointTrajectory>(std::string("/trajectory"), 25,
+                                                                            &JointPositionExampleController::setTrajCallback, this);
   return true;
 }
 
 void JointPositionExampleController::starting(const ros::Time& /* time */) {
   for (size_t i = 0; i < 7; ++i) {
-	initial_pose_[i] = position_joint_handles_[i].getPosition();
+    initial_pose_[i] = position_joint_handles_[i].getPosition();
     command_[i] = initial_pose_[i];
   }
   elapsed_time_ = ros::Duration(0.0);
@@ -67,10 +67,17 @@ void JointPositionExampleController::update(const ros::Time&, const ros::Duratio
   for (size_t i = 0; i < position_joint_handles_.size(); i++) {
     position_joint_handles_.at(i).setCommand(command_.at(i));
   }
-  if(index < traj_.size()){
-    command_ = traj_[index];
+  //if(elapsed_time_.toSec() - last_exec.toSec() >= 0.001 || true) {
+  if (index < current_traj_.size()) {
+    command_ = current_traj_[index];
+    index++;
   }
-  else{
+  else if(!traj_.empty()){
+    current_traj_ = traj_.front();
+    traj_.pop();
+    index = 0;
+  }
+  else {
     for (size_t i = 0; i < position_joint_handles_.size(); i++) {
       command_[i] = position_joint_handles_[i].getPosition();
     }
@@ -80,23 +87,22 @@ void JointPositionExampleController::update(const ros::Time&, const ros::Duratio
 }
 
 void JointPositionExampleController::setCommandCallback(const std_msgs::Float64MultiArrayConstPtr &msg) {
-    mutex.lock();
-    command_ = msg->data;
-    mutex.unlock();
+  mutex.lock();
+  command_ = msg->data;
+  mutex.unlock();
 }
 void JointPositionExampleController::setTrajCallback(const trajectory_msgs::JointTrajectoryConstPtr& msg) {
   mutex.lock();
-  if(index<=traj_.size()) {
-    traj_.clear();
-    index = 0;
-    std::vector<double> com(7);
-    for (int i = 0; i < msg->points.size(); i++) {
-      for (int j = 0; j < 7; j++) {
-        com[j] = msg->points[i].positions[i];
-      }
-      traj_.push_back(com);
+  std::vector<std::vector<double>> one_traj;
+  std::vector<double> com(7);
+  for (int i = 0; i < msg->points.size(); i++) {
+    for (int j = 0; j < 7; j++) {
+      com[j] = msg->points[i].positions[j];
     }
+    one_traj.push_back(com);
   }
+  traj_.push(one_traj);
+  ROS_INFO("Queue size %i", traj_.size());
   mutex.unlock();
 }
 
