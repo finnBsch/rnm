@@ -34,7 +34,7 @@ using namespace Eigen;
 // define number of frames to be extracted and used for calibration:
 int n_frames = 10;
 
-// only one of the following should be true
+// only one of the following should be true, with exception of use_preset
 
 // set true to write joint states and images to files:
 bool write_files = false;
@@ -199,7 +199,7 @@ int cameraCalibration() {
 
   std::vector<cv::String> rgbFileNames(n_frames);
   for (int i = 0; i < n_frames; i++) {
-    rgbFileNames[i] = "/home/nico/cal_data/imgs/pose_" + to_string(i + 1) + ".jpg";
+    rgbFileNames[i] = path + "/imgs/pose_" + to_string(i + 1) + ".jpg";
   }
   // std::vector<cv::String> irFileNames;
   //  std::string rgbFolder("/home/lars/CLionProjects/CameraCalibrationtests/cal_imgs/rgb/*.jpg");
@@ -324,9 +324,9 @@ int cameraCalibration() {
     Mat rgbk = (Mat1d(1, 8));
     std::vector<cv::Mat> rvecs, tvecs;
     std::vector<double> stdIntrinsics, stdExtrinsics, perViewErrors;
-    //int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
+    int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
                 cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
-    int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_RATIONAL_MODEL;
+    //int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_RATIONAL_MODEL;
     // try these cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT
 
     std::cout << "Calibrating rgb intrinsics...\n" << endl;
@@ -368,15 +368,15 @@ int cameraCalibration() {
     //R = R.t();
     //tvec = -R*tvec;
     //Rodrigues(R, rvec);
-    cameraPosesR.push_back(rvec);
+    //cameraPosesR.push_back(rvec);
+
+    /////////////////////////////
     cv::Mat temp;
     cv::Rodrigues(rvec, temp);
     temp = temp.t();
     R_target2cam.push_back(temp);
     cout << "R_target2cam: " << temp << endl;
-
     tvec = -temp*tvec;
-
     t_target2cam.push_back(tvec);
     cout << "t_target2cam: " << tvec << endl;
   }
@@ -503,11 +503,34 @@ void transform2rv(tf::StampedTransform transform, cv::Mat& rvec, cv::Mat& tvec){
 }
 */
 
+void readJoint_States() {
+  //// joint states
+  try {
+    ifstream file(path + "/joint_states.txt");
+    string line;
+    while (getline(file, line)) {
+      vector<double> one_joint_states;
+      istringstream stream(line);
+      double d;
+      while (stream >> d) {
+        one_joint_states.push_back(d);
+      }
+      allJointStates.push_back(one_joint_states);
+    }
+    cout << "allJointStates.size: " << allJointStates.size() << endl;
+    ROS_INFO("Done reading joint states.");
+    cout << endl;
+  }
+  catch (...) {
+    ROS_INFO("Error while reading joint states!!!");
+    cout << endl;
+  }
+}
 
 void readJointStates() {
   //// joint states
   try {
-    ifstream file(path + "/joint_states.txt");
+    ifstream file(path + "/joints.txt");
     string line;
     while (getline(file, line)) {
       vector<double> one_joint_states;
@@ -568,6 +591,11 @@ void readCheckPoses() {
       oneR_target2cam = oneR_target2cam.reshape(1, 3);
       cout << "oneR_target2cam: " << endl << oneR_target2cam << endl;
       cout << "onet_target2cam: " << endl << onet_target2cam << endl;
+      //////////
+      Mat tempt;
+      Mat tempR;
+      oneR_target2cam = oneR_target2cam.t();
+      onet_target2cam = -oneR_target2cam*onet_target2cam;
       t_target2cam.push_back(onet_target2cam);
       R_target2cam.push_back(oneR_target2cam);
       rot_count = 1;
@@ -606,8 +634,6 @@ void handEye(){
     auto fw_ret = get_forward_kinematics_transformation(a,allJointStates[i], d, alpha);
     auto R = fw_ret[0];
     auto t = fw_ret[1];
-
-
 
     cout << "R_gripper2base" << R <<endl;
     cout << "t_gripper2base " << t << endl;
@@ -715,7 +741,7 @@ int main(int argc, char** argv) {
   }
   if (from_folder_ == true) {
     cout << "starting camera calibration" << endl;
-    readJointStates();
+    readJoint_States();
     cameraCalibration();
   }
 

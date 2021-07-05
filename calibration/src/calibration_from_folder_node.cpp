@@ -1,3 +1,7 @@
+/*
+ * This file can be used to verify calibration and transformation algorithms.
+ * It reads the provided text files and feeds them into the calibration.
+*/
 #include <iostream>
 #include <string>
 #include <ros/ros.h>
@@ -15,7 +19,8 @@ using geometry_msgs::TransformStamped;
 string path = "/home/nico/CLionProjects/rnm_ws";
 
 //// calibration data path, contains: joints.txt, pose.txt, trk.txt
-string pathCal = "/home/nico/Documents/RNM/Rosbag/calibration/calibration";
+//string pathCal = "/home/nico/Documents/RNM/Rosbag/calibration/calibration";
+string pathCal = "/home/nico/cal_data/calibration";
 
 cv::Mat joint_states;
 vector<cv::Mat> R_gripper2base, t_gripper2base; // all gripper poses
