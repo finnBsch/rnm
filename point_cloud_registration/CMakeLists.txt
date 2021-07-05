@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(point_cloud_registration)
 
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl/")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 find_package(catkin REQUIRED COMPONENTS
         pcl_conversions
@@ -79,7 +79,7 @@ add_executable(PC_stitching_node src/PC_stitching_node.cpp)
 add_executable(Scanner_node src/Scanner_node.cpp)
 #add_executable(STLRegistration_sac_ia src/STLRegistration_sac_ia.cpp)
 add_executable(STLRegistration_node src/STLRegistration_node.cpp)
-#add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
+add_executable(RegistrationServiceTest src/RegistrationServiceTest.cpp)
 add_executable(PointCloudRecording src/PointCloudRecording.cpp)
 #add_executable(joint_states_publisher src/joint_states_publisher.cpp)
 
@@ -95,7 +95,7 @@ target_link_libraries(PC_stitching_node ${catkin_LIBRARIES})
 target_link_libraries(Scanner_node ${catkin_LIBRARIES})
 #target_link_libraries(STLRegistration ${catkin_LIBRARIES})
 target_link_libraries(STLRegistration_node ${catkin_LIBRARIES})
-#target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
+target_link_libraries(RegistrationServiceTest ${catkin_LIBRARIES})
 target_link_libraries(PointCloudRecording ${catkin_LIBRARIES})
 #target_link_libraries(joint_states_publisher ${catkin_LIBRARIES})
 
@@ -105,7 +105,7 @@ add_dependencies(PC_stitching_node point_cloud_registration_generate_messages_cp
 add_dependencies(Synchronizer_node point_cloud_registration_generate_messages_cpp)
 #add_dependencies(STLRegistration point_cloud_registration_generate_messages_cpp)
 add_dependencies(STLRegistration_node point_cloud_registration_generate_messages_cpp)
-#add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
+add_dependencies(RegistrationServiceTest point_cloud_registration_generate_messages_cpp)
 add_dependencies(Scanner_node point_cloud_registration_generate_messages_cpp)
 add_dependencies(PointCloudRecording point_cloud_registration_generate_messages_cpp)
 #add_dependencies(joint_states_publisher point_cloud_registration_generate_messages_cpp)

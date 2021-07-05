@@ -26,6 +26,7 @@ class PCStitch
         nh_ (nh),
         handeye_ (handeye),
         pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1)),
+        results_publisher_(nh.advertise<point_cloud_registration::registrationResults> ("registration_results", 1)),
         message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -36,6 +37,7 @@ class PCStitch
  private:
   ros::NodeHandle nh_;
   ros::Publisher pub_;
+  ros::Publisher results_publisher_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud_;
   pcl::PCLPointCloud2* received_cloud_{};
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr received_cloud_xyz_;
@@ -44,7 +46,7 @@ class PCStitch
   Eigen::Matrix4f handeye_;
   int message_counter_;
 
-  const int message_limit = 15;
+  const int message_limit = 11;
   const float leaf_size = 0.005;
   const Eigen::Vector4f xyz_min = {0.15, -0.5, 0.02, 1.0};
   const Eigen::Vector4f xyz_max = {0.7, 0.5, 0.3, 1.0};
@@ -186,6 +188,7 @@ class PCStitch
     tf::matrixEigenToMsg(transformation_matrix_*needle_goalpoint, res.registration_results.needle_goalpoint);
     tf::matrixEigenToMsg(transformation_matrix_*skeleton_centerpoint, res.registration_results.skeleton_centerpoint);
     tf::matrixEigenToMsg(transformation_matrix_, res.registration_results.registration_transformation);
+    results_publisher_.publish(res.registration_results);
     return true;
   }
 
@@ -250,7 +253,7 @@ main (int argc, char** argv)
 
   PCStitch pcs(nh, handeye);
 
-  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/Scanner_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
+  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/Synchronizer_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
 
   ros::spin();
 }

@@ -1,18 +1,19 @@
-#include <ros/ros.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/registration/icp.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float64MultiArray.h>
-#include "point_cloud_registration/PCJScombined.h"
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
+#include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
-#include <eigen_conversions/eigen_msg.h>
+#include "point_cloud_registration/PCJScombined.h"
 
 class Scanner {
  public:
@@ -22,9 +23,10 @@ class Scanner {
         pub_(nh_.advertise<point_cloud_registration::PCJScombined>("PCJScombined", 1)),
         pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("move_command",1))
   {
-    for ( int i = 0; i< 15; i++){
+    for (int i = 0; i < 15; ++i) {
       goal_poses[i].resize(7);
     }
+    ros::Duration(0.5).sleep();
     goal_poses[0] << 0.07975098222703264, 0.1912801323522601, 0.016800910318580282, -1.780517308656089, -0.43001809130774604, 2.840706754071704, 1.2763794419674155;
     goal_poses[1] << 0.07423677020502224, -0.16895207870170834, -0.01739294999455757, -2.148493787373226, -0.4594188762764029, 2.9986082050005596, 1.2267582378234292;
     goal_poses[2] << 0.09911098749072929, -0.1239977193691705, -0.00531071934126161, -2.048764962082538, -0.4053728662024609, 2.8943427835385838, 1.2215459212439252;
@@ -83,6 +85,7 @@ class Scanner {
 
     if (rounded_goal_pose.position == tempJS.position){
       std::cerr << "goal pose reached!" << std::endl;
+      ros::Duration(0.2).sleep();
       nextPose++;
       getPointCloud();
     }
@@ -105,7 +108,7 @@ class Scanner {
     //when we work with static poses, there is no need for time stamp matching, so we could just take the next incoming pointcloud and jointstates and publish them as a combined message
     //this would also make the callback function (publishMessage) unnecessary
     //ros::Duration(0.5).sleep();
-    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("/k4a/points2");
+    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("k4a/points2");
     sensor_msgs::JointStateConstPtr JS = ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired");
 
      //make sure messages have been received (apparently not necessary, but maybe we should still keep it)
