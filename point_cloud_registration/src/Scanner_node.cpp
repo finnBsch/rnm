@@ -21,7 +21,7 @@ class Scanner {
       : nh_(nh),
         nextPose(0),
         pub_(nh_.advertise<point_cloud_registration::PCJScombined>("PCJScombined", 1)),
-        pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("/move_command",1))
+        pose_publisher_(nh_.advertise<std_msgs::Float64MultiArray>("/move_command",10))
   {
     for (int i = 0; i < 15; ++i) {
       goal_poses[i].resize(7);
@@ -87,7 +87,7 @@ class Scanner {
 
     if (rounded_goal_pose.position == tempJS.position){
       std::cerr << "goal pose reached!" << std::endl;
-      //ros::Duration(0.2).sleep();
+      ros::Duration(0.2).sleep();
       nextPose++;
       getPointCloud();
     }

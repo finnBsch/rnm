@@ -198,9 +198,9 @@ class PCStitch
     receiveCloud(PCJS);
     transform();
     //crop();
-    outlierRemoval(received_cloud_xyz_);
+    //outlierRemoval(received_cloud_xyz_);
     subsample();
-    ICP();
+    //ICP();
     publishCloud();
     //when all messages have arrived, call outlier removal one more time, publish the final stitched cloud, call the registration service and
     // start the service from which other nodes can get the results
@@ -246,10 +246,15 @@ main (int argc, char** argv)
       srv.response.handeye.data[14],
       srv.response.handeye.data[15],*/
 
-  handeye << -0.0342177, -0.0224303,   0.999141,  0.0357424,
+  /*handeye << -0.0342177, -0.0224303,   0.999141,  0.0357424,
       -0.998979, -0.0285611,  -0.034854, -0.0232153,
       0.0293307,  -0.999324, -0.0214294,  0.0547717,
-      0,          0,          0,          1;
+      0,          0,          0,          1;*/
+
+  handeye << 0.814174, 0.0827681, -0.574692, -0.09550347255721067,
+      0.540927, 0.251557, 0.16004, 0.06788091771154511,
+      0.210995, -0.964297, 0.16004, 0.04136492132643586,
+      0, 0, 0, 1;
 
   PCStitch pcs(nh, handeye);
 
