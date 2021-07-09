@@ -260,9 +260,9 @@ int cameraCalibration() {
       rgbObjP.push_back(rgbobjp);
       i++;
     } else {
+      cout << "File " << rgbFileNames[i] << " not used!" << endl;
       rgbFileNames.erase(next(rgbFileNames.begin(), i));
       allJointStates.erase(next(allJointStates.begin(), i));
-      cout << "File " << rgbFileNames[i] << " not used!" << endl;
       i_deleted++;
     }
 
@@ -326,8 +326,8 @@ int cameraCalibration() {
         irObjP.push_back(irobjp);
         i++;
       } else {
-        irFileNames.erase(next(irFileNames.begin(), i));
         cout << "File " << irFileNames[i] << " not used!" << endl;
+        irFileNames.erase(next(irFileNames.begin(), i));
         i_deleted++;
       }
       // m++;
