@@ -32,7 +32,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be extracted and used for calibration:
-int n_frames = 5;
+int n_frames = 30;
 
 // only one of the following should be true, with exception of use_preset
 
@@ -255,7 +255,7 @@ int cameraCalibration() {
       vector<Point_<float>> temp_ = rgbcorners[i];
       cv::cornerSubPix(
           rgbgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),  // winsize 11,11 gute
-          cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
+          cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
       rgbcorners[i] = temp_;
 
       rgbObjP.push_back(rgbobjp);
@@ -264,7 +264,7 @@ int cameraCalibration() {
       rgbcorners.erase(next(rgbcorners.begin(), i));
       rgbFileNames.erase(next(rgbFileNames.begin(), i));
       allJointStates.erase(next(allJointStates.begin(), i));
-      cout << "!!!!!!!!File " << rgbFileNames[i] << "not used!!!!!!!!" << endl;
+      cout << "File " << rgbFileNames[i] << " not used!" << endl;
       i_deleted++;
     }
 
@@ -322,8 +322,8 @@ int cameraCalibration() {
       if (irpatternFound) {
         vector<Point_<float>> temp_ = ircorners[i];
         cv::cornerSubPix(
-            irgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
+            irgray, temp_, cv::Size(15, 15), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
         ircorners[i] = temp_;
 
         irObjP.push_back(irobjp);
@@ -331,11 +331,13 @@ int cameraCalibration() {
       } else {
         ircorners.erase(next(ircorners.begin(), i));
         irFileNames.erase(next(irFileNames.begin(), i));
-        cout << "!!!!!!!!File " << irFileNames[i] << "not used!!!!!!!!" << endl;
+        cout << "File " << irFileNames[i] << " not used!" << endl;
         i_deleted++;
       }
       // m++;
     }
+
+
     cout << "All IR Corners detected and safed in ircorners\n";
     //  // Display the detected pattern on the chessboard
     //  for (int i = 0; i < rgbFileNames.size(); i++) {
@@ -422,6 +424,8 @@ int cameraCalibration() {
               << irK << "\nk=\n"
               << irk << std::endl;
 
+    std::cout << "irObjP.size: " << rgbObjP.size() << " ircorners.size: " << rgbcorners.size()
+              << " irFileNames.size: " << rgbFileNames.size() << std::endl;
     /*
     cv::Mat rgbmapX, rgbmapY;
     cv::initUndistortRectifyMap(rgbK, rgbk, cv::Matx33f::eye(), rgbK, rgbFrameSize, CV_32FC1,
@@ -488,13 +492,13 @@ int cameraCalibration() {
         // Refine CornerDetection
         cv::cornerSubPix(
             gray1, corners1, cv::Size(11, 11), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
 
         cv::drawChessboardCorners(gray1, patternSize, corners1, found1);
 
         cv::cornerSubPix(
-            gray2, corners2, cv::Size(11, 11), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
+            gray2, corners2, cv::Size(15, 15), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
 
         cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
         cout << n << " good framepairs" << endl;
@@ -502,6 +506,7 @@ int cameraCalibration() {
         imagePoints2.push_back(corners2);
         object_points.push_back(obj);
         cout << "leftImg: " << fileNames1[i] << " and rightImg: " << fileNames2[i] << endl;
+        n++;
       } else {
        // corners1.erase(next(corners1.begin(), i - num_deleted));
        // corners2.erase(next(corners2.begin(), i - num_deleted));
