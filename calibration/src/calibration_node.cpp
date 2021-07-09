@@ -32,7 +32,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be extracted and used for calibration:
-int n_frames = 30;
+int n_frames = 40;
 
 // only one of the following should be true, with exception of use_preset
 
@@ -316,12 +316,14 @@ int cameraCalibration() {
       vector<Point_<float>> ircorners_dummy;
       bool irpatternFound =
           cv::findChessboardCorners(irgray, patternSize, ircorners_dummy,
-                                    cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE);
+                                    cv::CALIB_CB_ADAPTIVE_THRESH
+                                        //+ cv::CALIB_CB_NORMALIZE_IMAGE //TODO tweak the window size and flags
+      );
 
       if (irpatternFound) {
         cv::cornerSubPix(
-            irgray, ircorners_dummy, cv::Size(15, 15), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
+            irgray, ircorners_dummy, cv::Size(20, 20), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
         ircorners.push_back(ircorners_dummy);
         irObjP.push_back(irobjp);
         i++;
@@ -420,8 +422,8 @@ int cameraCalibration() {
               << irK << "\nk=\n"
               << irk << std::endl;
 
-    std::cout << "irObjP.size: " << rgbObjP.size() << " ircorners.size: " << rgbcorners.size()
-              << " irFileNames.size: " << rgbFileNames.size() << std::endl;
+    std::cout << "irObjP.size: " << irObjP.size() << " ircorners.size: " << ircorners.size()
+              << " irFileNames.size: " << irFileNames.size() << std::endl;
     /*
     cv::Mat rgbmapX, rgbmapY;
     cv::initUndistortRectifyMap(rgbK, rgbk, cv::Matx33f::eye(), rgbK, rgbFrameSize, CV_32FC1,
@@ -493,8 +495,8 @@ int cameraCalibration() {
         cv::drawChessboardCorners(gray1, patternSize, corners1, found1);
 
         cv::cornerSubPix(
-            gray2, corners2, cv::Size(15, 15), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
+            gray2, corners2, cv::Size(20, 20), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
 
         cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
         cout << n << " good framepairs" << endl;
