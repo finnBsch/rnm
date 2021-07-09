@@ -32,7 +32,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be extracted and used for calibration:
-int n_frames = 20;
+int n_frames = 5;
 
 // only one of the following should be true, with exception of use_preset
 
@@ -322,8 +322,8 @@ int cameraCalibration() {
       if (irpatternFound) {
         vector<Point_<float>> temp_ = ircorners[i];
         cv::cornerSubPix(
-            irgray, temp_, cv::Size(20, 20), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
+            irgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
         ircorners[i] = temp_;
 
         irObjP.push_back(irobjp);
@@ -462,9 +462,10 @@ int cameraCalibration() {
     // Size board_size = Size(board_width, board_height);
     //  int board_n = board_width * board_height;
     int num_deleted = 0;
+    int n = 1;
     for (int i = 0; i < n_frames; i++) {
-      img1 = cv::imread(fileNames1[i]);  // Load the images
-      img2 = cv::imread(fileNames2[i]);   // Load the images
+      img1 = cv::imread(fileNames1[i]);  // Load the rgb images
+      img2 = cv::imread(fileNames2[i]);   // Load the ir images
       cv::Mat gray1;                       // grayscale the rgb image
       cv::cvtColor(img1, gray1, cv::COLOR_RGB2GRAY);
       cv::Mat gray2;  // grayscale the ir image
@@ -482,20 +483,21 @@ int cameraCalibration() {
           obj.push_back(Point3f((float)k * fieldSize, (float)j * fieldSize, 0));
         }
       }
+
       if (found1 && found2) {
         // Refine CornerDetection
         cv::cornerSubPix(
             gray1, corners1, cv::Size(11, 11), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.1));
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.01));
 
         cv::drawChessboardCorners(gray1, patternSize, corners1, found1);
 
         cv::cornerSubPix(
-            gray2, corners2, cv::Size(20, 20), cv::Size(-1, -1),
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.1));
+            gray2, corners2, cv::Size(11, 11), cv::Size(-1, -1),
+            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
 
         cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
-        cout << i+1 << " good framepairs" << endl;
+        cout << n << " good framepairs" << endl;
         imagePoints1.push_back(corners1);
         imagePoints2.push_back(corners2);
         object_points.push_back(obj);
@@ -505,10 +507,9 @@ int cameraCalibration() {
        // corners2.erase(next(corners2.begin(), i - num_deleted));
        // num_deleted++;
 
-        cout << endl << "!!!!!!!!Pairs " << fileNames2[i] << "not used!!!!!!!!" << endl << endl;
+        cout << endl << "Pairs " << fileNames2[i] << "not used!!!!!!!!" << endl << endl;
       }
     }
-
 
 
     for (int i = 0; i < imagePoints1.size(); i++) {
@@ -538,8 +539,16 @@ int cameraCalibration() {
                                  rgbFrameSize, R, T, E, F, stereoflags);
     cout << "Done with RMS error=" << rms << endl;
 
+    std::cout << "object_points.size: " << object_points.size() << " left_img_points.size: " << left_img_points.size()
+              << " right_img_points.size: " << right_img_points.size() << std::endl;
+
+    std::cout << "\n RGB Intrinsics after StereoCalibration "<< K1 << endl << D1 << endl;
+    std::cout << "\n IR Intrinsics after StereoCalibration " << K2 << endl << D2 << endl;
+
     // Precompute lens correction interpolation
     cout << "Done Stereocalibration\n";
+//TODO Stereo calibration parameter need to be handed to the yaml file
+
 
     // Rectification
     cout << "Starting Rectification\n";
