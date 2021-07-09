@@ -1,8 +1,3 @@
-// cameraCalibration: rotation matrix is pretty close to provided transofmrations,
-// translation vector is very different
-// TODO: fix cameraCalibration translation vector
-
-
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -15,14 +10,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgcodecs.hpp>
 #include "cv_handeye.h"
-//#include <geometry_msgs/TransformStamped.h>
-//#include <tf/transform_listener.h>
 #include <boost/filesystem.hpp>
 #include <eigen3/Eigen/Dense>
-
 #include <opencv2/core/mat.hpp>
-
-//#include <tf2_ros/transform_listener.h>
 #include "calibration/handEyeCalibration.h"
 
 
@@ -34,25 +24,25 @@ using namespace Eigen;
 // define number of frames to be extracted and used for calibration:
 int n_frames = 40;
 
-// only one of the following should be true, with exception of use_preset
+// only one of following should be true, with exception of use_preset, irCalibration, and stereo
 
 // set true to write joint states and images to files:
 bool write_files = false;
 // set true to receive frames + joint states from get_images_node, and calibrate from those:
-bool receive_frames = true; // <--- standard setting
+bool receive_frames = false; // <--- standard setting
 // true to read from provided txt files:
 bool from_folder = false;
 // use written images for cameracal and joint_states.txt for handeye:
-bool from_folder_ = false;
+bool from_folder_ = true;
 
-// perfoming ir calibration
+// performing ir calibration
 bool irCalibration = true;
 // performing stereo calibration
 bool stereo = true;
 // using given k and K matrices:
 bool use_preset = false;
 // calibration data path:
-string path = "/home/lars/cal_data";
+string path = "/home/nico/cal_data";
 //string path = "/home/rnm_grp1/rgb";
 
 // Frame size
@@ -67,13 +57,14 @@ cv::Size patternSize(9 - 1, 6 - 1);  // Number of inner corners per a chessboard
 // counters for filenames
 int pose_rgb = 1;
 int pose_ir = 1;
+// counters to ensure correct assertion
 int js_count = 0;
 int rgb_count = 0;
 int ir_count = 0;
 
 // container for camera calibration data
 //std::vector<cv::Mat> rvecs, tvecs;
-std::vector<cv::Mat> cameraPosesR;
+//std::vector<cv::Mat> cameraPosesR;
 std::vector<cv::Mat> R_target2cam;
 std::vector<cv::Mat> t_target2cam;
 
@@ -126,14 +117,10 @@ array<Mat, 2> get_forward_kinematics_transformation(VectorXd a, vector<double> j
 void jointStatesWrite(const sensor_msgs::JointState& msg) {
   //// get joint angles
   if(js_count<n_frames) {
-    //tf::StampedTransform joint_state;
-    //tfListener->lookupTransform(robot_base, gripper, ros::Time(0), joint_state);
-
     vector<double> one_joint_states;
     one_joint_states = msg.position;
     allJointStates.push_back(one_joint_states);
     js_count++;
-
 
     cout << "one_joint_states: " << endl;
     cout << "[";
@@ -144,21 +131,24 @@ void jointStatesWrite(const sensor_msgs::JointState& msg) {
   }
 }
 void jointStatesWriteFile(const sensor_msgs::JointState& msg) {
-  string co = ",";
-  ofstream foutput;
-  ifstream finput;
-  finput.open(path + "/joint_states.txt");
-  foutput.open(path + "/joint_states.txt", ios::app);
+  if (js_count < n_frames) {
+    ofstream foutput;
+    ifstream finput;
+    finput.open(path + "/joint_states.txt");
+    foutput.open(path + "/joint_states.txt", ios::app);
 
-  vector<double, allocator<void>::rebind<double>::other> position = msg.position;
-  if (finput.is_open()) {
-    foutput << position[0] << " " << position[1] << " " << position[2] << " " << position[3]
-            << " " << position[4] << " " << position[5] << " " << position[6] << " "
-            << endl;
-    cout << "joint_states written to '" << path << "/joint_states.txt" << endl;
+    vector<double, allocator<void>::rebind<double>::other> position = msg.position;
+    if (finput.is_open()) {
+      foutput << position[0] << " " << position[1] << " " << position[2] << " " << position[3]
+              << " " << position[4] << " " << position[5] << " " << position[6] << " " << endl;
+      cout << "joint_states [" << position[0] << " " << position[1] << " " << position[2] << " "
+          << position[3] << " " << position[4] << " " << position[5] << " " << position[6]
+           << "] written to '" << path << "/joint_states.txt'" << endl; // added output of joint states (like in jointStatesWrite)
+    }
+    finput.close();
+    foutput.close();
+    js_count++;
   }
-  finput.close();
-  foutput.close();
 }
 
 // ir image writing
@@ -254,7 +244,7 @@ int cameraCalibration() {
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
       cv::cornerSubPix(
-          rgbgray, rgb_corners_dummy, cv::Size(11, 11), cv::Size(-1, -1),  // winsize 11,11 gute
+          rgbgray, rgb_corners_dummy, cv::Size(16, 16), cv::Size(-1, -1),  // winsize 11,11 gute
           cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
       rgbcorners.push_back(rgb_corners_dummy);
       rgbObjP.push_back(rgbobjp);
@@ -268,7 +258,7 @@ int cameraCalibration() {
 
     // i++;
   }
-  cout << "All RGB Corners detected and safed in rgbcorners\n";
+  cout << "All RGB Corners detected and saved in rgbcorners\n";
 
   //  // Display the detected pattern on the chessboard
   //  for (int i = 0; i < rgbFileNames.size(); i++) {
@@ -322,7 +312,7 @@ int cameraCalibration() {
 
       if (irpatternFound) {
         cv::cornerSubPix(
-            irgray, ircorners_dummy, cv::Size(20, 20), cv::Size(-1, -1),
+            irgray, ircorners_dummy, cv::Size(18, 18), cv::Size(-1, -1),
             cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
         ircorners.push_back(ircorners_dummy);
         irObjP.push_back(irobjp);
@@ -336,7 +326,7 @@ int cameraCalibration() {
     }
 
 
-    cout << "All IR Corners detected and safed in ircorners\n";
+    cout << "All IR Corners detected and saved in ircorners\n";
     //  // Display the detected pattern on the chessboard
     //  for (int i = 0; i < rgbFileNames.size(); i++) {
     //    rgbimg = cv::imread(rgbFileNames[i]);
@@ -351,10 +341,20 @@ int cameraCalibration() {
   // Mat rgbk = (Mat1d(1, 8));
   std::vector<cv::Mat> rvecs, tvecs;
   std::vector<double> stdIntrinsics, stdExtrinsics, perViewErrors;
-  int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
-              cv::CALIB_RATIONAL_MODEL;  // used to compute k4-k6
-  // int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_RATIONAL_MODEL;
-  //  try these cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT
+  //int flags = cv::CALIB_FIX_S1_S2_S3_S4 + cv::CALIB_FIX_TAUX_TAUY +
+              cv::CALIB_RATIONAL_MODEL;
+  int flags = cv::CALIB_RATIONAL_MODEL;// does the same as the above
+  //  try these
+  // cv::CALIB_FIX_ASPECT_RATIO fixes fx, fx/fy ratio stays the same
+  // cv::CALIB_ZERO_TANGENT_DIST p1,p2 =0 and stay 0
+  // cv::CALIB_FIX_K1 ...K6 fixes k1-k6 separately (radial distortion)
+  // cv::CALIB_RATIONAL_MODEL enables k4,k5,k6
+  // cv::CALIB_THIN_PRISM_MODEL enables s1,s2,s3,s4
+  // cv::CALIB_FIX_S1_S2_S3_S4
+  // cv::CALIB_TILTED_MODEL enables taux, tauy
+
+  // order: k1,k2,p1,p2,k3,k4,k5,k6,s1,s2,s3,s4,tx,ty
+  // addded 9.7.
 
   std::cout << "Calibrating rgb intrinsics...\n" << endl;
 
@@ -385,6 +385,7 @@ int cameraCalibration() {
   for (int i = 0; i < rgbFileNames.size(); i++) {
     cv::InputArray rgb1ObjP = rgbObjP[i];
     cv::InputArray rgb1corners = rgbcorners[i];
+    // 9.7. : TODO: try different solvePnP method ... rvec and tvec seem to not be accurate
     cv::solvePnPRansac(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec);
 
     // Mat R;
@@ -835,25 +836,30 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
 
-
   //tfListener = new tf::TransformListener();
   if (write_files == true) {
     boost::filesystem::remove(path + "/joint_states.txt");
-    boost::filesystem::remove_all(path + "/imgs");
+    boost::filesystem::remove_all(path + "/imgs/rgb");
+    boost::filesystem::remove_all(path + "/imgs/ir");
+    boost::filesystem::create_directory(path + "/imgs"); // added this 9.7.
     boost::filesystem::create_directory(path + "/imgs/rgb");
     boost::filesystem::create_directory(path + "/imgs/ir");
+    boost::filesystem::ofstream(path + "/joint_states.txt"); // added this 9.7.
     image_transport::Subscriber rgb_sub = it.subscribe("/calibration_rgb_img", 1, rgbImageWrite);
     image_transport::Subscriber ir_sub = it.subscribe("/calibration_ir_img", 1, irImageWrite);
     ros::Subscriber joint_states_sub = nh.subscribe("/calibration_joint_states", 1, jointStatesWriteFile);
     std::cout << "\nready to receive frames" << endl;
-    while (js_count < n_frames || rgb_count || ir_count < n_frames) {
+    while (js_count < n_frames || rgb_count < n_frames || ir_count < n_frames) { // corrected this 9.7., had a bug that was added yesterday
       ros::spinOnce();
     }
     cout << "\ncollected " << js_count << " frames" << endl;
+    cout << "Done saving images and joint states." << endl;
+    return 0;
   }
   if (receive_frames == true) {
-    boost::filesystem::remove(path + "/joint_states.txt");
-    boost::filesystem::remove_all(path + "/imgs");
+    //boost::filesystem::remove(path + "/joint_states.txt");
+    boost::filesystem::remove_all(path + "/imgs/rgb");
+    boost::filesystem::remove_all(path + "/imgs/ir");
     boost::filesystem::create_directory(path + "/imgs");
     boost::filesystem::create_directory(path + "/imgs/rgb");
     boost::filesystem::create_directory(path + "/imgs/ir");
