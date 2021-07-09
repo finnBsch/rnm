@@ -218,7 +218,7 @@ int cameraCalibration() {
   std::vector<cv::String> rgbFileNames(n_frames);
   std::vector<cv::String> fileNames1(n_frames);
   std::vector<std::vector<cv::Point3f>> rgbObjP;  // Checkerboard world coordinates
-  std::vector<std::vector<cv::Point2f>> rgbcorners(rgbFileNames.size());  // corners in rgb frames
+  std::vector<std::vector<cv::Point2f>> rgbcorners;  // corners in rgb frames
   std::vector<cv::Point2f> rgbimgp;  // Define the rgb img point
 
   for (int i = 0; i < n_frames; i++) {
@@ -246,22 +246,20 @@ int cameraCalibration() {
     rgbimg = cv::imread(f);  // Load the images
     cv::Mat rgbgray;         // grayscale the image
     cv::cvtColor(rgbimg, rgbgray, cv::COLOR_RGB2GRAY);
-    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgbcorners[i],
+    vector<Point_<float>> rgb_corners_dummy;
+    bool rgbPatternFound = cv::findChessboardCorners(rgbgray, patternSize, rgb_corners_dummy,
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
                                                          //+ cv::CALIB_CB_NORMALIZE_IMAGE
                                                          + cv::CALIB_CB_FILTER_QUADS);
     // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
     if (rgbPatternFound) {
-      vector<Point_<float>> temp_ = rgbcorners[i];
       cv::cornerSubPix(
-          rgbgray, temp_, cv::Size(11, 11), cv::Size(-1, -1),  // winsize 11,11 gute
+          rgbgray, rgb_corners_dummy, cv::Size(11, 11), cv::Size(-1, -1),  // winsize 11,11 gute
           cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
-      rgbcorners[i] = temp_;
-
+      rgbcorners.push_back(rgb_corners_dummy);
       rgbObjP.push_back(rgbobjp);
       i++;
     } else {
-      rgbcorners.erase(next(rgbcorners.begin(), i));
       rgbFileNames.erase(next(rgbFileNames.begin(), i));
       allJointStates.erase(next(allJointStates.begin(), i));
       cout << "File " << rgbFileNames[i] << " not used!" << endl;
@@ -285,7 +283,7 @@ int cameraCalibration() {
   std::vector<cv::String> fileNames2(n_frames);
 
   std::vector<std::vector<cv::Point3f>> irObjP;  // Checkerboard world coordinates
-  std::vector<std::vector<cv::Point2f>> ircorners(irFileNames.size());  // corners in ir frames
+  std::vector<std::vector<cv::Point2f>> ircorners;  // corners in ir frames
   std::vector<cv::Point2f> irimgp;                                      // Define the ir img point
 
   if (irCalibration == true) {
@@ -315,21 +313,19 @@ int cameraCalibration() {
       irimg = cv::imread(g);  // Load the images
       cv::Mat irgray;         // grayscale the image
       cv::cvtColor(irimg, irgray, cv::COLOR_RGB2GRAY);
+      vector<Point_<float>> ircorners_dummy;
       bool irpatternFound =
-          cv::findChessboardCorners(irgray, patternSize, ircorners[i],
+          cv::findChessboardCorners(irgray, patternSize, ircorners_dummy,
                                     cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE);
 
       if (irpatternFound) {
-        vector<Point_<float>> temp_ = ircorners[i];
         cv::cornerSubPix(
-            irgray, temp_, cv::Size(15, 15), cv::Size(-1, -1),
+            irgray, ircorners_dummy, cv::Size(15, 15), cv::Size(-1, -1),
             cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.0001));
-        ircorners[i] = temp_;
-
+        ircorners.push_back(ircorners_dummy);
         irObjP.push_back(irobjp);
         i++;
       } else {
-        ircorners.erase(next(ircorners.begin(), i));
         irFileNames.erase(next(irFileNames.begin(), i));
         cout << "File " << irFileNames[i] << " not used!" << endl;
         i_deleted++;
