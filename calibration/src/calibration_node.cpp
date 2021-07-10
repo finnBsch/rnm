@@ -21,7 +21,7 @@ using namespace std;
 using namespace Eigen;
 
 //// settings:
-// define number of frames to be extracted and used for calibration:
+// define number of frames to be received and used for calibration:
 int n_frames = 40;
 
 // only one of following should be true, with exception of use_preset, irCalibration, and stereo
@@ -36,11 +36,16 @@ bool from_folder = false;
 bool from_folder_ = true;
 
 // performing ir calibration
-bool irCalibration = true;
+bool irCalibration = false;
 // performing stereo calibration
-bool stereo = true;
+bool stereo = false;
 // using given k and K matrices:
 bool use_preset = false;
+
+// hand-eye: ON/OFF , QR24
+bool standardHandEye = true;
+bool QR24 = false;
+
 // calibration data path:
 string path = "/home/nico/cal_data";
 //string path = "/home/rnm_grp1/rgb";
@@ -741,6 +746,7 @@ void readCheckPoses() {
 
 
 cv::Mat R_cam2gripper, t_cam2gripper;
+vector<cv::Mat> R_gripper2base, t_gripper2base;
 // perform hand-eye calibration with the calculated transforms
 void handEye(){
   static VectorXd a(8);
@@ -749,7 +755,6 @@ void handEye(){
   a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
   d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
   alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
-  vector<cv::Mat> R_gripper2base, t_gripper2base;
 
 
   for(int i=0; i<allJointStates.size(); i++)
@@ -806,6 +811,103 @@ void handEye(){
   ROS_INFO("calibration saved to 'camera_hand_eye_calibration.yaml");
 }
 
+void handEyeQR24() {
+  // needs: gripper2base (world co), target2cam (cam co)
+  // outs: cam2gripper
+
+  // fill gripper2base from joint states
+  static VectorXd a(8);
+  static VectorXd d(8);
+  static VectorXd alpha(8);
+  a << 0, 0, 0, 0.0825, -0.0825, 0, 0.088, 0;
+  d << 0.333, 0, 0.316, 0, 0.384, 0, 0, 0.107;
+  alpha << 0, -M_PI/2, M_PI/2, M_PI/2, -M_PI/2, M_PI/2, M_PI/2, 0;
+  for(int i=0; i<allJointStates.size(); i++)
+  {
+    auto fw_ret = get_forward_kinematics_transformation(a,allJointStates[i], d, alpha);
+    auto R = fw_ret[0];
+    auto t = fw_ret[1];
+
+    cout << "R_gripper2base" << R <<endl;
+    cout << "t_gripper2base " << t << endl;
+
+    R_gripper2base.push_back(R);
+    t_gripper2base.push_back(t);
+  }
+
+
+  cout << endl << "Starting QR24 hand-eye calibration ..." << endl;
+
+  // input
+  Mat A(12*R_target2cam.size(), 24, CV_64FC1);
+  Mat B(12*R_target2cam.size(), 1,CV_64FC1);
+
+  Mat zeros91 = Mat::zeros(9,1,CV_64FC1);
+  Mat zeros93 = Mat::zeros(9,3,CV_64FC1);
+  Mat negEye = -1 * Mat::eye(12,12,CV_64FC1);
+
+  // output
+  Mat X;
+
+  // fill dem coefficent-matrices using our checkerboard poses (target) and end-effector poses (gripper)
+  for (int i = 0; i < R_target2cam.size(); i++) {
+    // A:
+
+    // not sure why index order of target2cam is (0,0), (1,0),... and not (0,0), (0,1) ... maybe target2cam needs to be inverted first
+    Mat a00 = R_gripper2base[i] * R_target2cam[i].at<double>(0,0);
+    Mat a01 = R_gripper2base[i] * R_target2cam[i].at<double>(1,0);
+    Mat a02 = R_gripper2base[i] * R_target2cam[i].at<double>(2,0);
+    Mat a10 = R_gripper2base[i] * R_target2cam[i].at<double>(0,1);
+    Mat a11 = R_gripper2base[i] * R_target2cam[i].at<double>(1,1);
+    Mat a12 = R_gripper2base[i] * R_target2cam[i].at<double>(2,1);
+    Mat a20 = R_gripper2base[i] * R_target2cam[i].at<double>(0,2);
+    Mat a21 = R_gripper2base[i] * R_target2cam[i].at<double>(1,2);
+    Mat a22 = R_gripper2base[i] * R_target2cam[i].at<double>(2,2);
+    Mat a30 = R_gripper2base[i] * t_target2cam[i].at<double>(0,0);
+    Mat a31 = R_gripper2base[i] * t_target2cam[i].at<double>(1,0);
+    Mat a32 = R_gripper2base[i] * t_target2cam[i].at<double>(2,0);
+
+    // !!! Rect(x coord of top left corner, y coord of top left corner, width, height) creates rectangle
+    // filling columns 1 to 9 (of 24)
+    // creates 12rows by 9cols blocks per iteration, next iteration's data uses next 12 rows
+    a00.copyTo(A(Rect(0,i*12,3,3)));
+    a01.copyTo(A(Rect(3,i*12,3,3)));
+    a02.copyTo(A(Rect(6,i*12,3,3)));
+    a10.copyTo(A(Rect(0,3 + i*12,3,3)));
+    a11.copyTo(A(Rect(3,3 + i*12,3,3)));
+    a12.copyTo(A(Rect(6,3 + i*12,3,3)));
+    a20.copyTo(A(Rect(0,6 + i*12,3,3)));
+    a21.copyTo(A(Rect(3,6 + i*12,3,3)));
+    a22.copyTo(A(Rect(6,6 + i*12,3,3)));
+    a30.copyTo(A(Rect(0,9 + i*12,3,3)));
+    a31.copyTo(A(Rect(3,9 + i*12,3,3)));
+    a32.copyTo(A(Rect(6,9 + i*12,3,3)));
+
+    // filling columns 10, 11, 12
+    zeros93.copyTo(A(Rect(9, i*12,3,9)));
+    R_gripper2base[i].copyTo(A(Rect(9,9 + i*12,3,3)));
+    // filling columns 13 to 24
+    negEye.copyTo(A(Rect(12,i*12,12,12)));
+
+    // B:
+    // 9rows by 1col blocks (of 12 rows)
+    zeros91.copyTo(B(Rect(0,i*12,1,9)));
+    // negative translation into row 10,11,12
+    Mat negT = -1 * t_gripper2base[i];
+    negT.copyTo(B(Rect(0,9 + i*12,1,3)));
+  }
+
+  // solve
+  solve(A,B,X,DECOMP_QR);
+
+  // reshape
+  Mat R = X(Rect(0,0,1,9));
+  Mat t = X(Rect(0,9,1,3));
+  R_cam2gripper = R.reshape(0,3);
+
+  cout << "R_cam2gripper: " << endl << R_cam2gripper << endl;
+  cout << "t_cam2gripper: " << endl << t << endl;
+}
 
 bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
                    calibration::handEyeCalibration::Response &res) {
@@ -885,7 +987,13 @@ int main(int argc, char** argv) {
     cameraCalibration();
   }
 
-  handEye();
+  if (QR24 == true) {
+    handEyeQR24();
+  }
+
+  if (standardHandEye == true) {
+    handEye();
+  }
 
   ros::ServiceServer service = nh.advertiseService("handEyeCalibration", handEyeOutput);
 
