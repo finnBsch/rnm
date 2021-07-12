@@ -1,3 +1,4 @@
+#include <yaml-cpp/yaml.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -22,7 +23,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be received and used for calibration:
-int n_frames = 40;
+int n_frames = 30;
 
 // only one of following should be true, with exception of use_preset, irCalibration, and stereo
 
@@ -36,9 +37,9 @@ bool from_folder = false;
 bool from_folder_ = true;
 
 // performing ir calibration
-bool irCalibration = false;
+bool irCalibration = true;
 // performing stereo calibration
-bool stereo = false;
+bool stereo = true;
 // using given k and K matrices:
 bool use_preset = false;
 
@@ -47,8 +48,8 @@ bool standardHandEye = true;
 bool QR24 = false;
 
 // calibration data path:
-string path = "/home/nico/cal_data";
-//string path = "/home/rnm_grp1/rgb";
+//string path = "/home/nico/cal_data";
+string path = "/home/rnm_grp1/cal_data";
 
 // Frame size
 cv::Size rgbFrameSize(2048, 1536);
@@ -208,6 +209,13 @@ void rgbImageWrite(const sensor_msgs::ImageConstPtr& msg) {
   }
 }
 
+cv::Mat K1, K2, R, F, E;
+cv::Vec3d T;
+cv::Mat D1, D2;
+double rms;
+float rgberror;
+float irerror;
+
 // camera calibration
 int cameraCalibration() {
   std::vector<cv::String> rgbFileNames(n_frames);
@@ -332,13 +340,13 @@ int cameraCalibration() {
 
 
     cout << "All IR Corners detected and saved in ircorners\n";
-    //  // Display the detected pattern on the chessboard
-    //  for (int i = 0; i < rgbFileNames.size(); i++) {
-    //    rgbimg = cv::imread(rgbFileNames[i]);
-    //    cv::drawChessboardCorners(rgbimg, patternSize, rgbcorners[i], true);
-    //   cv::imshow("RGB chessboard corner detection", rgbimg);
-    //     cv::waitKey(0);
-    //  }
+      // Display the detected pattern on the chessboard
+      /*for (int i = 0; i < irFileNames.size(); i++) {
+        irimg = cv::imread(irFileNames[i]);
+        cv::drawChessboardCorners(irimg, patternSize, ircorners[i], true);
+       cv::imshow("IR chessboard corner detection", irimg);
+         cv::waitKey(0);
+      }*/
   }
 
   // Calibrate the rgb frame intrinsics
@@ -363,7 +371,7 @@ int cameraCalibration() {
 
   std::cout << "Calibrating rgb intrinsics...\n" << endl;
 
-  float rgberror =
+  rgberror =
       cv::calibrateCamera(rgbObjP, rgbcorners, rgbFrameSize, rgbK, rgbk, rvecs, tvecs, flags);
   std::cout << "Reprojection error of rgb frames = " << rgberror << "\nK =\n"
             << rgbK << "\nk=\n"
@@ -405,10 +413,10 @@ int cameraCalibration() {
     cv::Rodrigues(rvec, temp);
     // temp = temp.t();
     R_target2cam.push_back(temp);
-    cout << "R_target2cam: " << temp << endl;
+    //cout << "R_target2cam: " << temp << endl;
     // tvec = -temp*tvec;
     t_target2cam.push_back(tvec);
-    cout << "t_target2cam: " << tvec << endl;
+    //cout << "t_target2cam: " << tvec << endl;
   }
 
   if (irCalibration == true) {
@@ -422,7 +430,7 @@ int cameraCalibration() {
     std::cout << "Calibrating ir intrinsics...\n" << std::endl;
     // 4. Call "float error = cv::calibrateCamera()" with the input coordinates
     // and output parameters as declared above...
-    float irerror =
+    irerror =
         cv::calibrateCamera(irObjP, ircorners, irFrameSize, irK, irk, irrvecs, irtvecs, irflags);
     std::cout << "Reprojection error of the ir frames = " << irerror << "\nK =\n"
               << irK << "\nk=\n"
@@ -495,13 +503,13 @@ int cameraCalibration() {
       if (found1 && found2) {
         // Refine CornerDetection
         cv::cornerSubPix(
-            gray1, corners1, cv::Size(11, 11), cv::Size(-1, -1),
+            gray1, corners1, cv::Size(16, 16), cv::Size(-1, -1),
             cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
 
         cv::drawChessboardCorners(gray1, patternSize, corners1, found1);
 
         cv::cornerSubPix(
-            gray2, corners2, cv::Size(20, 20), cv::Size(-1, -1),
+            gray2, corners2, cv::Size(18, 18), cv::Size(-1, -1),
             cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 100, 0.001));
 
         cv::drawChessboardCorners(gray2, patternSize, corners2, found2);
@@ -532,9 +540,9 @@ int cameraCalibration() {
     }
 
     std::cout << "Starting Calibration\n";
-    cv::Mat K1, K2, R, F, E;
+    /*cv::Mat K1, K2, R, F, E;
     cv::Vec3d T;
-    cv::Mat D1, D2;
+    cv::Mat D1, D2;*/
     K1 = rgbK;
     K2 = irK;
     D1 = rgbk;
@@ -544,7 +552,7 @@ int cameraCalibration() {
         CALIB_FIX_INTRINSIC + CALIB_FIX_S1_S2_S3_S4 + CALIB_FIX_TAUX_TAUY + CALIB_RATIONAL_MODEL;
 
     std::cout << "Compute stereocalibration...\n";
-    double rms = stereoCalibrate(object_points, left_img_points, right_img_points, K1, D1, K2, D2,
+    rms = stereoCalibrate(object_points, left_img_points, right_img_points, K1, D1, K2, D2,
                                  rgbFrameSize, R, T, E, F, stereoflags);
     cout << "Done with RMS error=" << rms << endl;
 
@@ -763,8 +771,8 @@ void handEye(){
     auto R = fw_ret[0];
     auto t = fw_ret[1];
 
-    cout << "R_gripper2base" << R <<endl;
-    cout << "t_gripper2base " << t << endl;
+    //cout << "R_gripper2base" << R <<endl;
+    //cout << "t_gripper2base " << t << endl;
 
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
@@ -933,9 +941,21 @@ bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
 }
 
 void writeResults(string method) {
+  cout << "R: " << endl << R << endl;
+  Mat extrinsic = Mat::zeros(4,4,CV_64FC1);
+  Mat zeros1 = Mat::zeros(1,4,CV_64FC1);
+  zeros1.at<double>(0,3) = float(1);
+  Mat extrinsic_T = Mat::zeros(3,1,CV_64FC1);
+  extrinsic_T.at<double>(0,0) = T[0];
+  extrinsic_T.at<double>(1,0) = T[1];
+  extrinsic_T.at<double>(2,0) = T[2];
+  R.copyTo(extrinsic(Rect(0,0,3,3)));
+  zeros1.copyTo(extrinsic(Rect(0,3,4,1)));
+  extrinsic_T.copyTo(extrinsic(Rect(3,0,1,3)));
+  Mat inv_extrinsic = homogeneousInverse(extrinsic);
   // saving calibration results
   ofstream myfile;
-  myfile.open(path + "/camera_hand_eye_calibration.yaml");
+  myfile.open(path + "/hand_eye_calibration.yaml");
   myfile << "# Calibration data" << endl;
   myfile << "settings: " << endl;
   myfile << "from_folder=" << from_folder << ", " << "use_preset=" << use_preset << ", "
@@ -950,6 +970,42 @@ void writeResults(string method) {
   myfile << R_cam2gripper << endl;
   myfile << "  # translation vector:" << endl;
   myfile << t_cam2gripper << endl;
+  myfile.close();
+
+  ofstream myfile1;
+  myfile1.open(path + "/camera_calibration.yaml");
+  myfile1 << "extrinsics:" << endl;
+  myfile1 << "  depth_to_rgb:" << endl << "  -"<< extrinsic.row(0) << endl
+          << "  -"<< extrinsic.row(1) << endl << "  -"<< extrinsic.row(2) << endl;
+  myfile1 << "  rgb_to_depth:" << endl << "  -"<< inv_extrinsic.row(0) << endl
+                               << "  -"<< inv_extrinsic.row(1) << endl << "  -"<< inv_extrinsic.row(2) << endl;
+  myfile1 << "  rms: " << rms << endl;
+  myfile1 << "intrinsic_color:" << endl;
+  myfile1 << "  camera_matrix:" << endl << "  -"<< K1.row(0) << endl
+                                   << "  -"<< K1.row(1) << endl << "  -"<< K1.row(2) << endl;
+  myfile1 << "  k1: " << D1.at<double>(0) << endl;
+  myfile1 << "  k2: " << D1.at<double>(1) << endl;
+  myfile1 << "  k3: " << D1.at<double>(4) << endl;
+  myfile1 << "  k4: " << D1.at<double>(5) << endl;
+  myfile1 << "  k5: " << D1.at<double>(6) << endl;
+  myfile1 << "  k6: " << D1.at<double>(7) << endl;
+  myfile1 << "  p1: " << D1.at<double>(2) << endl;
+  myfile1 << "  p2: " << D1.at<double>(3) << endl;
+  myfile1 << "  rms: " << rgberror << endl;
+  myfile1 << "intrinsic_depth:" << endl;
+  myfile1 << " camera_matrix:" << endl << "  -"<< K2.row(0) << endl
+                               << "  -"<< K2.row(1) << endl << "  -"<< K2.row(2) << endl;
+  myfile1 << "  k1: " << D2.at<double>(0) << endl;
+  myfile1 << "  k2: " << D2.at<double>(1) << endl;
+  myfile1 << "  k3: " << D2.at<double>(4) << endl;
+  myfile1 << "  k4: " << D2.at<double>(5) << endl;
+  myfile1 << "  k5: " << D2.at<double>(6) << endl;
+  myfile1 << "  k6: " << D2.at<double>(7) << endl;
+  myfile1 << "  p1: " << D2.at<double>(2) << endl;
+  myfile1 << "  p2: " << D2.at<double>(3) << endl;
+  myfile1 << "  rms: " << irerror << endl;
+  myfile1.close();
+
   ROS_INFO("calibration saved to 'camera_hand_eye_calibration.yaml");
 }
 
@@ -1005,6 +1061,7 @@ int main(int argc, char** argv) {
     cout << "starting camera calibration" << endl;
     readJoint_States();
     cameraCalibration();
+    cout << "T: " << T << endl;
   }
 
   if (QR24 == true) {
@@ -1018,7 +1075,7 @@ int main(int argc, char** argv) {
   }
 
   ros::ServiceServer service = nh.advertiseService("handEyeCalibration", handEyeOutput);
-
+  ros::spin();
   /* TODO: service that publishes matrix<xd> of defined size containing hand eye matrix*/
 
   return 0;
