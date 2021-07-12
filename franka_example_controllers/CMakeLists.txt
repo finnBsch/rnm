@@ -25,7 +25,11 @@ find_package(Franka 0.5.0 REQUIRED)
 add_message_files(FILES
   JointTorqueComparison.msg
 )
+add_service_files(
+        FILES
+        needle_insertion_service.srv
 
+)
 generate_messages()
 
 generate_dynamic_reconfigure_options(

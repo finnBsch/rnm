@@ -15,6 +15,8 @@
 #include "Path.h"
 #include <list>
 #include "trajectory_msgs/JointTrajectory.h"
+#include "franka_example_controllers/needle_insertion_service.h"
+
 
 using namespace std;
 using namespace Eigen;
@@ -72,8 +74,8 @@ public:
     RobotArm(ros::NodeHandle nh): nh_(nh), num_joints_(7), init_position(7),delta_angle(7)
     {
         traj_pub = new ros::Publisher(nh_.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10));
-        ros::ServiceClient client = nh.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
-        inverse_kinematics::unserService srv;
+
+
 
         sensor_msgs::JointState joint_state_msg;
 
@@ -83,50 +85,7 @@ public:
             init_position[i] = joint_state_msg.position[i];
         }
 
-        list<VectorXd> waypoints;
-        VectorXd waypoint(6);
-        VectorXd max_acc(6);
-        VectorXd max_vel(6);
-        for(int i = 0; i < received_joint_angles.size(); i++){
-            for(int j = 0; j < received_joint_angles[i].size()-1; j++){
-                waypoint[j] = received_joint_angles[i][j];
-            }
-            waypoints.push_back(waypoint);
-        }
-        for(int i = 0; i < 6; i++){
-            max_acc[i] = max_accs[i];
-            max_vel[i] = max_vels[i];
-        }
-        Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
-        trajectory.outputPhasePlaneTrajectory();
-        array<vector<float>, 6> joints_smooth;
-        trajectory_msgs::JointTrajectory traj_msg;
-        trajectory_msgs::JointTrajectoryPoint pt;
-        if(trajectory.isValid()) {
-            double duration = trajectory.getDuration();
-            ROS_INFO("Trajectory durrration: %f s", duration);
-            for(double t = 0.0; t < duration; t += 0.001) {
-                pt.positions.clear();
-                for(int k = 0; k<joints_smooth.size(); k++) {
-                    joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
-                    pt.positions.push_back(trajectory.getPosition(t)[k]);
-                }
-                pt.positions.push_back(init_position[6]);
-                traj_msg.points.push_back(pt);
-            }
-        }
-        ROS_INFO("Points : %i ", traj_msg.points.size());
-        //std::reverse(traj_msg.points.begin(),traj_msg.points.end());
-        traj_pub->publish(traj_msg);
-        ros::spinOnce();
-        /*for (int i=0; i<scaling_;i++){
-            for (int j =0;j<7; j++){
-                ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
-            }
-            ROS_INFO("--------------------------");
-        }
 
-        finalJointAngles = received_joint_angles[0];*/
 
     }
 
@@ -202,15 +161,15 @@ public:
 
     bool needle_insertion(franka_example_controllers::needle_insertion_service::Request &req,
                       franka_example_controllers::needle_insertion_service::Response &res) {
-
-
+      inverse_kinematics::unserService srv;
+      ros::ServiceClient client = nh_.serviceClient<inverse_kinematics::unserService>("/inverse_kinematics_node/unserService");
 
       //TODO request path planing points
       VectorXd o1(6);
       VectorXd o2(6);
 
 
-      o1 << req.start_pos_endeffector[0], req.start_pos_endeffector[1], req.start_pos_endeffector[2] req.start_pos_endeffector[3], req.start_pos_endeffector[4], req.start_pos_endeffector[5]; //Punkt 1 von Niklas
+      o1 << req.start_pos_endeffector[0], req.start_pos_endeffector[1], req.start_pos_endeffector[2], req.start_pos_endeffector[3], req.start_pos_endeffector[4], req.start_pos_endeffector[5]; //Punkt 1 von Niklas
       o2 << req.end_pos_endeffector[0], req.end_pos_endeffector[1], req.end_pos_endeffector[2], req.end_pos_endeffector[3], req.end_pos_endeffector[4], req.end_pos_endeffector[5];
       //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
       //o2 << 0.417488, 0.2473712, 0.251279, 0.0,     3.14, 0.0;
@@ -278,15 +237,60 @@ public:
                                       srv.response.ik_jointAngles[6]};
       }
 
+
+      list<VectorXd> waypoints;
+      VectorXd waypoint(6);
+      VectorXd max_acc(6);
+      VectorXd max_vel(6);
+      for(int i = 0; i < received_joint_angles.size(); i++){
+        for(int j = 0; j < received_joint_angles[i].size()-1; j++){
+          waypoint[j] = received_joint_angles[i][j];
+        }
+        waypoints.push_back(waypoint);
+      }
+      for(int i = 0; i < 6; i++){
+        max_acc[i] = max_accs[i];
+        max_vel[i] = max_vels[i];
+      }
+      Trajectory trajectory(Path(waypoints, 0.1),max_vel, max_acc);
+      trajectory.outputPhasePlaneTrajectory();
+      array<vector<float>, 6> joints_smooth;
+      trajectory_msgs::JointTrajectory traj_msg;
+      trajectory_msgs::JointTrajectoryPoint pt;
+      if(trajectory.isValid()) {
+        double duration = trajectory.getDuration();
+        ROS_INFO("Trajectory durrration: %f s", duration);
+        for(double t = 0.0; t < duration; t += 0.001) {
+          pt.positions.clear();
+          for(int k = 0; k<joints_smooth.size(); k++) {
+            joints_smooth[k].push_back(trajectory.getPosition(t)[k]);
+            pt.positions.push_back(trajectory.getPosition(t)[k]);
+          }
+          pt.positions.push_back(init_position[6]);
+          traj_msg.points.push_back(pt);
+        }
+      }
+      ROS_INFO("Points : %i ", traj_msg.points.size());
+      //std::reverse(traj_msg.points.begin(),traj_msg.points.end());
+      traj_pub->publish(traj_msg);
+      ros::spinOnce();
+      /*for (int i=0; i<scaling_;i++){
+          for (int j =0;j<7; j++){
+              ROS_INFO("Joint Angles %f", received_joint_angles[i][j]);
+          }
+          ROS_INFO("--------------------------");
+      }
+
+      finalJointAngles = received_joint_angles[0];*/
     }
-    }
-};
+    };
+
 
 int main(int argc, char** argv)
 {
     // Init the ROS node
     ros::init(argc, argv, "needle_insertion");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh("~");
 
 
     // create RobotArm object
@@ -295,7 +299,8 @@ int main(int argc, char** argv)
 
     // loop infinitely with a fixed frequency and send our commands
     ros::Rate loop_rate(1000);
-    ros::ServiceServer service = nh.advertiseService("needle_insertion_service",&RobotArm::needle_insertion,&inverse_kinematics);
+    ros::ServiceServer service = nh.advertiseService("needle_insertion_service",&RobotArm::needle_insertion,&arm);
+ // ros::ServiceServer service = node_handle.advertiseService("unserService",&IncrementalInverseKinematics::ik_jointAngles,&inverse_kinematics);
     while (ros::ok())
     {
         //arm.sendStepCommand();
