@@ -15,6 +15,7 @@
 #include <eigen3/Eigen/Dense>
 #include <opencv2/core/mat.hpp>
 #include "calibration/handEyeCalibration.h"
+#include <cmath>
 
 
 using namespace cv;
@@ -23,7 +24,7 @@ using namespace Eigen;
 
 //// settings:
 // define number of frames to be received and used for calibration:
-int n_frames = 30;
+int n_frames = 40;
 
 // only one of following should be true, with exception of use_preset, irCalibration, and stereo
 
@@ -37,9 +38,9 @@ bool from_folder = false;
 bool from_folder_ = true;
 
 // performing ir calibration
-bool irCalibration = true;
+bool irCalibration = false;
 // performing stereo calibration
-bool stereo = true;
+bool stereo = false;
 // using given k and K matrices:
 bool use_preset = false;
 
@@ -48,8 +49,8 @@ bool standardHandEye = true;
 bool QR24 = false;
 
 // calibration data path:
-//string path = "/home/nico/cal_data";
-string path = "/home/rnm_grp1/cal_data";
+string path = "/home/nico/cal_data";
+//string path = "/home/rnm_grp1/cal_data";
 
 // Frame size
 cv::Size rgbFrameSize(2048, 1536);
@@ -823,6 +824,7 @@ void handEyeQR24() {
   Mat A(12*R_target2cam.size(), 24, CV_64FC1);
   Mat B(12*R_target2cam.size(), 1,CV_64FC1);
 
+  //Mat zeros91 = Mat::zeros(9,1,CV_64FC1);
   Mat zeros91 = Mat::eye(9,1,CV_64FC1);
   Mat zeros93 = Mat::zeros(9,3,CV_64FC1);
   Mat negEye = -1 * Mat::eye(12,12,CV_64FC1);
@@ -938,6 +940,52 @@ bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
   res.R_cam2gripper = f_R_cam2gripper;
   res.t_cam2gripper = f_t_cam2gripper;
   return true;
+}
+
+void handEyeError(){
+  // create homogeneous matrices
+  Mat target2gripper = Mat::zeros(4,4,CV_64FC1);
+  Mat cam2gripper = Mat::zeros(4,4,CV_64FC1);
+  Mat gripper2base = Mat::zeros(4,4,CV_64FC1);
+  Mat target2cam = Mat::zeros(4,4,CV_64FC1);
+  Mat cam2base = Mat::zeros(4,4,CV_64FC1);
+  Mat target2base = Mat::zeros(4,4,CV_64FC1);
+  Mat zeros = Mat::zeros(0,4,CV_64FC1);
+  zeros.at<double>(0,3) = float(1);
+
+  // cam2gripper
+  R_cam2gripper.copyTo(cam2gripper(Rect(0,0,3,3)));
+  t_cam2gripper.copyTo(cam2gripper(Rect(3,0,1,3)));
+  zeros.copyTo(cam2gripper(Rect(0,3,4,1)));
+
+  //gripper2base, first one
+  R_gripper2base[0].copyTo(gripper2base(Rect(0,0,3,3)));
+  t_gripper2base[0].copyTo(gripper2base(Rect(3,0,1,3)));
+  zeros.copyTo(gripper2base(Rect(0,3,4,1)));
+
+  // target2base = cam2base * target2cam
+  // target2cam, first one
+  R_target2cam[0].copyTo(target2cam(Rect(0,0,3,3)));
+  t_target2cam[0].copyTo(target2cam(Rect(3,0,1,3)));
+  zeros.copyTo(target2cam(Rect(0,3,4,1)));
+  // cam2base = gripper2base * cam2gripper, first one
+  cam2base = gripper2base * cam2gripper;
+  target2base = cam2base * target2cam;
+
+  // target2gripper
+  target2gripper = target2cam * cam2gripper;
+
+  // inverses
+  Mat inv_target2gripper = homogeneousInverse(target2gripper);
+  Mat inv_gripper2base = homogeneousInverse(gripper2base);
+  Mat inv_cam2base = homogeneousInverse(cam2base);
+  Mat inv_target2cam = homogeneousInverse(target2cam);
+
+  Mat A = inv_target2gripper * inv_gripper2base * cam2base * target2cam;
+  float trans_err = sqrt(pow(A.at<double>(0,3),2) + pow(A.at<double>(1,3),2) + pow(A.at<double>(2,3),2));
+  cout << "trans_err: " << trans_err << endl;
+
+
 }
 
 void writeResults(string method) {
@@ -1066,11 +1114,13 @@ int main(int argc, char** argv) {
 
   if (QR24 == true) {
     handEyeQR24();
+    //handEyeError();
     writeResults("QR24");
   }
 
   if (standardHandEye == true) {
     handEye();
+    //handEyeError();
     writeResults("Tsai-Lenz");
   }
 
