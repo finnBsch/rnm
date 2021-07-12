@@ -73,7 +73,7 @@ public:
     // Initialize
     RobotArm(ros::NodeHandle nh): nh_(nh), num_joints_(7), init_position(7),delta_angle(7)
     {
-        traj_pub = new ros::Publisher(nh_.advertise<trajectory_msgs::JointTrajectory>("trajectory", 10));
+        traj_pub = new ros::Publisher(nh_.advertise<trajectory_msgs::JointTrajectory>("/trajectory", 10));
 
 
 

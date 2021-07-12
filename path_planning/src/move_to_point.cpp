@@ -11,8 +11,8 @@ using namespace ruckig;
 using namespace Eigen;
 using namespace std;
 ros::Publisher* traj_pub;
-const float fac = 0.07;
-const float fac2 = 0.07;
+const float fac = 0.04;
+const float fac2 = 0.04;
 std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
 std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
 

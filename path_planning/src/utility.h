@@ -9,7 +9,6 @@
 #include <list>
 #include <cmath>
 #include "eigen3/Eigen/Dense"
-#include "spline.h"
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <random>
