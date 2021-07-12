@@ -29,7 +29,7 @@ class RobotArm
 
 private:
     float fac = 0.05;
-    float fac2 = 0.003;
+    float fac2 = 0.01;
     std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
     std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
     ros::NodeHandle nh_;

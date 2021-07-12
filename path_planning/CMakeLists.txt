@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
         forward_kin
         inverse_kinematics
         point_cloud_registration
+        franka_example_controllers
         )
 find_package( PkgConfig REQUIRED)
 find_package( Bullet REQUIRED)

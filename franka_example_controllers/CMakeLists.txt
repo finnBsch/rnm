@@ -87,6 +87,7 @@ add_executable(trajectory_test_node src/trajectory_test_node.cpp)
 add_executable(inverse_kinematics_test_move_node src/inverse_kinematics_test_move_node.cpp)
 add_executable(needle_insertion src/needle_insertion.cpp src/Path.cpp src/Path.h src/Trajectory.cpp
         src/Trajectory.h)
+add_dependencies(needle_insertion franka_example_controllers_gencpp)
 
 target_link_libraries(trajectory_test_node PUBLIC
         ${catkin_LIBRARIES}

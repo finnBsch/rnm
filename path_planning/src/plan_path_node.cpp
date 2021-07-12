@@ -11,6 +11,7 @@
 #include "inverse_kinematics/unserService.h"
 #include "point_cloud_registration/registration_results_service.h"
 #include "eigen3/Eigen/Geometry"
+#include "franka_example_controllers/needle_insertion_service.h"
 
 /* good routes:
  * - [0.56, 0.3, 0.5] -> [0.12, 0.05, 0.4]*/
@@ -53,21 +54,30 @@ int main(int argc, char **argv)
   inverse_kinematics::unserService srv_inv;
   point_cloud_registration::registration_results_service srv_pcr;
   ros::ServiceClient client = n.serviceClient<forward_kin::get_endeffector>("forward_kin_node/get_endeffector");
-  //ros::ServiceClient client_pcr = n.serviceClient<point_cloud_registration::registration_results_service>("/registration_results_service");
+  ros::ServiceClient client_pcr = n.serviceClient<point_cloud_registration::registration_results_service>("PC_stitching_node/registration_results_service");
   ros::ServiceClient client_inv = n.serviceClient<inverse_kinematics::unserService>("inverse_kinematics_node/unserService");
+  ros::ServiceClient client_ins = n.serviceClient<franka_example_controllers::needle_insertion_service>("/needle_insertion/needle_insertion_service");
 
-  //auto pcr_ret = client_pcr.call(srv_pcr);
-  //auto pcr_res_gp = srv_pcr.response.registration_results.needle_goalpoint;
-  //auto pcr_res_sp = srv_pcr.response.registration_results.needle_startpoint;
-  array<double, 3> pcr_res_sp = {0.35, 0.45, 0.35};
-  array<double, 3> pcr_res_gp = {0.35, 0.35, 0.25};
+  auto pcr_ret = client_pcr.call(srv_pcr);
+  if(pcr_ret){
+
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service stichy");
+    //return 1;
+  }
+  auto pcr_res_gp = srv_pcr.response.registration_results.needle_goalpoint;
+  auto pcr_res_sp = srv_pcr.response.registration_results.needle_startpoint;
+  //array<double, 3> pcr_res_sp = {0.35, 0.45, 0.35};
+  //array<double, 3> pcr_res_gp = {0.35, 0.35, 0.25};
   Eigen::Matrix3d rotMatrix;
   Eigen::Vector3d vectorBefore(0, 0, 1);
-  Eigen::Vector3d vectorAfter(pcr_res_gp[0] - pcr_res_sp[0], pcr_res_gp[1] - pcr_res_sp[1], pcr_res_gp[2] - pcr_res_sp[2]);
+  Eigen::Vector3d vectorAfter(pcr_res_gp.data[0] - pcr_res_sp.data[0], pcr_res_gp.data[1] - pcr_res_sp.data[1], pcr_res_gp.data[2] - pcr_res_sp.data[2]);
   rotMatrix = Eigen::Quaterniond::FromTwoVectors(vectorBefore, vectorAfter).toRotationMatrix();
   auto angs = rotMatrix.eulerAngles(2, 1, 0);
   //std_msgs::Float64MultiArray goal_point_ = *(ros::topic::waitForMessage<std_msgs::Float64MultiArray>("/goal_p",ros::Duration(10)));
-  boost::array<double, 6> des_ef = {pcr_res_sp[0],pcr_res_sp[1],pcr_res_sp[2], angs[0], angs[1], angs[2]};
+  boost::array<double, 6> des_ef = {pcr_res_sp.data[0],pcr_res_sp.data[1],pcr_res_sp.data[2], angs[0], angs[1], angs[2]};
   boost::array<double, 7> arr = {joint_state_msg.position[0], joint_state_msg.position[1],joint_state_msg.position[2],
                                  joint_state_msg.position[3], joint_state_msg.position[4],joint_state_msg.position[5],
                                  joint_state_msg.position[6]};
@@ -159,8 +169,8 @@ int main(int argc, char **argv)
   ROS_INFO("Starting to find path to joint angles %f, %f, %f, %f, %f, %f",goal[0], goal[1], goal[2], goal[3], goal[4], goal[5]);
   ROS_INFO("Starting to find path from joint angles %f, %f, %f, %f, %f, %f",start[0], start[1], start[2], start[3], start[4], start[5]);
 
-  float fac = 0.03;
-  float fac2 = 0.002;
+  float fac = 0.05;
+  float fac2 = 0.005;
   std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
   std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
   rrt_params params_ = {step_size, joint_ranges, goal_joint, num_nodes_extra, max_vels, max_accs};
@@ -313,7 +323,7 @@ int main(int argc, char **argv)
     }
     i++;
   }
-  ros::Rate loop_rate(1000);
+  /*ros::Rate loop_rate(1000);
   for(auto wp:goal_path.waypoints){
     acc_msg.data.clear();
     for(int i =0; i<wp.acceleration.size(); i++){
@@ -321,9 +331,13 @@ int main(int argc, char **argv)
     }
     pub_accs.publish(acc_msg);
     loop_rate.sleep();
-  }
+  }*/
   marker_pub.publish(line_list[1]);
   marker_pub.publish(line_list[3]);
   traj_pub.publish(traj_msg);
+  franka_example_controllers::needle_insertion_service ins_srv;
+  ins_srv.request.start_pos_endeffector = des_ef;
+  ins_srv.request.end_pos_endeffector = {pcr_res_gp.data[0],pcr_res_gp.data[1],pcr_res_gp.data[2], angs[0], angs[1], angs[2]};
+  client_ins.call(ins_srv);
   ros::spin();
 }

@@ -73,7 +73,7 @@ void JointPositionExampleController::update(const ros::Time&, const ros::Duratio
     index++;
   }
   else if(!traj_.empty()){
-    current_traj_ = traj_.front();
+    current_traj_ = *traj_.front();
     traj_.pop();
     index = 0;
   }
@@ -90,18 +90,18 @@ void JointPositionExampleController::setCommandCallback(const std_msgs::Float64M
   mutex.unlock();
 }
 void JointPositionExampleController::setTrajCallback(const trajectory_msgs::JointTrajectoryConstPtr& msg) {
-  mutex.lock();
-  std::vector<std::vector<double>> one_traj;
+  std::vector<std::vector<double>>* one_traj = new std::vector<std::vector<double>>;
   std::vector<double> com(7);
   for (int i = 0; i < msg->points.size(); i++) {
     for (int j = 0; j < 7; j++) {
       com[j] = msg->points[i].positions[j];
     }
-    one_traj.push_back(com);
+    one_traj->push_back(com);
   }
+  mutex.lock();
   traj_.push(one_traj);
-  ROS_INFO("Queue size %i", traj_.size());
   mutex.unlock();
+  ROS_INFO("Queue size %i", traj_.size());
 }
 
 }  // namespace franka_example_controllers

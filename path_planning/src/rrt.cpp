@@ -620,7 +620,7 @@ void rrt::initialize_world() {
     mObjects.push_back(cyl3);
     mObjects.push_back(cyl4);
     mObjects.push_back(cyl5);
-    mColObjects.push_back(sphere);
+    //mColObjects.push_back(sphere);
     mColObjects.push_back(box);
 }
 
