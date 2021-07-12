@@ -1,0 +1,4 @@
+float64[6] start_pos_endeffector
+float64[6] end_pos_endeffector
+---
+float64[7] ik_jointAngles

@@ -83,76 +83,6 @@ public:
             init_position[i] = joint_state_msg.position[i];
         }
 
-        //TODO request path planing points
-        VectorXd o1(6);
-        VectorXd o2(6);
-        o1 << 0.417488, 0.3273712, 0.251279, 0.0, 3.14, 0.0; //Punkt 1 von Niklas
-        o2 << 0.117488, -0.5273712, 0.251279, 0.0, 3.14, 0.0;
-        //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
-        //o2 << 0.417488, 0.2473712, 0.251279, 0.0,     3.14, 0.0;
-        //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
-        //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; // Punkt 2 von Niklas
-
-        MatrixXd points(3,scaling_);
-        points = getLinePoints(o1, o2);
-
-        for (int i = 0; i<points.rows();i++){
-            for(int j = 0; j<points.cols();j++){
-                ROS_INFO(" Endeffektor Position %f", points(i,j));
-            }
-            ROS_INFO("----------------------");
-        }
-
-
-        //give inverse kinematics the current joint angles of the robot
-        srv.request.initial_joint_angles = {init_position[0],
-                                            init_position[1],
-                                            init_position[2],
-                                            init_position[3],
-                                            init_position[4],
-                                            init_position[5],
-                                            init_position[6]};
-        received_joint_angles[0] = {init_position[0],
-                                    init_position[1],
-                                    init_position[2],
-                                    init_position[3],
-                                    init_position[4],
-                                    init_position[5],
-                                    init_position[6]};
-        for(int i = 0; i<scaling_;i++) {
-
-
-            if(i>=1) {
-
-                srv.request.initial_joint_angles = {received_joint_angles[i - 1][0],
-                                                    received_joint_angles[i - 1][1],
-                                                    received_joint_angles[i - 1][2],
-                                                    received_joint_angles[i - 1][3],
-                                                    received_joint_angles[i - 1][4],
-                                                    received_joint_angles[i - 1][5],
-                                                    received_joint_angles[i - 1][6]};
-            }
-            srv.request.desired_endeffector = {points(0, i), points(1, i), points(2, i), o1(3), o1(4), o1(5)};
-
-            auto a = client.call(srv);
-            if (a)
-            {
-                ROS_INFO("Connection Successful");
-            }
-            else
-            {
-                ROS_ERROR("Failed to call service inverse_kinematics");
-                exit; //TODO find better solution
-            }
-
-            received_joint_angles[i+1] = {srv.response.ik_jointAngles[0],
-                                          srv.response.ik_jointAngles[1],
-                                          srv.response.ik_jointAngles[2],
-                                          srv.response.ik_jointAngles[3],
-                                          srv.response.ik_jointAngles[4],
-                                          srv.response.ik_jointAngles[5],
-                                          srv.response.ik_jointAngles[6]};
-        }
         list<VectorXd> waypoints;
         VectorXd waypoint(6);
         VectorXd max_acc(6);
@@ -269,6 +199,87 @@ public:
         }
 
     }
+
+    bool needle_insertion(franka_example_controllers::needle_insertion_service::Request &req,
+                      franka_example_controllers::needle_insertion_service::Response &res) {
+
+
+
+      //TODO request path planing points
+      VectorXd o1(6);
+      VectorXd o2(6);
+
+
+      o1 << req.start_pos_endeffector[0], req.start_pos_endeffector[1], req.start_pos_endeffector[2] req.start_pos_endeffector[3], req.start_pos_endeffector[4], req.start_pos_endeffector[5]; //Punkt 1 von Niklas
+      o2 << req.end_pos_endeffector[0], req.end_pos_endeffector[1], req.end_pos_endeffector[2], req.end_pos_endeffector[3], req.end_pos_endeffector[4], req.end_pos_endeffector[5];
+      //o2 << 0.617488, 0.2473712, 0.251279, 0.0, 3.14, 0.0;
+      //o2 << 0.417488, 0.2473712, 0.251279, 0.0,     3.14, 0.0;
+      //o2 << 0.417488, 0.0473712, 0.251279, 0.0, 3.14, 0.0;
+      //o2 << 0.436342, 0.109329, 0.103379, 0.0, 3.14, 0.0; // Punkt 2 von Niklas
+
+      MatrixXd points(3,scaling_);
+      points = getLinePoints(o1, o2);
+
+      for (int i = 0; i<points.rows();i++){
+        for(int j = 0; j<points.cols();j++){
+          ROS_INFO(" Endeffektor Position %f", points(i,j));
+        }
+        ROS_INFO("----------------------");
+      }
+
+
+      //give inverse kinematics the current joint angles of the robot
+      srv.request.initial_joint_angles = {init_position[0],
+                                          init_position[1],
+                                          init_position[2],
+                                          init_position[3],
+                                          init_position[4],
+                                          init_position[5],
+                                          init_position[6]};
+      received_joint_angles[0] = {init_position[0],
+                                  init_position[1],
+                                  init_position[2],
+                                  init_position[3],
+                                  init_position[4],
+                                  init_position[5],
+                                  init_position[6]};
+      for(int i = 0; i<scaling_;i++) {
+
+
+        if(i>=1) {
+
+          srv.request.initial_joint_angles = {received_joint_angles[i - 1][0],
+                                              received_joint_angles[i - 1][1],
+                                              received_joint_angles[i - 1][2],
+                                              received_joint_angles[i - 1][3],
+                                              received_joint_angles[i - 1][4],
+                                              received_joint_angles[i - 1][5],
+                                              received_joint_angles[i - 1][6]};
+        }
+        srv.request.desired_endeffector = {points(0, i), points(1, i), points(2, i), o1(3), o1(4), o1(5)};
+
+        auto a = client.call(srv);
+        if (a)
+        {
+          ROS_INFO("Connection Successful");
+        }
+        else
+        {
+          ROS_ERROR("Failed to call service inverse_kinematics");
+          exit; //TODO find better solution
+        }
+
+        received_joint_angles[i+1] = {srv.response.ik_jointAngles[0],
+                                      srv.response.ik_jointAngles[1],
+                                      srv.response.ik_jointAngles[2],
+                                      srv.response.ik_jointAngles[3],
+                                      srv.response.ik_jointAngles[4],
+                                      srv.response.ik_jointAngles[5],
+                                      srv.response.ik_jointAngles[6]};
+      }
+
+    }
+    }
 };
 
 int main(int argc, char** argv)
@@ -284,6 +295,7 @@ int main(int argc, char** argv)
 
     // loop infinitely with a fixed frequency and send our commands
     ros::Rate loop_rate(1000);
+    ros::ServiceServer service = nh.advertiseService("needle_insertion_service",&RobotArm::needle_insertion,&inverse_kinematics);
     while (ros::ok())
     {
         //arm.sendStepCommand();
