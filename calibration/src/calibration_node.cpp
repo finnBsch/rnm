@@ -45,8 +45,10 @@ bool stereo = false;
 bool use_preset = false;
 
 // hand-eye: ON/OFF , QR24
-bool standardHandEye = true;
-bool QR24 = false;
+bool standardHandEye = false;
+bool QR24 = true; // better results
+// solvePnP method
+string PnPMethod = "iterative"; // ransac or iterative, target2cam transforms created with iterative are closer to trk.txt
 
 // calibration data path:
 string path = "/home/nico/cal_data";
@@ -72,8 +74,13 @@ int ir_count = 0;
 // container for camera calibration data
 //std::vector<cv::Mat> rvecs, tvecs;
 //std::vector<cv::Mat> cameraPosesR;
-std::vector<cv::Mat> R_target2cam;
+std::vector<cv::Mat> R_target2cam; // cv input format
 std::vector<cv::Mat> t_target2cam;
+std::vector<cv::Mat> R_target2cam_og; // trk.txt format
+std::vector<cv::Mat> t_target2cam_og;
+
+Mat extrinsic = Mat::zeros(4,4,CV_64FC1);
+Mat inv_extrinsic;
 
 vector<vector<double>> allJointStates;
 vector<array<cv::Mat,2>> allTransforms;
@@ -255,7 +262,7 @@ int cameraCalibration() {
                                                      cv::CALIB_CB_ADAPTIVE_THRESH
                                                          //+ cv::CALIB_CB_NORMALIZE_IMAGE
                                                          + cv::CALIB_CB_FILTER_QUADS);
-    // Use cv::cornerSubPix() to refine the found corner detections with default values given by opencv
+    // Use cv::cornerSubPix() to refine the found corner detections with values given by opencv
     if (rgbPatternFound) {
       cv::cornerSubPix(
           rgbgray, rgb_corners_dummy, cv::Size(16, 16), cv::Size(-1, -1),  // winsize 11,11 gute
@@ -378,8 +385,8 @@ int cameraCalibration() {
             << rgbK << "\nk=\n"
             << rgbk << std::endl;
 
-  cv::Mat rvec;
-  cv::Mat tvec;
+  //cv::Mat rvec;
+  //cv::Mat tvec;
   std::cout << "rgbObjP.size: " << rgbObjP.size() << " rgbcorners.size: " << rgbcorners.size()
             << " rgbFileNames.size: " << rgbFileNames.size() << std::endl;
 
@@ -397,10 +404,17 @@ int cameraCalibration() {
   }
 
   for (int i = 0; i < rgbFileNames.size(); i++) {
+    Mat rvec;
+    Mat tvec;
     cv::InputArray rgb1ObjP = rgbObjP[i];
     cv::InputArray rgb1corners = rgbcorners[i];
     // 9.7. : TODO: try different solvePnP method ... rvec and tvec seem to not be accurate
-    cv::solvePnPRansac(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec);
+    if (PnPMethod == "ransac") {
+      cv::solvePnPRansac(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec);
+    }
+    if (PnPMethod == "iterative") {
+      cv::solvePnP(rgb1ObjP, rgb1corners, rgbK, rgbk, rvec, tvec, SOLVEPNP_ITERATIVE);
+    }
 
     // Mat R;
     // Rodrigues(rvec, R);
@@ -412,12 +426,18 @@ int cameraCalibration() {
     /////////////////////////////
     cv::Mat temp;
     cv::Rodrigues(rvec, temp);
-    // temp = temp.t();
     R_target2cam.push_back(temp);
-    //cout << "R_target2cam: " << temp << endl;
-    // tvec = -temp*tvec;
     t_target2cam.push_back(tvec);
     //cout << "t_target2cam: " << tvec << endl;
+    //cout << "R_target2cam: " << temp << endl;
+
+    //// trk.txt format
+    Mat tempR = temp.t();
+    Mat tempt = -tempR * tvec;
+    R_target2cam_og.push_back(tempR);
+    t_target2cam_og.push_back(tempt);
+    cout << "R_target2cam_og: " << endl << tempR << endl;
+    cout << "t_target2cam_og: " << endl << tempt << endl;
   }
 
   if (irCalibration == true) {
@@ -525,7 +545,7 @@ int cameraCalibration() {
        // corners2.erase(next(corners2.begin(), i - num_deleted));
        // num_deleted++;
 
-        cout << endl << "Pairs " << fileNames2[i] << "not used!!!!!!!!" << endl << endl;
+        cout << "Pairs " << fileNames2[i] << "not used!" << endl;
       }
     }
 
@@ -680,14 +700,6 @@ void readJointStates() {
       while (stream >> d) {
         one_joint_states.push_back(d);
       }
-      /*
-      cout << "one_joint_states: " << endl;
-      cout << "[";
-      for (int i=0; i < one_joint_states.size(); i++) {
-        cout << one_joint_states[i] << ", ";
-      }
-      cout << "]" << endl;
-       */
       allJointStates.push_back(one_joint_states);
     }
     cout << "allJointStates.size: " << allJointStates.size() << endl;
@@ -730,15 +742,17 @@ void readCheckPoses() {
         }
       }
       oneR_target2cam = oneR_target2cam.reshape(1, 3);
-      cout << "oneR_target2cam: " << endl << oneR_target2cam << endl;
-      cout << "onet_target2cam: " << endl << onet_target2cam << endl;
-      //////////
+      //cout << "oneR_target2cam: " << endl << oneR_target2cam << endl;
+      //cout << "onet_target2cam: " << endl << onet_target2cam << endl;
+      R_target2cam_og.push_back(oneR_target2cam);
+      t_target2cam_og.push_back(onet_target2cam);
+      ////////// rotate to cv input format
       Mat tempt;
       Mat tempR;
-      oneR_target2cam = oneR_target2cam.t();
-      onet_target2cam = -oneR_target2cam*onet_target2cam;
-      t_target2cam.push_back(onet_target2cam);
-      R_target2cam.push_back(oneR_target2cam);
+      tempR = oneR_target2cam.t();
+      tempt = -tempR * onet_target2cam;
+      t_target2cam.push_back(tempt);
+      R_target2cam.push_back(tempR);
       rot_count = 1;
     }
     cout << "R_target2cam.size: " << R_target2cam.size() << endl;
@@ -810,8 +824,8 @@ void handEyeQR24() {
     auto R = fw_ret[0];
     auto t = fw_ret[1];
 
-    cout << "R_gripper2base" << R <<endl;
-    cout << "t_gripper2base " << t << endl;
+    //cout << "R_gripper2base" << R <<endl;
+    //cout << "t_gripper2base " << t << endl;
 
     R_gripper2base.push_back(R);
     t_gripper2base.push_back(t);
@@ -912,6 +926,7 @@ void handEyeQR24() {
   Mat R = X(Rect(0,0,1,9));
   Mat t = X(Rect(0,9,1,3));
   R_cam2gripper = R.reshape(0,3);
+  R_cam2gripper = R_cam2gripper.t();
   t_cam2gripper = t;
 
   cout << "t_cam2gripper: " << endl << t_cam2gripper << endl;
@@ -942,68 +957,98 @@ bool handEyeOutput(calibration::handEyeCalibration::Request  &req,
   return true;
 }
 
+float avg_trans_err;
 void handEyeError(){
-  // create homogeneous matrices
-  Mat target2gripper = Mat::zeros(4,4,CV_64FC1);
-  Mat cam2gripper = Mat::zeros(4,4,CV_64FC1);
-  Mat gripper2base = Mat::zeros(4,4,CV_64FC1);
-  Mat target2cam = Mat::zeros(4,4,CV_64FC1);
-  Mat cam2base = Mat::zeros(4,4,CV_64FC1);
-  Mat target2base = Mat::zeros(4,4,CV_64FC1);
-  Mat zeros = Mat::zeros(0,4,CV_64FC1);
-  zeros.at<double>(0,3) = float(1);
+  int n_poses = R_target2cam.size();
 
-  // cam2gripper
-  R_cam2gripper.copyTo(cam2gripper(Rect(0,0,3,3)));
-  t_cam2gripper.copyTo(cam2gripper(Rect(3,0,1,3)));
-  zeros.copyTo(cam2gripper(Rect(0,3,4,1)));
-
-  //gripper2base, first one
-  R_gripper2base[0].copyTo(gripper2base(Rect(0,0,3,3)));
-  t_gripper2base[0].copyTo(gripper2base(Rect(3,0,1,3)));
-  zeros.copyTo(gripper2base(Rect(0,3,4,1)));
-
-  // target2base = cam2base * target2cam
-  // target2cam, first one
-  R_target2cam[0].copyTo(target2cam(Rect(0,0,3,3)));
-  t_target2cam[0].copyTo(target2cam(Rect(3,0,1,3)));
-  zeros.copyTo(target2cam(Rect(0,3,4,1)));
-  // cam2base = gripper2base * cam2gripper, first one
-  cam2base = gripper2base * cam2gripper;
-  target2base = cam2base * target2cam;
-
-  // target2gripper
-  target2gripper = target2cam * cam2gripper;
-
-  // inverses
-  Mat inv_target2gripper = homogeneousInverse(target2gripper);
-  Mat inv_gripper2base = homogeneousInverse(gripper2base);
-  Mat inv_cam2base = homogeneousInverse(cam2base);
-  Mat inv_target2cam = homogeneousInverse(target2cam);
-
-  Mat A = inv_target2gripper * inv_gripper2base * cam2base * target2cam;
-  float trans_err = sqrt(pow(A.at<double>(0,3),2) + pow(A.at<double>(1,3),2) + pow(A.at<double>(2,3),2));
-  cout << "trans_err: " << trans_err << endl;
-
-
-}
-
-void writeResults(string method) {
-  cout << "R: " << endl << R << endl;
-  Mat extrinsic = Mat::zeros(4,4,CV_64FC1);
-  Mat zeros1 = Mat::zeros(1,4,CV_64FC1);
-  zeros1.at<double>(0,3) = float(1);
+  // point in camera-coord = K * world2cam(R,T) * point in world coord = M * point in world coord
+  // extrincsic camera matrix, world2cam
+  extrinsic.at<double>(3,3) = float(1);
   Mat extrinsic_T = Mat::zeros(3,1,CV_64FC1);
   extrinsic_T.at<double>(0,0) = T[0];
   extrinsic_T.at<double>(1,0) = T[1];
   extrinsic_T.at<double>(2,0) = T[2];
   R.copyTo(extrinsic(Rect(0,0,3,3)));
-  zeros1.copyTo(extrinsic(Rect(0,3,4,1)));
   extrinsic_T.copyTo(extrinsic(Rect(3,0,1,3)));
-  Mat inv_extrinsic = homogeneousInverse(extrinsic);
+  inv_extrinsic = homogeneousInverse(extrinsic);
+  // homogeneous rgbK
+  Mat homRgbK = Mat::zeros(4,4,CV_64FC1);
+  homRgbK.at<double>(3,3) = float(1);
+  rgbK.copyTo(homRgbK(Rect(0,0,3,3)));
+
+  Mat M = homRgbK * extrinsic;
+  //cout << "M: " << M << endl;
+
+  // translational error:
+  // A = inv_target2gripper * inv_gripper2base * cam2base * target2cam
+
+  Mat A;
+
+  // create homogeneous matrices
+  Mat target2gripper = Mat::zeros(4,4,CV_64FC1);
+  Mat inv_target2gripper = Mat::zeros(4,4,CV_64FC1);
+  Mat gripper2base = Mat::zeros(4,4,CV_64FC1);
+  Mat inv_gripper2base = Mat::zeros(4,4,CV_64FC1);
+  Mat cam2base = Mat::zeros(4,4,CV_64FC1);
+  Mat target2cam = Mat::zeros(4,4,CV_64FC1);
+  Mat cam2gripper = Mat::zeros(4,4,CV_64FC1);
+
+  Mat zeros = Mat::zeros(1,4,CV_64FC1);
+  zeros.at<double>(0,3) = 1.0;
+  zeros.copyTo(target2cam(Rect(0, 3, 4, 1)));
+  zeros.copyTo(target2gripper(Rect(0, 3, 4, 1)));
+  zeros.copyTo(cam2gripper(Rect(0, 3, 4, 1)));
+  zeros.copyTo(gripper2base(Rect(0,3,4,1)));
+  zeros.copyTo(cam2base(Rect(0,3,4,1)));
+
+  //    cam2gripper
+  R_cam2gripper.copyTo(cam2gripper(Rect(0, 0, 3, 3)));
+  t_cam2gripper.copyTo(cam2gripper(Rect(3, 0, 1, 3)));
+  //cout << "cam2gripper: " << endl << cam2gripper << endl;
+
+  for (int pose = 0; pose < n_poses; pose++) {
+    // target2gripper
+    //    target2cam
+    R_target2cam[pose].copyTo(target2cam(Rect(0, 0, 3, 3)));
+    t_target2cam[pose].copyTo(target2cam(Rect(3, 0, 1, 3)));
+    //cout << "target2cam: " << endl << target2cam << endl;
+
+    target2gripper = cam2gripper * target2cam;
+    //cout << "target2gripper: " << endl << target2gripper << endl;
+    inv_target2gripper = homogeneousInverse(target2gripper);
+    //cout << "inv_target2gripper: " << endl << inv_target2gripper << endl;
+
+    // gripper2base
+    R_gripper2base[pose].copyTo(gripper2base(Rect(0, 0, 3, 3)));
+    t_gripper2base[pose].copyTo(gripper2base(Rect(3, 0, 1, 3)));
+    zeros.copyTo(gripper2base(Rect(0, 3, 4, 1)));
+    inv_gripper2base = homogeneousInverse(gripper2base);
+    //cout << "inv_gripper2base: " << endl << inv_gripper2base << endl;
+
+    // cam2base
+    cam2base = gripper2base * cam2gripper;
+
+    // A
+    A = gripper2base * cam2gripper * target2cam;
+    //A = inv_target2gripper * inv_gripper2base * cam2base * target2cam;
+    float trans_err =
+        sqrt(pow(A.at<double>(0, 3), 2) + pow(A.at<double>(1, 3), 2) + pow(A.at<double>(2, 3), 2));
+    //cout << endl << "A: " << endl << A << endl;
+    //cout << endl << "inv_A: " << endl << homogeneousInverse(A) << endl;
+    //cout << "trans_err: " << trans_err << endl;
+    avg_trans_err += trans_err;
+  }
+  avg_trans_err = avg_trans_err / n_poses;
+  //cout << "avg trans_err: " << avg_trans_err << endl;
+  cout << "extrinsic: " << extrinsic << endl;
+  cout << " cam2base = gripper2base * cam2gripper: " << endl << cam2base << endl;
+}
+
+void writeResults(string method) {
   // saving calibration results
   ofstream myfile;
-  myfile.open(path + "/hand_eye_calibration.yaml");
+  string filename = "/hand_eye_calibration.yaml";
+  myfile.open(path + filename);
   myfile << "# Calibration data" << endl;
   myfile << "settings: " << endl;
   myfile << "from_folder=" << from_folder << ", " << "use_preset=" << use_preset << ", "
@@ -1018,43 +1063,59 @@ void writeResults(string method) {
   myfile << R_cam2gripper << endl;
   myfile << "  # translation vector:" << endl;
   myfile << t_cam2gripper << endl;
+  myfile << "average translational error: " << avg_trans_err << endl;
   myfile.close();
 
-  ofstream myfile1;
-  myfile1.open(path + "/camera_calibration.yaml");
-  myfile1 << "extrinsics:" << endl;
-  myfile1 << "  depth_to_rgb:" << endl << "  -"<< extrinsic.row(0) << endl
-          << "  -"<< extrinsic.row(1) << endl << "  -"<< extrinsic.row(2) << endl;
-  myfile1 << "  rgb_to_depth:" << endl << "  -"<< inv_extrinsic.row(0) << endl
-                               << "  -"<< inv_extrinsic.row(1) << endl << "  -"<< inv_extrinsic.row(2) << endl;
-  myfile1 << "  rms: " << rms << endl;
-  myfile1 << "intrinsic_color:" << endl;
-  myfile1 << "  camera_matrix:" << endl << "  -"<< K1.row(0) << endl
-                                   << "  -"<< K1.row(1) << endl << "  -"<< K1.row(2) << endl;
-  myfile1 << "  k1: " << D1.at<double>(0) << endl;
-  myfile1 << "  k2: " << D1.at<double>(1) << endl;
-  myfile1 << "  k3: " << D1.at<double>(4) << endl;
-  myfile1 << "  k4: " << D1.at<double>(5) << endl;
-  myfile1 << "  k5: " << D1.at<double>(6) << endl;
-  myfile1 << "  k6: " << D1.at<double>(7) << endl;
-  myfile1 << "  p1: " << D1.at<double>(2) << endl;
-  myfile1 << "  p2: " << D1.at<double>(3) << endl;
-  myfile1 << "  rms: " << rgberror << endl;
-  myfile1 << "intrinsic_depth:" << endl;
-  myfile1 << " camera_matrix:" << endl << "  -"<< K2.row(0) << endl
-                               << "  -"<< K2.row(1) << endl << "  -"<< K2.row(2) << endl;
-  myfile1 << "  k1: " << D2.at<double>(0) << endl;
-  myfile1 << "  k2: " << D2.at<double>(1) << endl;
-  myfile1 << "  k3: " << D2.at<double>(4) << endl;
-  myfile1 << "  k4: " << D2.at<double>(5) << endl;
-  myfile1 << "  k5: " << D2.at<double>(6) << endl;
-  myfile1 << "  k6: " << D2.at<double>(7) << endl;
-  myfile1 << "  p1: " << D2.at<double>(2) << endl;
-  myfile1 << "  p2: " << D2.at<double>(3) << endl;
-  myfile1 << "  rms: " << irerror << endl;
-  myfile1.close();
+  string filename1 = "/camera_calibration.yaml";
+  if (stereo == true) {
+    ofstream myfile1;
+    myfile1.open(path + filename1);
+    myfile1 << "extrinsics:" << endl;
+    myfile1 << "  depth_to_rgb:" << endl
+            << "  -" << extrinsic.row(0) << endl
+            << "  -" << extrinsic.row(1) << endl
+            << "  -" << extrinsic.row(2) << endl;
+    myfile1 << "  rgb_to_depth:" << endl
+            << "  -" << inv_extrinsic.row(0) << endl
+            << "  -" << inv_extrinsic.row(1) << endl
+            << "  -" << inv_extrinsic.row(2) << endl;
+    myfile1 << "  rms: " << rms << endl;
+    myfile1 << "intrinsic_color:" << endl;
+    myfile1 << "  camera_matrix:" << endl
+            << "  -" << K1.row(0) << endl
+            << "  -" << K1.row(1) << endl
+            << "  -" << K1.row(2) << endl;
+    myfile1 << "  k1: " << D1.at<double>(0) << endl;
+    myfile1 << "  k2: " << D1.at<double>(1) << endl;
+    myfile1 << "  k3: " << D1.at<double>(4) << endl;
+    myfile1 << "  k4: " << D1.at<double>(5) << endl;
+    myfile1 << "  k5: " << D1.at<double>(6) << endl;
+    myfile1 << "  k6: " << D1.at<double>(7) << endl;
+    myfile1 << "  p1: " << D1.at<double>(2) << endl;
+    myfile1 << "  p2: " << D1.at<double>(3) << endl;
+    myfile1 << "  rms: " << rgberror << endl;
+    myfile1 << "intrinsic_depth:" << endl;
+    myfile1 << " camera_matrix:" << endl
+            << "  -" << K2.row(0) << endl
+            << "  -" << K2.row(1) << endl
+            << "  -" << K2.row(2) << endl;
+    myfile1 << "  k1: " << D2.at<double>(0) << endl;
+    myfile1 << "  k2: " << D2.at<double>(1) << endl;
+    myfile1 << "  k3: " << D2.at<double>(4) << endl;
+    myfile1 << "  k4: " << D2.at<double>(5) << endl;
+    myfile1 << "  k5: " << D2.at<double>(6) << endl;
+    myfile1 << "  k6: " << D2.at<double>(7) << endl;
+    myfile1 << "  p1: " << D2.at<double>(2) << endl;
+    myfile1 << "  p2: " << D2.at<double>(3) << endl;
+    myfile1 << "  rms: " << irerror << endl;
+    myfile1.close();
+  }
 
-  ROS_INFO("calibration saved to 'camera_hand_eye_calibration.yaml");
+  ROS_INFO("calibration saved to ");
+  cout << path << filename << endl;
+  if (stereo == true) {
+    cout << path << filename1 << endl;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -1109,7 +1170,9 @@ int main(int argc, char** argv) {
     cout << "starting camera calibration" << endl;
     readJoint_States();
     cameraCalibration();
-    cout << "T: " << T << endl;
+
+    cout << "rgbK: " << endl << rgbK << endl;
+    cout << "rgbk: " << endl << rgbk << endl;
   }
 
   if (QR24 == true) {
@@ -1124,8 +1187,8 @@ int main(int argc, char** argv) {
     writeResults("Tsai-Lenz");
   }
 
-  ros::ServiceServer service = nh.advertiseService("handEyeCalibration", handEyeOutput);
-  ros::spin();
+
+  //ros::ServiceServer service = nh.advertiseService("handEyeCalibration", handEyeOutput);
   /* TODO: service that publishes matrix<xd> of defined size containing hand eye matrix*/
 
   return 0;
