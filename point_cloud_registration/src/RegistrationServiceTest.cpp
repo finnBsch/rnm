@@ -33,98 +33,112 @@
 #include "point_cloud_registration/registration_results_service.h"
 
 int
-main (int argc, char** argv)
-{
+main (int argc, char** argv) {
   ros::init(argc, argv, "RegistrationServiceTest");
   ros::NodeHandle nh("~");
 
-  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::registration_results_service>("/PC_stitching_node/registration_results_service");
+  ros::ServiceClient client =
+      nh.serviceClient<point_cloud_registration::registration_results_service>(
+          "/PC_stitching_node/registration_results_service");
 
   point_cloud_registration::registration_results_service srv;
 
-  if (client.call(srv)){
-    std::cout << "box width, length, height: " << srv.response.registration_results.box_width << ", " << srv.response.registration_results.box_length << ", " << srv.response.registration_results.box_height << std::endl;
-    std::cout << "transformation matrix: " << srv.response.registration_results.registration_transformation;
-    std::cout << "transformed start point: " << srv.response.registration_results.needle_startpoint << std::endl;
-    std::cout << "transformed goal point: " << srv.response.registration_results.needle_goalpoint << std::endl;
-    std::cout << "transformed skeleton center: " << srv.response.registration_results.skeleton_centerpoint << std::endl;
-  }else{
+  if (client.call(srv)) {
+    std::cout << "box width, length, height: " << srv.response.registration_results.box_width
+              << ", " << srv.response.registration_results.box_length << ", "
+              << srv.response.registration_results.box_height << std::endl;
+    std::cout << "transformation matrix: "
+              << srv.response.registration_results.registration_transformation;
+    std::cout << "transformed start point: " << srv.response.registration_results.needle_startpoint
+              << std::endl;
+    std::cout << "transformed goal point: " << srv.response.registration_results.needle_goalpoint
+              << std::endl;
+    std::cout << "transformed skeleton center: "
+              << srv.response.registration_results.skeleton_centerpoint << std::endl;
+  } else {
     std::cerr << "SERVICE CALL FAILED!";
   }
 
-/*
-  ros::init (argc, argv, "RegistrationServiceTest");
-  ros::NodeHandle nh;
-  //Let the publisher publish on topic transformed_clouds
+  /*
+    ros::init (argc, argv, "RegistrationServiceTest");
+    ros::NodeHandle nh;
+    //Let the publisher publish on topic transformed_clouds
 
-  ros::Publisher publisher;
-  publisher = nh.advertise<std_msgs::Float64MultiArray> ("STLtransformation", 1);
-  point_cloud_registration::alignment_service srv;
+    ros::Publisher publisher;
+    publisher = nh.advertise<std_msgs::Float64MultiArray> ("STLtransformation", 1);
+    point_cloud_registration::alignment_service srv;
 
-  ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker",
+  10);
 
-  ros::ServiceClient client = nh.serviceClient<point_cloud_registration::alignment_service>("STLRegistration2/alignment_service");
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud_backup.pcd", *stitched_cloud);
-  pcl::toROSMsg(*stitched_cloud,srv.request.stitched_cloud);
+    ros::ServiceClient client =
+  nh.serviceClient<point_cloud_registration::alignment_service>("STLRegistration2/alignment_service");
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::io::loadPCDFile("/home/niklas/Documents/RNM/stitched_cloud_backup.pcd", *stitched_cloud);
+    pcl::toROSMsg(*stitched_cloud,srv.request.stitched_cloud);
 
-  client.call(srv);
+    client.call(srv);
 
-  Eigen::Matrix4f transform;
-  transform << srv.response.alignment_transformation.data[0],srv.response.alignment_transformation.data[1],srv.response.alignment_transformation.data[2],srv.response.alignment_transformation.data[3],
-      srv.response.alignment_transformation.data[4],srv.response.alignment_transformation.data[5],srv.response.alignment_transformation.data[6],srv.response.alignment_transformation.data[7],
-      srv.response.alignment_transformation.data[8],srv.response.alignment_transformation.data[9],srv.response.alignment_transformation.data[10],srv.response.alignment_transformation.data[11],
-      srv.response.alignment_transformation.data[12],srv.response.alignment_transformation.data[13],srv.response.alignment_transformation.data[14],srv.response.alignment_transformation.data[15];
-  std::cout << transform(12) << transform(13) << transform(14) << transform(15);
+    Eigen::Matrix4f transform;
+    transform <<
+  srv.response.alignment_transformation.data[0],srv.response.alignment_transformation.data[1],srv.response.alignment_transformation.data[2],srv.response.alignment_transformation.data[3],
+        srv.response.alignment_transformation.data[4],srv.response.alignment_transformation.data[5],srv.response.alignment_transformation.data[6],srv.response.alignment_transformation.data[7],
+        srv.response.alignment_transformation.data[8],srv.response.alignment_transformation.data[9],srv.response.alignment_transformation.data[10],srv.response.alignment_transformation.data[11],
+        srv.response.alignment_transformation.data[12],srv.response.alignment_transformation.data[13],srv.response.alignment_transformation.data[14],srv.response.alignment_transformation.data[15];
+    std::cout << transform(12) << transform(13) << transform(14) << transform(15);
 
-  Eigen::Vector4f needle_startpoint;
-  Eigen::Vector4f needle_goalpoint;
-  needle_startpoint = {-30.0/1000, -100.674/1000, 160.0/1000, 1.0};
-  needle_goalpoint = {-4.0/1000, -21.0/1000, 22.0/1000, 1.0};
-  needle_startpoint = transform*needle_startpoint;
-  needle_goalpoint = transform*needle_goalpoint;
-  std::cout << "Start_pos: " << "\n" << "x: " << needle_startpoint(0) << "\n" << "y: " << needle_startpoint(1) << "\n" << "z: " << needle_startpoint(2) << "\n";
-  std::cout << "Goal_pos: " << "\n" << "x: " << needle_goalpoint(0) << "\n" << "y: " << needle_goalpoint(1) << "\n" << "z: " << needle_goalpoint(2) << "\n";
+    Eigen::Vector4f needle_startpoint;
+    Eigen::Vector4f needle_goalpoint;
+    needle_startpoint = {-30.0/1000, -100.674/1000, 160.0/1000, 1.0};
+    needle_goalpoint = {-4.0/1000, -21.0/1000, 22.0/1000, 1.0};
+    needle_startpoint = transform*needle_startpoint;
+    needle_goalpoint = transform*needle_goalpoint;
+    std::cout << "Start_pos: " << "\n" << "x: " << needle_startpoint(0) << "\n" << "y: " <<
+  needle_startpoint(1) << "\n" << "z: " << needle_startpoint(2) << "\n"; std::cout << "Goal_pos: "
+  << "\n" << "x: " << needle_goalpoint(0) << "\n" << "y: " << needle_goalpoint(1) << "\n" << "z: "
+  << needle_goalpoint(2) << "\n";
 
 
 
 
 
-    visualization_msgs::Marker points;
-    points.header.frame_id = "rgb_camera_link";
-    points.header.stamp = ros::Time::now();
-    points.ns = "points_and_lines";
-    points.action  = visualization_msgs::Marker::ADD;
-    points.pose.orientation.w =  1.0;
-    points.id = 0;
-    points.type = visualization_msgs::Marker::POINTS;
-    // POINTS markers use x and y scale for width/height respectively
-    points.scale.x = 0.005;
-    points.scale.y = 0.005;
-    points.scale.z = 0.005;
+      visualization_msgs::Marker points;
+      points.header.frame_id = "rgb_camera_link";
+      points.header.stamp = ros::Time::now();
+      points.ns = "points_and_lines";
+      points.action  = visualization_msgs::Marker::ADD;
+      points.pose.orientation.w =  1.0;
+      points.id = 0;
+      points.type = visualization_msgs::Marker::POINTS;
+      // POINTS markers use x and y scale for width/height respectively
+      points.scale.x = 0.005;
+      points.scale.y = 0.005;
+      points.scale.z = 0.005;
 
-    // Points are green
-    points.color.g = 1.0f;
-    points.color.a = 1.0;
-    float x = needle_startpoint(0);
-    float y = needle_startpoint(1);
-    float z = needle_startpoint(2);
-      geometry_msgs::Point p;
+      // Points are green
+      points.color.g = 1.0f;
+      points.color.a = 1.0;
+      float x = needle_startpoint(0);
+      float y = needle_startpoint(1);
+      float z = needle_startpoint(2);
+        geometry_msgs::Point p;
+        p.x = x;
+        p.y = y;
+        p.z = z;
+        points.points.push_back(p);
+
+       x = needle_goalpoint(0);
+       y = needle_goalpoint(1);
+       z = needle_goalpoint(2);
       p.x = x;
       p.y = y;
       p.z = z;
       points.points.push_back(p);
 
-     x = needle_goalpoint(0);
-     y = needle_goalpoint(1);
-     z = needle_goalpoint(2);
-    p.x = x;
-    p.y = y;
-    p.z = z;
-    points.points.push_back(p);
+
+      marker_pub.publish(points);
 
 
-    marker_pub.publish(points);
-*/
-
+  }
+   */
 }

@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
         PCL REQUIRED
         forward_kin
         message_generation
+        visualization_msgs
 )
 find_package(Eigen3 REQUIRED)
 

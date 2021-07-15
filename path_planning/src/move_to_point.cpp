@@ -11,7 +11,7 @@ using namespace ruckig;
 using namespace Eigen;
 using namespace std;
 ros::Publisher* traj_pub;
-const float fac = 0.1;
+const float fac = 0.07;
 const float fac2 = 0.005;
 std::vector<float> max_vels = {2.175f*fac, 2.175f*fac, 2.175f*fac, 2.175f*fac, 2.61f*fac, 2.61f*fac, 2.61f*fac};
 std::vector<float> max_accs = {15.0f*fac2, 7.5f*fac2, 10.0f*fac2, 12.5f*fac2, 15.0f*fac2, 20.0f*fac2, 20.0f*fac2};
@@ -25,7 +25,7 @@ void callback(const std_msgs::Float64MultiArray& msg) {
   input.current_acceleration = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   input.target_velocity = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   input.target_acceleration = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  double fac3 = 0.1;
+  double fac3 = 0.005;
   input.max_jerk = {fac3, fac3,fac3,fac3,fac3,fac3,fac3};
   for(int j = 0; j < 7; j++){
     input.current_position[j] = start.position[j];
