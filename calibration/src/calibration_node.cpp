@@ -56,7 +56,7 @@ cv::Size rgbFrameSize(2048, 1536);
 cv::Size irFrameSize(640, 576);
 // Define checkerboard Parameters for both frames
 float fieldSize = 0.040;
-int checkerBoard[2] = {9, 6};        // Checkerboard pattern
+int checkerBoard[2] = {9, 6};       // Checkerboard pattern
 cv::Size patternSize(9 - 1, 6 - 1);  // Number of inner corners per a chessboard row and column
 
 
