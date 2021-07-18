@@ -9,7 +9,6 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
-#include <eigen3/Eigen/Dense>
 #include <sensor_msgs/JointState.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -17,7 +16,6 @@
 #include "point_cloud_registration/PCJScombined.h"
 #include "point_cloud_registration/alignment_service.h"
 #include "point_cloud_registration/registration_results_service.h"
-#include "visualization_msgs/Marker.h"
 
 class PCStitch
 {
@@ -28,7 +26,6 @@ class PCStitch
         handeye_ (handeye),
         pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1)),
         results_publisher_(nh.advertise<point_cloud_registration::registrationResults> ("registration_results", 1)),
-        marker_pub_(nh.advertise<visualization_msgs::Marker>("visualization_marker", 1)),
         message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -47,9 +44,6 @@ class PCStitch
   Eigen::Matrix4f transformation_matrix_;
   Eigen::Matrix4f handeye_;
   int message_counter_;
-
-  ros::Publisher marker_pub_;
-  visualization_msgs::Marker marker;
 
   const int message_limit = 14;
   const float leaf_size = 0.005;
@@ -201,25 +195,6 @@ class PCStitch
     return true;
   }
 
-  void publishMarker(){
-    marker.header.frame_id = "rgb_camera_link";
-    marker.type = visualization_msgs::Marker::SPHERE;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = (transformation_matrix_*needle_goalpoint)[0];
-    marker.pose.position.y = (transformation_matrix_*needle_goalpoint)[1];
-    marker.pose.position.z = (transformation_matrix_*needle_goalpoint)[2];
-
-    marker.color.r = 1.0;
-    marker.color.g = 0.0;
-    marker.color.b = 0.0;
-    marker.color.a = 1.0;
-
-    marker.scale.x = 0.01;
-    marker.scale.y = 0.01;
-    marker.scale.z = 0.01;
-
-    marker_pub_.publish(marker);
-  }
 
   //public function which calls all the the private functions in the right order, after a new cloud has arrived
  public:
@@ -237,7 +212,6 @@ class PCStitch
       outlierRemoval(stitched_cloud_);
       publishCloud();
       calculateSkeletonPosition();
-      publishMarker();
       startService();
     }
   }
@@ -252,29 +226,6 @@ main (int argc, char** argv)
   ros::NodeHandle nh("~");
 
   Eigen::Matrix4f handeye;
-
-/*  calibration::handeye_service srv;
-
-  ros::ServiceClient client = nh_.serviceClient<calibration::handeye_service>(
-      "calibration/handeye_service");
-  client.call(srv);
-
-  handeye << srv.response.handeye.data[0],
-      srv.response.handeye.data[1],
-      srv.response.handeye.data[2],
-      srv.response.handeye.data[3],
-      srv.response.handeye.data[4],
-      srv.response.handeye.data[5],
-      srv.response.handeye.data[6],
-      srv.response.handeye.data[7],
-      srv.response.handeye.data[8],
-      srv.response.handeye.data[9],
-      srv.response.handeye.data[10],
-      srv.response.handeye.data[11],
-      srv.response.handeye.data[12],
-      srv.response.handeye.data[13],
-      srv.response.handeye.data[14],
-      srv.response.handeye.data[15],*/
 
 
   //given
