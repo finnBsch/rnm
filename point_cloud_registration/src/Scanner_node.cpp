@@ -92,7 +92,7 @@ class Scanner {
   //boolean "published_message", to check (in the callback function) if there was already an message published for this goal pose
   void getPointCloud(){
 
-    PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("/k4a/points2");
+    sensor_msgs::PointCloud2ConstPtr PC = ros::topic::waitForMessage<sensor_msgs::PointCloud2>("/k4a/points2");
     sensor_msgs::JointStateConstPtr JS = ros::topic::waitForMessage<sensor_msgs::JointState>("/franka_state_controller/joint_states_desired"); //franka_state_controller/joint_states_desired
 
        point_cloud_registration::PCJScombined PCJS;
