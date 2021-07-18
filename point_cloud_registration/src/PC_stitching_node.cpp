@@ -17,6 +17,7 @@
 #include "point_cloud_registration/PCJScombined.h"
 #include "point_cloud_registration/alignment_service.h"
 #include "point_cloud_registration/registration_results_service.h"
+#include "visualization_msgs/Marker.h"
 
 class PCStitch
 {
@@ -26,6 +27,8 @@ class PCStitch
         nh_ (nh),
         handeye_ (handeye),
         pub_ (nh.advertise<sensor_msgs::PointCloud2> ("stitched_cloud", 1)),
+        results_publisher_(nh.advertise<point_cloud_registration::registrationResults> ("registration_results", 1)),
+        marker_pub_(nh.advertise<visualization_msgs::Marker>("visualization_marker", 1)),
         message_counter_(0)
   {
     stitched_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB> ());
@@ -36,6 +39,7 @@ class PCStitch
  private:
   ros::NodeHandle nh_;
   ros::Publisher pub_;
+  ros::Publisher results_publisher_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitched_cloud_;
   pcl::PCLPointCloud2* received_cloud_{};
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr received_cloud_xyz_;
@@ -44,10 +48,15 @@ class PCStitch
   Eigen::Matrix4f handeye_;
   int message_counter_;
 
-  const int message_limit = 11;
+  ros::Publisher marker_pub_;
+  visualization_msgs::Marker marker;
+
+  const int message_limit = 14;
   const float leaf_size = 0.005;
-  const Eigen::Vector4f xyz_min = {0.15, -0.5, 0.02, 1.0};
-  const Eigen::Vector4f xyz_max = {0.7, 0.5, 0.3, 1.0};
+  const Eigen::Vector4f xyz_min = {0.2, -0.4, 0.02, 1.0};
+  const Eigen::Vector4f xyz_max = {0.6, 0.45, 0.25, 1.0};
+  //const Eigen::Vector4f xyz_min = {0.15, -0.35, 0.02, 1.0};
+  //const Eigen::Vector4f xyz_max = {0.55, 0.4, 0.25, 1.0};
   const int mean_k = 50;
   const double std_dev_max = 1;
   const int icp_max = 50;
@@ -90,7 +99,7 @@ class PCStitch
   void transform(){
     forward_kin::get_endeffector srv;
 
-    ros::ServiceClient client = nh_.serviceClient<forward_kin::get_endeffector>("pcl_registration_forward_kin_node/get_endeffector");
+    ros::ServiceClient client = nh_.serviceClient<forward_kin::get_endeffector>("/pcl_registration_forward_kin_node/get_endeffector");
     boost::array<double, 7> angles = {joint_states_.position[0], joint_states_.position[1],joint_states_.position[2],
                                       joint_states_.position[3], joint_states_.position[4],joint_states_.position[5],
                                       joint_states_.position[6]};
@@ -132,6 +141,7 @@ class PCStitch
 
       icp.align(*goal_cloud);
       *stitched_cloud_ += *goal_cloud;
+      //*stitched_cloud_ += *received_cloud_xyz_;
     }
   }
 
@@ -139,6 +149,7 @@ class PCStitch
   void publishCloud(){
     sensor_msgs::PointCloud2 output;
     pcl::toROSMsg(*stitched_cloud_, output);
+    output.header.frame_id = "rgb_camera_link";
     pub_.publish (output);
   }
 
@@ -147,7 +158,7 @@ class PCStitch
     point_cloud_registration::alignment_service srv;
 
     ros::ServiceClient client = nh_.serviceClient<point_cloud_registration::alignment_service>(
-        "STLRegistration_node/alignment_service");
+        "/STLRegistration_node/alignment_service");
     pcl::toROSMsg(*stitched_cloud_, srv.request.stitched_cloud);
     client.call(srv);
 
@@ -186,7 +197,28 @@ class PCStitch
     tf::matrixEigenToMsg(transformation_matrix_*needle_goalpoint, res.registration_results.needle_goalpoint);
     tf::matrixEigenToMsg(transformation_matrix_*skeleton_centerpoint, res.registration_results.skeleton_centerpoint);
     tf::matrixEigenToMsg(transformation_matrix_, res.registration_results.registration_transformation);
+    results_publisher_.publish(res.registration_results);
     return true;
+  }
+
+  void publishMarker(){
+    marker.header.frame_id = "rgb_camera_link";
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = (transformation_matrix_*needle_goalpoint)[0];
+    marker.pose.position.y = (transformation_matrix_*needle_goalpoint)[1];
+    marker.pose.position.z = (transformation_matrix_*needle_goalpoint)[2];
+
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
+
+    marker.scale.x = 0.01;
+    marker.scale.y = 0.01;
+    marker.scale.z = 0.01;
+
+    marker_pub_.publish(marker);
   }
 
   //public function which calls all the the private functions in the right order, after a new cloud has arrived
@@ -205,6 +237,7 @@ class PCStitch
       outlierRemoval(stitched_cloud_);
       publishCloud();
       calculateSkeletonPosition();
+      publishMarker();
       startService();
     }
   }
@@ -216,7 +249,7 @@ main (int argc, char** argv)
   const int queue_size = 50;
 
   ros::init (argc, argv, "PC_stitching_node");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
 
   Eigen::Matrix4f handeye;
 
@@ -243,14 +276,35 @@ main (int argc, char** argv)
       srv.response.handeye.data[14],
       srv.response.handeye.data[15],*/
 
+
+  //given
   handeye << -0.0342177, -0.0224303,   0.999141,  0.0357424,
       -0.998979, -0.0285611,  -0.034854, -0.0232153,
       0.0293307,  -0.999324, -0.0214294,  0.0547717,
       0,          0,          0,          1;
 
+
+  //?
+  /*handeye << 0.814174, 0.0827681, -0.574692, -0.09550347255721067,
+      0.540927, 0.251557, 0.16004, 0.06788091771154511,
+      0.210995, -0.964297, 0.16004, 0.04136492132643586,
+      0, 0, 0, 1;*/
+
+  //
+  //handeye << -0.7258577881909511, -0.01673749775906991, 0.6876411327802501, 0.01895099236320481,
+  //    -0.6878091287739676, 0.007480212265355224, -0.7258530490393087, -0.05771204671222979,
+  //    0.007005262146124014, -0.9998319371740585, -0.01694177408165154, 0.04546746394460912,
+  //    0, 0, 0, 1;
+
+  //QR24
+  //handeye << -0.7131299900098458, -0.677301161690843, 0.01423234556254976, 0.02136714517374633,
+  //-0.02256233823795995, 0.003182393085564173, -0.9833173297922964, -0.0602141316144537,
+  //0.6764328518706179, -0.712780983197623, -0.01755548995171936, 0.04409221258877444,
+  //    0,0,0,1;
+
   PCStitch pcs(nh, handeye);
 
-  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("Synchronizer_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
+  ros::Subscriber sub = nh.subscribe<point_cloud_registration::PCJScombined>("/Synchronizer_node/PCJScombined", queue_size, &PCStitch::addCloud, &pcs);
 
   ros::spin();
 }
