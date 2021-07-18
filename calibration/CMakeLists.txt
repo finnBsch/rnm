@@ -16,9 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
         message_generation
         sensor_msgs
         std_msgs
-        #forward_kin
-        tf2_ros
-        tf
         )
 find_package( OpenCV REQUIRED )
 ## find_package(OpenCV REQUIRED PATHS "/usr/local/include/opencv2") ## did not work
@@ -147,11 +144,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_get_images_node src/get_images.cpp)
-add_executable(${PROJECT_NAME}_get_images_check_node src/get_images_check.cpp)
-add_executable(${PROJECT_NAME}_write_images_node src/write_images.cpp)
 add_executable(${PROJECT_NAME}_calibration_node src/calibration_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
         #forward_kin/forward_kinematics.cpp forward_kin/forward_kinematics.h)
-add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from_folder_node.cpp src/cv_handeye.cpp src/cv_handeye.h)
 
 
 ## Rename C++ executable without prefix
@@ -166,15 +160,7 @@ add_executable(${PROJECT_NAME}_calibration_from_folder_node src/calibration_from
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_get_images_node ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_get_images_check_node ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_write_images_node ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_write_images_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
 target_link_libraries(${PROJECT_NAME}_calibration_node ${OpenCV_LIBS}   ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
-target_link_libraries(${PROJECT_NAME}_calibration_from_folder_node ${catkin_LIBRARIES})
-##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${catkin_LIBRARIES})
-##target_link_libraries(${PROJECT_NAME}_loadFromFolder ${OpenCV_LIBS} /usr/lib/x86_64-linux-gnu/libopencv_highgui.so)
-
 
 add_dependencies(${PROJECT_NAME}_calibration_node ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_calibration_node calibration_generate_messages_cpp)
